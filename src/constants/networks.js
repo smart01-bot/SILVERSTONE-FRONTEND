@@ -1,15 +1,17 @@
-export const NETWORKS = ['Vodacom', 'Yas', 'Airtel', 'Halotel'];
+// src/constants/networks.js
+// Short names matching the mockup: Voda, Yas, Airtel, Halotel
+export const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
 
 export const NETWORK_COLORS = {
-  Vodacom: '#E40000',
-  Yas:     '#7B2FBE',
+  Voda:    '#E40000',
+  Yas:     '#0070B8',
   Airtel:  '#3D3D3D',
   Halotel: '#D4A017',
 };
 
 export const NETWORK_WALLETS = {
-  Vodacom: 'M-Pesa',
-  Yas:     'Mixx by Yas',
+  Voda:    'Mpesa',
+  Yas:     'Mixx',
   Airtel:  'Airtel Money',
   Halotel: 'Halopesa',
 };

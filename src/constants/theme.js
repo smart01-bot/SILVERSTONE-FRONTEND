@@ -1,11 +1,12 @@
+// src/constants/theme.js
 export const COLORS = {
-  primary:      '#FFA500',
-  primaryDark:  '#E6940A',
-  primaryLight: '#FFF3E0',
+  primary:      '#D32F2F',
+  primaryDark:  '#B71C1C',
+  primaryLight: '#FFEBEE',
 
   // Networks
-  vodacom: '#E40000',
-  yas:     '#7B2FBE',
+  voda:    '#E40000',
+  yas:     '#0070B8',
   airtel:  '#3D3D3D',
   halotel: '#D4A017',
 
@@ -21,14 +22,30 @@ export const COLORS = {
 };
 
 export const LIGHT = {
-  bg:          '#F4F4F4',
+  bg:          '#FFFFFF',
   surface:     '#FFFFFF',
   surfaceAlt:  '#F7F7F7',
   border:      '#EBEBEB',
   text:        '#0A0A0A',
   textMid:     '#1A1A1A',
-  textDim:     '#666666',
+  textDim:     '#555555',
   muted:       '#C4C4C4',
+
+  // Semantic aliases used in screens
+  primary:      '#D32F2F',
+  primaryDark:  '#B71C1C',
+  primaryLight: '#FFEBEE',
+  red:          '#D32F2F',
+  redLight:     '#FFEBEE',
+  green:        '#16A34A',
+  greenLight:   '#DCFCE7',
+  teal:         '#0891B2',
+  tealLight:    '#E0F2FE',
+  amber:        '#F59E0B',
+
+  heroGradStart: '#D32F2F',
+  heroGradEnd:   '#B71C1C',
+
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -37,45 +54,53 @@ export const LIGHT = {
     elevation: 3,
   },
   heroShadow: {
-    shadowColor: '#FFA500',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#D32F2F',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowRadius: 14,
     elevation: 8,
   },
-  ...COLORS,
 };
 
 export const DARK = {
-  bg:          '#0A0A0A',
-  surface:     '#141414',
-  surfaceAlt:  '#1C1C1C',
-  border:      '#2A2A2A',
+  bg:          '#000000',
+  surface:     '#0D0D0D',
+  surfaceAlt:  '#161616',
+  border:      '#222222',
   text:        '#F5F5F5',
   textMid:     '#D4D4D4',
   textDim:     '#909090',
-  muted:       '#333333',
+  muted:       '#222222',
+
+  // Semantic aliases
+  primary:      '#EF5350',
+  primaryDark:  '#D32F2F',
+  primaryLight: '#1C0000',
+  red:          '#EF5350',
+  redLight:     '#1C0000',
+  green:        '#22C55E',
+  greenLight:   '#052E16',
+  teal:         '#06B6D4',
+  tealLight:    '#083344',
+  amber:        '#F59E0B',
+
+  heroGradStart: '#1C0000',
+  heroGradEnd:   '#2C0000',
+
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
   },
   heroShadow: {
-    shadowColor: '#FFA500',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
   },
-  ...COLORS,
-};
-
-export const FONT = {
-  regular:  undefined, // system default (SF Pro / Roboto)
-  medium:   undefined,
-  bold:     undefined,
 };
 
 export const typography = {
