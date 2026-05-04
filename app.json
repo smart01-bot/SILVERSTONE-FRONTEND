@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Silverstone",
+    "slug": "silverstone",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#FFA500"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFA500"
+      },
+      "package": "com.silverstone.floatmanager"
+    },
+    "ios": {
+      "bundleIdentifier": "com.silverstone.floatmanager"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store"
+    ]
+  }
+}

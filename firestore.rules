@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Agents can read/write their own doc. Main agents can read all.
+    match /agents/{agentId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth.uid == agentId;
+      allow update: if request.auth.uid == agentId
+                    || get(/databases/$(database)/documents/agents/$(request.auth.uid)).data.role == 'main-agent';
+    }
+
+    // Requests: agents can create/read their own. Main agents can read/update all.
+    match /requests/{requestId} {
+      allow create: if request.auth != null;
+      allow read:   if request.auth != null
+                    && (resource.data.agentId == request.auth.uid
+                        || get(/databases/$(database)/documents/agents/$(request.auth.uid)).data.role == 'main-agent');
+      allow update: if get(/databases/$(database)/documents/agents/$(request.auth.uid)).data.role == 'main-agent';
+    }
+
+    // Transactions: only main agents write, all auth users can read
+    match /transactions/{txId} {
+      allow read:  if request.auth != null;
+      allow write: if get(/databases/$(database)/documents/agents/$(request.auth.uid)).data.role == 'main-agent';
+    }
+  }
+}
