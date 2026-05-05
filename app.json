@@ -17,13 +17,10 @@
     "ios": {
       "bundleIdentifier": "com.silverstone.floatmanager"
     },
-    "notification": {
-      "color": "#D32F2F"
-    },
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-notifications"
-    ]
+      ["expo-notifications", { "color": "#D32F2F" }]
+    ],
   }
 }
