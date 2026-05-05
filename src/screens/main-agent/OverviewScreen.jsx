@@ -11,6 +11,14 @@ const W = Dimensions.get('window').width;
 const fmt  = (n) => `TZS ${Number(n).toLocaleString()}`;
 const fmtK = (n) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n/1000).toFixed(0)}k` : `${n}`;
 
+const getMonthBuckets = () => {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return { label: d.toLocaleDateString('en', { month: 'short' }), year: d.getFullYear(), month: d.getMonth() };
+  });
+};
+
 export default function OverviewScreen() {
   const { user } = useAuth();
   const { theme, tr } = useTheme();
@@ -27,22 +35,35 @@ export default function OverviewScreen() {
     { label: 'Total Volume',      value: fmtK(stats?.totalVolume ?? 0), icon: '💰', delta: 'moved' },
   ];
 
-  // Chart data: last 6 months of requests
-  const months = ['Nov','Dec','Jan','Feb','Mar','Apr'];
+  // Chart data: last 6 months — computed from real Firestore data
+  const monthBuckets = getMonthBuckets();
+
+  const inMonth = (ts, year, month) => {
+    const d = ts?.toDate?.();
+    return d && d.getFullYear() === year && d.getMonth() === month;
+  };
+
+  const monthlyRequests = monthBuckets.map(({ year, month }) =>
+    (stats?.requests ?? []).filter(r => inMonth(r.createdAt, year, month)).length
+  );
+  const monthlyTx = monthBuckets.map(({ year, month }) =>
+    (stats?.transactions ?? []).filter(t => inMonth(t.createdAt, year, month)).length
+  );
+
   const txChart = {
-    labels: months,
+    labels: monthBuckets.map(b => b.label),
     datasets: [
-      { data: [12,18,9,24,15,stats?.completedCount ?? 0], color: () => theme.primary },
-      { data: [8, 12,6,18,10,stats?.totalTx ?? 0],        color: () => theme.info ?? '#0891B2' },
+      { data: monthlyRequests.map(v => v || 0), color: () => theme.primary },
+      { data: monthlyTx.map(v => v || 0),       color: () => theme.teal ?? '#0891B2' },
     ],
     legend: ['Requests', 'Transactions'],
   };
 
-  // Network breakdown
-  const netData = stats?.transactions?.reduce((acc, t) => {
-    acc[t.sourceNetwork] = (acc[t.sourceNetwork] || 0) + t.amount;
+  // Network breakdown from real transactions
+  const netData = (stats?.transactions ?? []).reduce((acc, t) => {
+    if (t.sourceNetwork) acc[t.sourceNetwork] = (acc[t.sourceNetwork] || 0) + (t.amount || 0);
     return acc;
-  }, {}) ?? {};
+  }, {});
   const netEntries = Object.entries(netData).sort((a,b) => b[1]-a[1]);
 
   const chartConfig = {

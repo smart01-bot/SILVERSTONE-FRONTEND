@@ -6,20 +6,24 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "backgroundColor": "#FFA500"
+      "backgroundColor": "#D32F2F"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFA500"
+        "backgroundColor": "#D32F2F"
       },
       "package": "com.silverstone.floatmanager"
     },
     "ios": {
       "bundleIdentifier": "com.silverstone.floatmanager"
     },
+    "notification": {
+      "color": "#D32F2F"
+    },
     "plugins": [
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications"
     ]
   }
 }

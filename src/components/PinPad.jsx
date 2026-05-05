@@ -9,7 +9,7 @@ const DIGITS = [
   ['','0','⌫'],
 ];
 
-export default function PinPad({ length = 6, onComplete, onError }) {
+export default function PinPad({ length = 6, onComplete, onError, onBiometric }) {
   const { theme } = useTheme();
   const [pin, setPin] = useState('');
 
@@ -51,24 +51,39 @@ export default function PinPad({ length = 6, onComplete, onError }) {
       <View style={styles.pad}>
         {DIGITS.map((row, ri) => (
           <View key={ri} style={styles.row}>
-            {row.map((d, di) => (
-              <TouchableOpacity
-                key={di}
-                onPress={() => press(d)}
-                activeOpacity={0.7}
-                style={[
-                  styles.key,
-                  {
-                    backgroundColor: d === '' ? 'transparent' : theme.surface,
-                    borderColor: d === '' ? 'transparent' : theme.border,
-                  }
-                ]}
-              >
-                <Text style={[styles.keyText, { color: d === '⌫' ? theme.primary : theme.text }]}>
-                  {d}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {row.map((d, di) => {
+              // Bottom-left empty slot → biometric button when available
+              if (d === '' && onBiometric) {
+                return (
+                  <TouchableOpacity
+                    key={di}
+                    onPress={onBiometric}
+                    activeOpacity={0.7}
+                    style={[styles.key, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  >
+                    <Text style={[styles.keyText, { color: theme.primary }]}>⊙</Text>
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <TouchableOpacity
+                  key={di}
+                  onPress={() => press(d)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.key,
+                    {
+                      backgroundColor: d === '' ? 'transparent' : theme.surface,
+                      borderColor: d === '' ? 'transparent' : theme.border,
+                    }
+                  ]}
+                >
+                  <Text style={[styles.keyText, { color: d === '⌫' ? theme.primary : theme.text }]}>
+                    {d}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
       </View>

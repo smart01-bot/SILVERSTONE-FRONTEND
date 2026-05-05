@@ -1,21 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import PinPad from '../../components/PinPad';
+import Logo from '../../components/Logo';
 
 export default function PinLoginScreen({ navigation }) {
   const { user, profile, verifyPin, logout } = useAuth();
   const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
-  const [email, setEmail]     = useState('');
-  const [password, setPassword] = useState('');
-  const [emailMode, setEmailMode] = useState(!user); // show email/pass if no user
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
+  const [emailMode, setEmailMode] = useState(!user);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const [bioAvailable, setBioAvailable] = useState(false);
   const { login } = useAuth();
+
+  useEffect(() => {
+    (async () => {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled  = await LocalAuthentication.isEnrolledAsync();
+      setBioAvailable(hasHardware && isEnrolled);
+    })();
+  }, []);
+
+  const handleBiometric = async () => {
+    setError('');
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Sign in to Silverstone',
+        fallbackLabel: 'Use PIN instead',
+        cancelLabel:   'Cancel',
+      });
+      if (result.success) {
+        // Biometric passed — treat as PIN success (AppNavigator handles routing)
+      } else if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+        setError('Biometric failed. Use your PIN instead.');
+      }
+    } catch {
+      setError('Biometric unavailable. Use your PIN instead.');
+    }
+  };
 
   // If no Firebase user — show email login
   const handleEmailLogin = async () => {
@@ -50,9 +79,12 @@ export default function PinLoginScreen({ navigation }) {
 
         {/* Header */}
         <View style={styles.topRow}>
-          <View>
-            <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
-            <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
+          <View style={styles.brandGroup}>
+            <Logo size={60} />
+            <View style={{ marginLeft: 12 }}>
+              <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
+              <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
+            </View>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={[styles.themeBtn, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}>
             <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
@@ -68,7 +100,7 @@ export default function PinLoginScreen({ navigation }) {
             <Text style={[styles.greeting, { color: theme.text }]}>Welcome back, {firstName}</Text>
             <Text style={[styles.sub, { color: theme.textDim }]}>{tr('enterPin')}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            <PinPad length={6} onComplete={handlePin} />
+            <PinPad length={6} onComplete={handlePin} onBiometric={bioAvailable ? handleBiometric : undefined} />
             <TouchableOpacity onPress={async () => { await logout(); setEmailMode(true); }} style={{ marginTop: 16 }}>
               <Text style={{ color: theme.textDim, fontSize: 14 }}>Not {firstName}?  <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text></Text>
             </TouchableOpacity>
@@ -125,15 +157,13 @@ export default function PinLoginScreen({ navigation }) {
   );
 }
 
-// Need to import TextInput
-import { TextInput } from 'react-native';
-
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  inner:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
-  topRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: 16 },
-  brand:   { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
-  tagline: { fontSize: 11, marginTop: 2 },
+  safe:       { flex: 1 },
+  inner:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
+  topRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 },
+  brandGroup: { flexDirection: 'row', alignItems: 'center' },
+  brand:      { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+  tagline:    { fontSize: 11, marginTop: 2 },
   themeBtn:{ borderWidth: 1, borderRadius: 20, padding: 8 },
   avatar:  { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 32, fontWeight: '700' },

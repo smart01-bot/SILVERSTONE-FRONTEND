@@ -37,14 +37,18 @@ export default function HomeScreen({ navigation }) {
   const netVol = {};
   completed.forEach(r => { netVol[r.sourceNetwork] = (netVol[r.sourceNetwork] || 0) + r.amount; });
 
-  // Chart: last 7 days volume
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d;
+  // Chart: last 30 days volume, label every 7th day
+  const days30 = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (29 - i)); return d;
   });
   const chartData = {
-    labels: days.map(d => d.toLocaleDateString('en', { weekday: 'short' }).slice(0,3)),
+    labels: days30.map((d, i) =>
+      (29 - i) % 7 === 0
+        ? d.toLocaleDateString('en', { month: 'short', day: 'numeric' })
+        : ''
+    ),
     datasets: [{
-      data: days.map(d => {
+      data: days30.map(d => {
         const dayStr = d.toDateString();
         return completed
           .filter(r => r.createdAt?.toDate?.()?.toDateString() === dayStr)
@@ -78,9 +82,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* Hero card */}
         <LinearGradient
-          colors={['#FFA500', '#E6940A', '#CC8400']}
+          colors={[theme.heroGradStart, theme.heroGradEnd]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={styles.hero}
+          style={[styles.hero, theme.heroShadow]}
         >
           <View style={styles.heroTop}>
             <Text style={styles.heroLabel}>{tr('totalVolume')}</Text>
@@ -127,7 +131,7 @@ export default function HomeScreen({ navigation }) {
         {/* Chart */}
         {chartData.datasets[0].data.some(v => v > 0) && (
           <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 4 }]}>7-Day Volume</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 4 }]}>30-Day Volume</Text>
             <Text style={[styles.cardSub, { color: theme.textDim }]}>Daily float requested (TZS)</Text>
             <LineChart
               data={chartData}
@@ -210,8 +214,6 @@ const styles = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   hero: {
     borderRadius: 20, padding: 20, gap: 8,
-    shadowColor: '#FFA500', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 16, elevation: 10,
   },
   heroTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroLabel:  { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500' },

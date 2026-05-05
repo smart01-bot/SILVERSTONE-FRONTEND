@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { submitRequest } from '../../utils/firestore';
 import { NETWORKS, NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
+import { validatePhone, validateAmount } from '../../utils/validation';
 
 const fmt = (n) => n ? `TZS ${Number(n).toLocaleString()}` : '—';
 
@@ -23,26 +24,36 @@ export default function NewRequestScreen({ navigation }) {
     amount:        '',
     urgent:        false,
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(null); // { requestId, queuePos }
+  const [submitted, setSubmitted] = useState(null);
 
-  const set = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k) => (v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    if (fieldErrors[k]) setFieldErrors(e => { const n = { ...e }; delete n[k]; return n; });
+  };
 
   const validate = () => {
-    if (!form.sourceNetwork) return 'Select source network.';
-    if (!form.destNetwork)   return 'Select destination network.';
-    if (form.sourceNetwork === form.destNetwork) return 'Source and destination must be different.';
-    if (!form.sourcePhone.trim()) return 'Enter source phone.';
-    if (!form.destPhone.trim())   return 'Enter destination phone.';
-    if (!form.amount || isNaN(form.amount) || Number(form.amount) <= 0) return 'Enter a valid amount.';
-    return null;
+    const errs = {};
+    if (!form.sourceNetwork) errs.sourceNetwork = 'Select source network.';
+    if (!form.destNetwork)   errs.destNetwork = 'Select destination network.';
+    if (form.sourceNetwork && form.destNetwork && form.sourceNetwork === form.destNetwork)
+      errs.destNetwork = 'Destination must differ from source.';
+    const sp = validatePhone(form.sourcePhone);
+    if (!sp.valid) errs.sourcePhone = sp.message;
+    const dp = validatePhone(form.destPhone);
+    if (!dp.valid) errs.destPhone = dp.message;
+    const amt = validateAmount(form.amount);
+    if (!amt.valid) errs.amount = amt.message;
+    setFieldErrors(errs);
+    return Object.keys(errs).length > 0 ? Object.values(errs)[0] : null;
   };
 
   const submit = async () => {
     setError('');
     const err = validate();
-    if (err) { setError(err); return; }
+    if (err) return;
     setLoading(true);
     try {
       const id = await submitRequest(user.uid, profile.name, {
@@ -84,7 +95,13 @@ export default function NewRequestScreen({ navigation }) {
           ))}
         </View>
 
-        <TouchableOpacity onPress={() => { setSubmitted(null); setForm({ sourceNetwork:'', destNetwork:'', sourcePhone:'', destPhone:'', amount:'', urgent:false }); navigation.navigate('Home'); }}
+        <TouchableOpacity
+          onPress={() => {
+            setSubmitted(null);
+            setForm({ sourceNetwork:'', destNetwork:'', sourcePhone:'', destPhone:'', amount:'', urgent:false });
+            setFieldErrors({});
+            navigation.navigate('Home');
+          }}
           style={[styles.btn, { backgroundColor: theme.primary }]}>
           <Text style={styles.btnText}>{tr('backHome')}</Text>
         </TouchableOpacity>
@@ -93,7 +110,7 @@ export default function NewRequestScreen({ navigation }) {
   );
 
   // ── Form ───────────────────────────────────────────────────
-  const NetworkPicker = ({ label, selected, onSelect, exclude }) => (
+  const NetworkPicker = ({ label, selected, onSelect, exclude, errorKey }) => (
     <View style={{ gap: 8, marginBottom: 4 }}>
       <Text style={[styles.label, { color: theme.textDim }]}>{label}</Text>
       <View style={styles.netGrid}>
@@ -101,10 +118,11 @@ export default function NewRequestScreen({ navigation }) {
           const isDisabled = n === exclude;
           const isSelected = n === selected;
           return (
-            <TouchableOpacity key={n} onPress={() => !isDisabled && onSelect(n)}
+            <TouchableOpacity key={n}
+              onPress={() => { if (!isDisabled) { onSelect(n); if (fieldErrors[errorKey]) setFieldErrors(e => { const x = { ...e }; delete x[errorKey]; return x; }); } }}
               style={[
                 styles.netBtn,
-                { borderColor: isSelected ? NETWORK_COLORS[n] : theme.border,
+                { borderColor: isSelected ? NETWORK_COLORS[n] : (fieldErrors[errorKey] ? '#DC262630' : theme.border),
                   backgroundColor: isSelected ? NETWORK_COLORS[n] + '18' : theme.surfaceAlt,
                   opacity: isDisabled ? 0.35 : 1,
                 }
@@ -116,11 +134,20 @@ export default function NewRequestScreen({ navigation }) {
           );
         })}
       </View>
+      {fieldErrors[errorKey] ? <Text style={styles.fieldError}>{fieldErrors[errorKey]}</Text> : null}
     </View>
   );
 
-  const inp = [styles.input, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }];
-  const lbl = [styles.label, { color: theme.textDim }];
+  const fe = (k) => fieldErrors[k] ? <Text style={styles.fieldError}>{fieldErrors[k]}</Text> : null;
+
+  const inp = (key) => [
+    styles.input,
+    {
+      backgroundColor: theme.surfaceAlt,
+      borderColor: fieldErrors[key] ? '#DC2626' : theme.border,
+      color: theme.text,
+    },
+  ];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
@@ -135,22 +162,30 @@ export default function NewRequestScreen({ navigation }) {
             selected={form.sourceNetwork}
             onSelect={set('sourceNetwork')}
             exclude={form.destNetwork}
+            errorKey="sourceNetwork"
           />
           <NetworkPicker
             label={tr('destNetwork')}
             selected={form.destNetwork}
             onSelect={set('destNetwork')}
             exclude={form.sourceNetwork}
+            errorKey="destNetwork"
           />
 
-          <Text style={lbl}>{tr('sourcePhone')}</Text>
-          <TextInput style={inp} value={form.sourcePhone} onChangeText={set('sourcePhone')} placeholder="e.g. 0741234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
+          <Text style={[styles.label, { color: theme.textDim }]}>{tr('sourcePhone')}</Text>
+          <TextInput style={inp('sourcePhone')} value={form.sourcePhone} onChangeText={set('sourcePhone')}
+            placeholder="e.g. 0741234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
+          {fe('sourcePhone')}
 
-          <Text style={lbl}>{tr('destPhone')}</Text>
-          <TextInput style={inp} value={form.destPhone} onChangeText={set('destPhone')} placeholder="e.g. 0651234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
+          <Text style={[styles.label, { color: theme.textDim }]}>{tr('destPhone')}</Text>
+          <TextInput style={inp('destPhone')} value={form.destPhone} onChangeText={set('destPhone')}
+            placeholder="e.g. 0651234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
+          {fe('destPhone')}
 
-          <Text style={lbl}>{tr('amount')}</Text>
-          <TextInput style={inp} value={form.amount} onChangeText={set('amount')} placeholder="e.g. 500000" placeholderTextColor={theme.muted} keyboardType="numeric" />
+          <Text style={[styles.label, { color: theme.textDim }]}>{tr('amount')}</Text>
+          <TextInput style={inp('amount')} value={form.amount} onChangeText={set('amount')}
+            placeholder="e.g. 50000 (min 1,000)" placeholderTextColor={theme.muted} keyboardType="numeric" />
+          {fe('amount')}
 
           {/* Urgent toggle */}
           <View style={[styles.urgentRow, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
@@ -196,23 +231,24 @@ export default function NewRequestScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe:    { flex: 1 },
-  scroll:  { padding: 16, paddingBottom: 100, gap: 10 },
+  scroll:  { padding: 16, paddingBottom: 100, gap: 6 },
   title:   { fontSize: 22, fontWeight: '800', marginBottom: 2 },
   sub:     { fontSize: 14, marginBottom: 8 },
   label:   { fontSize: 13, fontWeight: '500', marginTop: 4 },
   input:   { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, marginTop: 4 },
+  fieldError: { color: '#DC2626', fontSize: 12, marginTop: 3 },
   netGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   netBtn:  { width: '47%', borderWidth: 1.5, borderRadius: 12, padding: 10, gap: 3 },
   netDot:  { width: 8, height: 8, borderRadius: 4 },
   netBtnText: { fontSize: 14, fontWeight: '700' },
   netWallet:  { fontSize: 11 },
-  urgentRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 14, gap: 12 },
-  urgentLabel: { fontSize: 15, fontWeight: '600' },
-  urgentDesc:  { fontSize: 12, marginTop: 2 },
-  summaryCard: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 },
-  summaryTitle:{ fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryLine: { fontSize: 14 },
-  summaryAmt:  { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
+  urgentRow:  { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 14, gap: 12, marginTop: 4 },
+  urgentLabel:{ fontSize: 15, fontWeight: '600' },
+  urgentDesc: { fontSize: 12, marginTop: 2 },
+  summaryCard:  { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6, marginTop: 4 },
+  summaryTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryLine:  { fontSize: 14 },
+  summaryAmt:   { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
   error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
   btn:     { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },

@@ -2,6 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 import HomeScreen       from '../screens/sub-agent/HomeScreen';
 import NewRequestScreen from '../screens/sub-agent/NewRequestScreen';
 import MyRequestsScreen from '../screens/sub-agent/MyRequestsScreen';
@@ -14,7 +16,9 @@ const Icon = ({ emoji, focused, color }) => (
 );
 
 export default function SubAgentNavigator() {
+  const { user } = useAuth();
   const { theme, tr } = useTheme();
+  useNotifications(user?.uid);
 
   return (
     <Tab.Navigator

@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import AuthNavigator      from './AuthNavigator';
 import SubAgentNavigator  from './SubAgentNavigator';
 import MainAgentNavigator from './MainAgentNavigator';
+import SplashScreen       from '../screens/auth/SplashScreen';
 import * as SecureStore   from 'expo-secure-store';
+
+export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
   const { user, profile, loading } = useAuth();
-  const { theme } = useTheme();
   const [pinChecked, setPinChecked] = useState(false);
   const [pinSet, setPinSet]         = useState(false);
+  const [animDone, setAnimDone]     = useState(false);
 
   useEffect(() => {
     if (!user) { setPinChecked(false); setPinSet(false); return; }
@@ -23,11 +24,13 @@ export default function AppNavigator() {
     })();
   }, [user]);
 
-  if (loading || (user && !pinChecked)) {
+  const authReady = !loading && !(user && !pinChecked);
+
+  if (!animDone || !authReady) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.bg }}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <SplashScreen
+        onAnimationDone={() => setAnimDone(true)}
+      />
     );
   }
 
@@ -41,7 +44,7 @@ export default function AppNavigator() {
   const route = getInitialRoute();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {route === 'auth'      && <AuthNavigator />}
       {route === 'pending'   && <AuthNavigator initialRouteName="Pending" />}
       {route === 'pinSetup'  && <AuthNavigator initialRouteName="PinSetup" />}
