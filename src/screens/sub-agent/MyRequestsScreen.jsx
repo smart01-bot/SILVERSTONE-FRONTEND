@@ -5,14 +5,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenRequests } from '../../utils/firestore';
 import RequestCard from '../../components/RequestCard';
+import RequestDetailModal from '../../components/RequestDetailModal';
 
 const FILTERS = ['all', 'pending', 'completed', 'rejected'];
 
 export default function MyRequestsScreen({ navigation }) {
   const { user } = useAuth();
   const { theme, tr } = useTheme();
-  const [requests, setRequests] = useState([]);
-  const [filter, setFilter]     = useState('all');
+  const [requests, setRequests]   = useState([]);
+  const [filter, setFilter]       = useState('all');
+  const [selected, setSelected]   = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -20,6 +22,10 @@ export default function MyRequestsScreen({ navigation }) {
   }, [user]);
 
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+
+  const handleRetry = (request) => {
+    navigation.navigate('NewRequest', { prefill: request });
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
@@ -47,27 +53,39 @@ export default function MyRequestsScreen({ navigation }) {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => <RequestCard request={item} />}
+        renderItem={({ item }) => (
+          <RequestCard request={item} onPress={setSelected} />
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 36 }}>📭</Text>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>No {filter === 'all' ? '' : filter} requests</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>
+              No {filter === 'all' ? '' : filter} requests
+            </Text>
           </View>
         }
+      />
+
+      <RequestDetailModal
+        request={selected}
+        visible={!!selected}
+        onClose={() => setSelected(null)}
+        role="sub-agent"
+        onRetry={handleRetry}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1 },
-  header: { padding: 16, paddingBottom: 8 },
-  title:  { fontSize: 22, fontWeight: '800' },
-  count:  { fontSize: 13, marginTop: 2 },
-  pills:  { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  pill:   { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  safe:     { flex: 1 },
+  header:   { padding: 16, paddingBottom: 8 },
+  title:    { fontSize: 22, fontWeight: '800' },
+  count:    { fontSize: 13, marginTop: 2 },
+  pills:    { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  pill:     { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   pillText: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
-  list:   { padding: 16, gap: 10, paddingBottom: 100 },
-  empty:  { alignItems: 'center', gap: 12, paddingTop: 60 },
-  emptyText: { fontSize: 15, fontWeight: '600' },
+  list:     { padding: 16, gap: 10, paddingBottom: 100 },
+  empty:    { alignItems: 'center', gap: 12, paddingTop: 60 },
+  emptyText:{ fontSize: 15, fontWeight: '600' },
 });

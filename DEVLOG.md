@@ -88,26 +88,49 @@ transactions/{txId}: requestId, agentId, agentName, sourceNetwork, destNetwork, 
 ---
 
 ## Session 2 — Features and Polish
-Date: TBD
-Status: Planned
+Date: May 2026
+Status: Complete
 
-### Features To Build
-- Splash screen with Silverstone logo animation
-- Logo on auth screens
-- Input validation for phone, TIN, NIDA, amount
-- Real Firestore charts replacing placeholder data
-- KYC status tracker on pending screen
-- Request detail modal
-- Biometric auth fingerprint and face ID
-- Push notifications
-- Relative timestamps
-- Offline support with sync
-- Agent network phone management screen
-- Editable profile fields
-- Pull to refresh on all lists
-- Dark mode audit to fix hardcoded colors
-- Request card press animation
-- Tab badges showing pending counts
+### Completed
+- KYC status tracker: animated 4-step tracker in PendingScreen with Firestore onSnapshot; auto-navigates to PinSetup on approval
+- RequestDetailModal: bottom sheet with swipe-to-dismiss, full request details, sub-agent (cancel/retry) and main-agent (approve/process/reject) actions
+- RequestCard: press scale animation (0.97 on press), left border colored by sourceNetwork
+- time.js utility: timeAgo() with EN/SW support, covers seconds through years
+- useOfflineQueue hook: NetInfo-based online/offline detection, AsyncStorage queue, auto-sync on reconnect
+- Offline banners on HomeScreen, NewRequestScreen, QueueScreen (red banner when offline, green toast on sync)
+- NetworksScreen: manage all 4 networks with phone inputs, active toggles, phone validation, Firestore save
+- ProfileScreen: editable Name, Phone, BusinessLocation fields (inline edit + Firestore save); My Networks navigation
+- SubAgentNavigator: ProfileStack wrapping ProfileScreen + NetworksScreen; RequestDetailModal on HomeScreen and MyRequestsScreen
+- MainAgentNavigator: live pending-request badge on Queue tab, pending-approval badge on Approvals tab
+- HomeScreen: RefreshControl, pending count badge on My Requests quick action, offline banner
+- QueueScreen: replaced inline modal with RequestDetailModal; per-filter empty states; offline banner
+- SplashScreen: tagline fixed to "Tanzania's First Float Management System", letterSpacing 3
+- validation.js: added validatePassword, validateName; fixed NIDA to accept 19 or 20 prefix; fixed amount max to 50M TZS
+- package.json: added @react-native-community/netinfo ^11.0.0
+
+### Current Dependencies
+- expo: ~55.0.23
+- react-native: 0.83.6
+- firebase: ^12.12.1
+- @react-native-async-storage/async-storage: 2.2.0
+- @react-native-community/netinfo: ^11.0.0
+- expo-secure-store: ~55.0.13
+- expo-linear-gradient: ~55.0.13
+- expo-local-authentication: ~55.0.13
+- expo-notifications: ~55.0.22
+- react-native-chart-kit: ^6.x
+- @react-navigation/native: ^7.x
+- @react-navigation/bottom-tabs: ^7.x
+- @react-navigation/native-stack: ^7.x
+
+### Features Still To Build (Session 3)
+- Splash screen PNG logo swap (awaiting silverS.png asset)
+- Push token registration + Expo Push API for cross-device notifications
+- Biometric preference persistence via AsyncStorage
+- Pull to refresh on all lists (MyRequests, QueueScreen, etc.)
+- Dark mode audit: remaining hardcoded colors in TransfersScreen, AgentsScreen, ApprovalsScreen
+- Request card swipe-to-reject gesture (QueueScreen)
+- Hero card pulse animation (HomeScreen)
 
 ---
 
@@ -132,4 +155,4 @@ EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
 4. Sign back in → Main Agent dashboard loads
 
 ---
-Last updated: May 2025
+Last updated: May 2026

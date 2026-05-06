@@ -7,22 +7,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { submitRequest } from '../../utils/firestore';
+import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { NETWORKS, NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
 import { validatePhone, validateAmount } from '../../utils/validation';
 
 const fmt = (n) => n ? `TZS ${Number(n).toLocaleString()}` : '—';
 
-export default function NewRequestScreen({ navigation }) {
+export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { theme, tr } = useTheme();
+  const { isOnline, enqueue } = useOfflineQueue(user?.uid, profile?.name);
 
+  const prefill = route?.params?.prefill;
   const [form, setForm] = useState({
-    sourceNetwork: '',
-    destNetwork:   '',
-    sourcePhone:   '',
-    destPhone:     '',
-    amount:        '',
-    urgent:        false,
+    ...( prefill ? {
+      sourceNetwork: prefill.sourceNetwork ?? '',
+      destNetwork:   prefill.destNetwork   ?? '',
+      sourcePhone:   prefill.sourcePhone   ?? '',
+      destPhone:     prefill.destPhone     ?? '',
+      amount:        prefill.amount ? String(prefill.amount) : '',
+      urgent:        prefill.urgent ?? false,
+    } : {
+      sourceNetwork: '',
+      destNetwork:   '',
+      sourcePhone:   '',
+      destPhone:     '',
+      amount:        '',
+      urgent:        false,
+    }),
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError]     = useState('');
@@ -55,15 +67,21 @@ export default function NewRequestScreen({ navigation }) {
     const err = validate();
     if (err) return;
     setLoading(true);
+    const requestData = {
+      sourceNetwork: form.sourceNetwork,
+      destNetwork:   form.destNetwork,
+      sourcePhone:   form.sourcePhone.trim(),
+      destPhone:     form.destPhone.trim(),
+      amount:        Number(form.amount),
+      urgent:        form.urgent,
+    };
     try {
-      const id = await submitRequest(user.uid, profile.name, {
-        sourceNetwork: form.sourceNetwork,
-        destNetwork:   form.destNetwork,
-        sourcePhone:   form.sourcePhone.trim(),
-        destPhone:     form.destPhone.trim(),
-        amount:        Number(form.amount),
-        urgent:        form.urgent,
-      });
+      if (!isOnline) {
+        await enqueue(requestData);
+        setSubmitted({ requestId: 'OFFLINE-' + Date.now().toString(36).toUpperCase(), queuePos: 'queued offline' });
+        return;
+      }
+      const id = await submitRequest(user.uid, profile.name, requestData);
       setSubmitted({ requestId: id, queuePos: '~' + (Math.floor(Math.random() * 5) + 1) });
     } catch (e) {
       setError(e.message ?? tr('error'));
@@ -151,6 +169,11 @@ export default function NewRequestScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>⚠ You're offline — request will be saved and sent when connected</Text>
+        </View>
+      )}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
@@ -249,6 +272,8 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   summaryLine:  { fontSize: 14 },
   summaryAmt:   { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
+  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, alignItems: 'center' },
+  offlineText:   { color: '#fff', fontSize: 12, fontWeight: '600' },
   error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
   btn:     { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },

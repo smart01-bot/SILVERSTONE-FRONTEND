@@ -47,7 +47,7 @@ export default function SplashScreen({ onAnimationDone }) {
       </Animated.View>
       <Animated.View style={[styles.textWrap, { opacity: textOpacity }]}>
         <Text style={styles.name}>SILVERSTONE INC.</Text>
-        <Text style={styles.tagline}>Tanzania's Float Management System</Text>
+        <Text style={styles.tagline}>Tanzania's First Float Management System</Text>
       </Animated.View>
     </LinearGradient>
   );
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   tagline: {
     color: 'rgba(255,255,255,0.65)',

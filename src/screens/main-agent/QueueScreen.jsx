@@ -1,24 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { listenAllRequests, updateRequestStatus, createTransaction } from '../../utils/firestore';
+import { listenAllRequests } from '../../utils/firestore';
+import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import RequestCard from '../../components/RequestCard';
-import StatusBadge from '../../components/StatusBadge';
-import { NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
+import RequestDetailModal from '../../components/RequestDetailModal';
 
-const fmt = (n) => `TZS ${Number(n).toLocaleString()}`;
+const FILTERS = ['pending', 'approved', 'completed', 'all'];
+
+const EMPTY_ICONS = { pending: '✅', approved: '⇄', completed: '📦', all: '📭' };
+const EMPTY_MSGS  = {
+  pending:   'No pending requests',
+  approved:  'No approved requests',
+  completed: 'No completed requests',
+  all:       'No requests yet',
+};
 
 export default function QueueScreen() {
-  const { user } = useAuth();
   const { theme, tr } = useTheme();
+  const { isOnline } = useOfflineQueue();
   const [requests, setRequests] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading]   = useState(false);
   const [filter, setFilter]     = useState('pending');
 
   useEffect(() => {
@@ -30,51 +36,20 @@ export default function QueueScreen() {
     .sort((a, b) => {
       if (a.urgent && !b.urgent) return -1;
       if (!a.urgent && b.urgent) return 1;
-      return 0;
+      const ta = a.createdAt?.toMillis?.() ?? 0;
+      const tb = b.createdAt?.toMillis?.() ?? 0;
+      return tb - ta;
     });
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
-  const handleApprove = async () => {
-    if (!selected) return;
-    setLoading(true);
-    try {
-      await updateRequestStatus(selected.id, 'approved', user.uid);
-      setSelected(null);
-    } catch (e) { Alert.alert('Error', e.message); }
-    finally { setLoading(false); }
-  };
-
-  const handleProcess = async () => {
-    if (!selected) return;
-    setLoading(true);
-    try {
-      await createTransaction(selected, user.uid);
-      setSelected(null);
-    } catch (e) { Alert.alert('Error', e.message); }
-    finally { setLoading(false); }
-  };
-
-  const handleReject = async () => {
-    if (!selected) return;
-    Alert.alert('Reject Request', 'Are you sure you want to reject this request?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reject', style: 'destructive',
-        onPress: async () => {
-          setLoading(true);
-          try {
-            await updateRequestStatus(selected.id, 'rejected', user.uid);
-            setSelected(null);
-          } catch (e) { Alert.alert('Error', e.message); }
-          finally { setLoading(false); }
-        },
-      },
-    ]);
-  };
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>⚠ You're offline — live queue updates paused</Text>
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>{tr('requestQueue')}</Text>
         {pendingCount > 0 && (
@@ -83,14 +58,19 @@ export default function QueueScreen() {
           </View>
         )}
       </View>
-      <Text style={[styles.sub, { color: theme.textDim }]}>{tr('queueDesc')}</Text>
+      <Text style={[styles.sub, { color: theme.textDim }]}>
+        Urgent requests are sorted first
+      </Text>
 
       {/* Filter */}
       <View style={styles.pills}>
-        {['pending','approved','completed','all'].map(f => (
+        {FILTERS.map(f => (
           <TouchableOpacity key={f} onPress={() => setFilter(f)}
-            style={[styles.pill, { backgroundColor: filter===f ? theme.primary : theme.surfaceAlt, borderColor: filter===f ? theme.primary : theme.border }]}>
-            <Text style={[styles.pillText, { color: filter===f ? '#fff' : theme.textDim }]}>
+            style={[styles.pill, {
+              backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
+              borderColor: filter === f ? theme.primary : theme.border,
+            }]}>
+            <Text style={[styles.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>
               {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -106,66 +86,21 @@ export default function QueueScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>✅</Text>
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('queueEmpty')}</Text>
-            <Text style={[styles.emptyDesc, { color: theme.textDim }]}>{tr('queueEmptyDesc')}</Text>
+            <Text style={{ fontSize: 40 }}>{EMPTY_ICONS[filter]}</Text>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>{EMPTY_MSGS[filter]}</Text>
+            <Text style={[styles.emptyDesc, { color: theme.textDim }]}>
+              {filter === 'pending' ? 'All caught up — nothing waiting.' : ''}
+            </Text>
           </View>
         }
       />
 
-      {/* Action modal */}
-      <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelected(null)}>
-        {selected && (
-          <View style={[styles.modal, { backgroundColor: theme.surface }]}>
-            <View style={styles.modalHandle} />
-
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Process Request</Text>
-            <StatusBadge status={selected.status} />
-
-            {/* Request details */}
-            <View style={[styles.detailCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              {[
-                ['Agent',   selected.agentName],
-                ['Route',   `${selected.sourceNetwork} → ${selected.destNetwork}`],
-                ['Amount',  fmt(selected.amount)],
-                ['Source',  `${selected.sourcePhone} (${NETWORK_WALLETS[selected.sourceNetwork]})`],
-                ['Dest',    `${selected.destPhone} (${NETWORK_WALLETS[selected.destNetwork]})`],
-                ['Priority',selected.urgent ? '⚡ URGENT' : 'Normal'],
-              ].map(([label, value]) => (
-                <View key={label} style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: theme.textDim }]}>{label}</Text>
-                  <Text style={[styles.detailVal, { color: theme.text }]}>{value}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.actionBtns}>
-              {selected.status === 'pending' && (
-                <TouchableOpacity onPress={handleApprove} disabled={loading}
-                  style={[styles.actionBtn, { backgroundColor: theme.info ?? '#0891B2' }]}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>✓ {tr('approve')}</Text>}
-                </TouchableOpacity>
-              )}
-              {(selected.status === 'pending' || selected.status === 'approved') && (
-                <TouchableOpacity onPress={handleProcess} disabled={loading}
-                  style={[styles.actionBtn, { backgroundColor: theme.primary }]}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>⇄ {tr('processTransfer')}</Text>}
-                </TouchableOpacity>
-              )}
-              {selected.status === 'pending' && (
-                <TouchableOpacity onPress={handleReject} disabled={loading}
-                  style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}>
-                  <Text style={styles.actionBtnText}>✕ {tr('reject')}</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={() => setSelected(null)}
-                style={[styles.actionBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, borderWidth: 1 }]}>
-                <Text style={[styles.actionBtnText, { color: theme.textDim }]}>{tr('cancel')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </Modal>
+      <RequestDetailModal
+        request={selected}
+        visible={!!selected}
+        onClose={() => setSelected(null)}
+        role="main-agent"
+      />
     </SafeAreaView>
   );
 }
@@ -181,17 +116,9 @@ const styles = StyleSheet.create({
   pill:   { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
   pillText: { fontSize: 12, fontWeight: '600' },
   list:   { padding: 16, gap: 10, paddingBottom: 100 },
+  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, alignItems: 'center' },
+  offlineText:   { color: '#fff', fontSize: 12, fontWeight: '600' },
   empty:  { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyTitle: { fontSize: 16, fontWeight: '700' },
   emptyDesc:  { fontSize: 14, textAlign: 'center' },
-  modal:  { flex: 1, padding: 24, gap: 16, borderRadius: 20 },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5E5', alignSelf: 'center', marginBottom: 8 },
-  modalTitle: { fontSize: 22, fontWeight: '800' },
-  detailCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  detailRow:  { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#00000008' },
-  detailLabel:{ fontSize: 13 },
-  detailVal:  { fontSize: 13, fontWeight: '600', flex: 1, textAlign: 'right' },
-  actionBtns: { gap: 10 },
-  actionBtn:  { borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
