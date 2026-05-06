@@ -134,9 +134,32 @@ Status: Complete
 
 ---
 
+## Session 3 — Critical Reset
+Date: May 2026
+Status: Complete
+
+### Changes
+- Expo downgraded from 55 to 51 (most stable for standalone APK builds)
+- expo-dev-client removed — was causing Expo Go login screen on launch
+- All dependencies updated to Expo 51 compatible versions
+- eas.json updated: all profiles now build standalone APK (developmentClient: false, buildType: apk)
+- app.json: added android.versionCode: 1
+- Node version locked to 20.19.4 via .nvmrc and .node-version
+- package.json engines field added: node >=20.19.4
+- npm scripts updated to include nvm setup inline
+
+### Root Cause of Expo Go Screen
+eas.json had developmentClient: true in the development profile.
+This flags the build to expect a running Metro server and shows
+the Expo Go login screen instead of launching the app directly.
+Fix: developmentClient: false + buildType: apk in all profiles.
+
+---
+
 ## How To Run
-Start dev server: unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && npm start
-Build Android APK: eas build --profile development --platform android
+Start dev server: npm start
+Build preview APK: npm run build:android
+Build dev APK: npm run build:dev
 Deploy Firestore rules: firebase deploy --only firestore:rules,firestore:indexes
 
 ## Environment Variables
