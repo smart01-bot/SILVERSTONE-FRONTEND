@@ -147,6 +147,7 @@ Status: Complete
 - Node version locked to 20.19.4 via .nvmrc and .node-version
 - package.json engines field added: node >=20.19.4
 - npm scripts updated to include nvm setup inline
+- Deleted orphaned src/firebase/firestore.js — was importing db from ./config (non-existent); canonical file is src/utils/firestore.js
 
 ### Root Cause of Expo Go Screen
 eas.json had developmentClient: true in the development profile.
