@@ -179,4 +179,20 @@ EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
 4. Sign back in → Main Agent dashboard loads
 
 ---
+
+## Session 4 — Firebase APK Crash Fix
+Date: May 2026
+Status: Complete
+
+### Problem
+Android APK crashed immediately on launch with "Silverstone keeps stopping".
+Root cause: `auth/invalid-api-key` — `EXPO_PUBLIC_*` env vars are not embedded
+into standalone APK builds by EAS; `process.env` reads return undefined at runtime.
+
+### Fix
+- `app.json` → added all Firebase config values to `expo.extra` (embedded at build time)
+- `src/config/firebase.js` → switched from `process.env` to `Constants.expoConfig.extra`
+- `package.json` → added `expo-constants: ~16.0.0` as explicit dependency
+
+---
 Last updated: May 2026
