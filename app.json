@@ -20,7 +20,17 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      ["expo-notifications", { "color": "#D32F2F" }]
+      [
+        "expo-notifications",
+        {
+          "color": "#D32F2F"
+        }
+      ]
     ],
+    "extra": {
+      "eas": {
+        "projectId": "469e0366-de37-46ba-9b05-d70be2c18124"
+      }
+    }
   }
 }
