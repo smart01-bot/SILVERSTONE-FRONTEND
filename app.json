@@ -12,7 +12,8 @@
       "adaptiveIcon": {
         "backgroundColor": "#D32F2F"
       },
-      "package": "com.silverstone.floatmanager"
+      "package": "com.silverstone.floatmanager",
+      "versionCode": 1
     },
     "ios": {
       "bundleIdentifier": "com.silverstone.floatmanager"
