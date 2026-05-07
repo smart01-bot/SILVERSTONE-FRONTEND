@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Silverstone",
-    "slug": "silverstone",
+    "slug": "67",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -34,7 +34,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "469e0366-de37-46ba-9b05-d70be2c18124"
+        "projectId": "dfe8b6fe-376a-47e8-a1ec-68df9a0d09b6"
       },
       "firebaseApiKey": "AIzaSyCvD5JbWjzEEF2CbG5r8_YkvoRaY3X9qpA",
       "firebaseAuthDomain": "silverstone-frontend.firebaseapp.com",
@@ -42,6 +42,7 @@
       "firebaseStorageBucket": "silverstone-frontend.firebasestorage.app",
       "firebaseMessagingSenderId": "197875724216",
       "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d"
-    }
+    },
+    "owner": "dev.05"
   }
 }
