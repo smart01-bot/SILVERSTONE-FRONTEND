@@ -5,7 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/silverS.png",
     "splash": {
+      "image": "./assets/silverS.png",
+      "resizeMode": "contain",
       "backgroundColor": "#D32F2F"
     },
     "android": {
