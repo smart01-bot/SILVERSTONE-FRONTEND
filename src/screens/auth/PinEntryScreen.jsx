@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, Vibration,
+  ScrollView, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { checkLockout, recordFailedAttempt, clearLockout } from '../../utils/pinLockout';
 
@@ -17,16 +17,15 @@ const DIGITS = [
   ['bio','0','⌫'],
 ];
 
-export default function PinEntryScreen({ navigation, isSessionUnlock = false }) {
-  const { profile, verifyPin, unlockSession, logout, resetPin } = useAuth();
+export default function PinEntryScreen({ isSessionUnlock = false, onForgotPin }) {
+  const { profile, verifyPin, unlockSession, logout } = useAuth();
   const { theme } = useTheme();
 
-  const [pin,             setPin]             = useState('');
-  const [error,           setError]           = useState('');
-  const [attemptsLeft,    setAttemptsLeft]    = useState(null);
-  const [lockedUntil,     setLockedUntil]     = useState(null);
-  const [countdown,       setCountdown]       = useState('');
-  const [bioAvailable,    setBioAvailable]    = useState(false);
+  const [pin,          setPin]          = useState('');
+  const [error,        setError]        = useState('');
+  const [lockedUntil,  setLockedUntil]  = useState(null);
+  const [countdown,    setCountdown]    = useState('');
+  const [bioAvailable, setBioAvailable] = useState(false);
 
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
 
@@ -45,11 +44,11 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
   useEffect(() => {
     (async () => {
       const status = await checkLockout();
-      if (status.locked) setLockedUntil(status.lockUntil);
+      if (status.locked) setLockedUntil(Date.now() + status.remaining);
     })();
   }, []);
 
-  // ── Countdown timer while locked ─────────────────────────
+  // ── Countdown timer ───────────────────────────────────────
   useEffect(() => {
     if (!lockedUntil) return;
     const tick = () => {
@@ -86,14 +85,12 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
     const result = await recordFailedAttempt();
     if (result.locked) {
       setLockedUntil(result.lockUntil);
-      setAttemptsLeft(null);
       setError('Too many attempts. Locked for 30 minutes.');
     } else {
-      setAttemptsLeft(result.attemptsRemaining);
       setError(
-        result.attemptsRemaining === 1
+        result.remaining === 1
           ? 'Incorrect PIN. 1 attempt remaining.'
-          : `Incorrect PIN. ${result.attemptsRemaining} attempts remaining.`
+          : `Incorrect PIN. ${result.remaining} attempts remaining.`
       );
     }
   }, [lockedUntil, verifyPin, unlockSession]);
@@ -130,27 +127,6 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
     }
   };
 
-  // ── Forgot PIN ────────────────────────────────────────────
-  const handleForgotPin = () => {
-    if (isSessionUnlock) {
-      // Inside the lock overlay — navigate within LockStack
-      navigation?.navigate('ForgotPin');
-    } else {
-      // Should not occur in current routing (session overlay handles everything)
-      Alert.alert('Reset PIN', 'Sign out to reset your PIN.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: logout },
-      ]);
-    }
-  };
-
-  const handleSwitchAccount = () => {
-    Alert.alert('Sign Out', 'Sign out of this account?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: logout },
-    ]);
-  };
-
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: theme.bg }]}>
       <ScrollView
@@ -166,7 +142,7 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
         </View>
 
         <Text style={[styles.greeting, { color: theme.text }]}>Welcome back, {firstName}</Text>
-        <Text style={[styles.sub, { color: theme.textDim }]}>Enter your 4-digit PIN</Text>
+        <Text style={[styles.sub, { color: theme.textDim }]}>Enter your PIN</Text>
 
         {/* PIN boxes */}
         <View style={styles.boxes}>
@@ -212,10 +188,7 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
                       },
                     ]}
                   >
-                    <Text style={[
-                      styles.keyText,
-                      { color: d === '⌫' || isBio ? theme.primary : theme.text },
-                    ]}>
+                    <Text style={[styles.keyText, { color: d === '⌫' || isBio ? theme.primary : theme.text }]}>
                       {isBio ? (bioAvailable ? '⊙' : '') : d}
                     </Text>
                   </TouchableOpacity>
@@ -226,37 +199,42 @@ export default function PinEntryScreen({ navigation, isSessionUnlock = false }) 
         </View>
 
         {/* Links */}
-        <TouchableOpacity onPress={handleForgotPin} style={{ marginTop: 16 }}>
+        <TouchableOpacity onPress={onForgotPin} style={{ marginTop: 16 }}>
           <Text style={{ color: theme.textDim, fontSize: 13 }}>
             Forgot PIN?{'  '}
             <Text style={{ color: theme.primary, fontWeight: '600' }}>Reset PIN</Text>
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleSwitchAccount} style={{ marginTop: 8 }}>
-          <Text style={{ color: theme.textDim, fontSize: 13 }}>
-            Not {firstName}?{'  '}
-            <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text>
-          </Text>
-        </TouchableOpacity>
+        {!isSessionUnlock && (
+          <TouchableOpacity
+            onPress={() => logout()}
+            style={{ marginTop: 8 }}
+          >
+            <Text style={{ color: theme.textDim, fontSize: 13 }}>
+              Not {firstName}?{'  '}
+              <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  inner:   { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
-  avatar:  { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 32, fontWeight: '700' },
-  greeting:{ fontSize: 22, fontWeight: '700', textAlign: 'center' },
-  sub:     { fontSize: 14, textAlign: 'center' },
-  boxes:   { flexDirection: 'row', gap: 14, marginVertical: 4 },
-  box:     { width: 56, height: 56, borderRadius: 10, borderWidth: 2 },
-  error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
-  pad:     { gap: 12, alignItems: 'center' },
+  safe:        { flex: 1 },
+  inner:       { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
+  avatar:      { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  avatarText:  { fontSize: 32, fontWeight: '700' },
+  greeting:    { fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  sub:         { fontSize: 14, textAlign: 'center' },
+  boxes:       { flexDirection: 'row', gap: 14, marginVertical: 4 },
+  box:         { width: 56, height: 56, borderRadius: 10, borderWidth: 2 },
+  error:       { color: '#DC2626', fontSize: 13, textAlign: 'center' },
+  pad:         { gap: 12, alignItems: 'center' },
   padDisabled: { opacity: 0.4 },
-  row:     { flexDirection: 'row', gap: 12 },
-  key:     { width: 80, height: 80, borderRadius: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  keyText: { fontSize: 26, fontWeight: '500', fontFamily: 'Courier New' },
+  row:         { flexDirection: 'row', gap: 12 },
+  key:         { width: 80, height: 80, borderRadius: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  keyText:     { fontSize: 26, fontWeight: '500', fontFamily: 'Courier New' },
 });

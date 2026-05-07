@@ -16,15 +16,16 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const LAST_ACTIVE_KEY = 'silverstone_last_active';
 
 const AuthContext = createContext({});
-export const useAuth  = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
-  const [user,           setUser]           = useState(null);
-  const [profile,        setProfile]        = useState(null);
-  const [authLoading,    setAuthLoading]    = useState(true);
-  const [sessionLocked,  setSessionLocked]  = useState(false);
+  const [user,          setUser]          = useState(null);
+  const [profile,       setProfile]       = useState(null);
+  const [authLoading,   setAuthLoading]   = useState(true);
+  const [sessionLocked, setSessionLocked] = useState(false);
 
   const profileUnsubRef       = useRef(null);
   const hasInitializedSession = useRef(false);
@@ -33,10 +34,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (nextState === 'active') {
-        const saved   = await AsyncStorage.getItem('silverstone_last_active');
+        const saved   = await AsyncStorage.getItem(LAST_ACTIVE_KEY);
         const elapsed = saved ? Date.now() - parseInt(saved, 10) : 0;
         if (elapsed > SESSION_TIMEOUT) {
-          // Only lock if there is an authenticated user with a PIN
+          // Read current state via nested setState to avoid stale closure
           setUser(prev => {
             setProfile(prof => {
               if (prev && prof?.pinSet) setSessionLocked(true);
@@ -45,9 +46,9 @@ export function AuthProvider({ children }) {
             return prev;
           });
         }
-        await AsyncStorage.setItem('silverstone_last_active', Date.now().toString());
+        await AsyncStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
       } else {
-        await AsyncStorage.setItem('silverstone_last_active', Date.now().toString());
+        await AsyncStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
       }
     });
     return () => sub.remove();
@@ -69,7 +70,7 @@ export function AuthProvider({ children }) {
               const data = snap.data();
               setProfile({ id: snap.id, ...data });
 
-              // Lock session on first profile load if PIN already configured
+              // Lock session only on first profile load per auth session
               if (!hasInitializedSession.current) {
                 hasInitializedSession.current = true;
                 if (data.pinSet === true) setSessionLocked(true);
@@ -98,12 +99,12 @@ export function AuthProvider({ children }) {
     const agentDoc = {
       uid, name, phone, email,
       businessName, businessLocation, regNo, tin, nida,
-      role:             'sub-agent',
-      status:           'pending',
-      pinSet:           false,
-      networks:         [],
-      agentPhoneNumbers:{},
-      createdAt:        serverTimestamp(),
+      role:              'sub-agent',
+      status:            'pending',
+      pinSet:            false,
+      networks:          [],
+      agentPhoneNumbers: {},
+      createdAt:         serverTimestamp(),
     };
     await setDoc(doc(db, 'agents', uid), agentDoc);
     return agentDoc;
@@ -144,7 +145,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Clears PIN without signing out (used by Forgot PIN flow)
+  // Clears PIN without signing out
   const resetPin = async () => {
     if (!user) return;
     try {
@@ -161,7 +162,7 @@ export function AuthProvider({ children }) {
     hasInitializedSession.current = false;
     try {
       if (user?.uid) await SecureStore.deleteItemAsync(pinKey(user.uid));
-      await AsyncStorage.removeItem('silverstone_last_active');
+      await AsyncStorage.removeItem(LAST_ACTIVE_KEY);
     } catch {}
     if (profileUnsubRef.current) profileUnsubRef.current();
     setUser(null);

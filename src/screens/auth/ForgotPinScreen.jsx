@@ -4,15 +4,16 @@ import {
   ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function ForgotPinScreen({ navigation }) {
-  const { user, login, resetPin, unlockSession } = useAuth();
+export default function ForgotPinScreen({ onBack }) {
+  const { user, login, resetPin } = useAuth();
   const { theme } = useTheme();
+
   const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const handleVerify = async () => {
     if (!password.trim()) { setError('Please enter your password.'); return; }
@@ -21,8 +22,7 @@ export default function ForgotPinScreen({ navigation }) {
     try {
       await login(user.email, password);
       await resetPin();
-      unlockSession();
-      // sessionLocked=false + pinExists=false → AppNavigator routes to PinSetup
+      // pinSet=false + pinExists=false → overlay condition false → PinSetupScreen shown automatically
     } catch (e) {
       const msg = e.message?.replace('Firebase: ', '') ?? 'Verification failed.';
       if (
@@ -41,14 +41,14 @@ export default function ForgotPinScreen({ navigation }) {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={[styles.inner, { paddingBottom: 60 }]}
+          contentContainerStyle={[styles.inner, { paddingBottom: 80 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.topRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Text style={{ color: theme.primary, fontSize: 16, fontWeight: '600' }}>‹ Back</Text>
             </TouchableOpacity>
           </View>
@@ -91,7 +91,7 @@ export default function ForgotPinScreen({ navigation }) {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnText}>Verify & Reset PIN</Text>}
+              : <Text style={styles.btnText}>Verify Identity</Text>}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
