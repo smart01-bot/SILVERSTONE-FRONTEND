@@ -28,7 +28,7 @@ export default function PinSetupScreen({ navigation }) {
     }
     try {
       await savePin(pin);
-      navigation.replace('App');
+      // AppNavigator re-routes automatically once profile.pinSet becomes true
     } catch (e) {
       Alert.alert('Error', e.message);
     }
