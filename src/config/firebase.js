@@ -4,23 +4,20 @@ import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-const {
-  firebaseApiKey,
-  firebaseAuthDomain,
-  firebaseProjectId,
-  firebaseStorageBucket,
-  firebaseMessagingSenderId,
-  firebaseAppId,
-} = Constants.expoConfig.extra;
+const extra = Constants.expoConfig?.extra ?? {};
 
 const firebaseConfig = {
-  apiKey:            firebaseApiKey,
-  authDomain:        firebaseAuthDomain,
-  projectId:         firebaseProjectId,
-  storageBucket:     firebaseStorageBucket,
-  messagingSenderId: firebaseMessagingSenderId,
-  appId:             firebaseAppId,
+  apiKey:            extra.firebaseApiKey,
+  authDomain:        extra.firebaseAuthDomain,
+  projectId:         extra.firebaseProjectId,
+  storageBucket:     extra.firebaseStorageBucket,
+  messagingSenderId: extra.firebaseMessagingSenderId,
+  appId:             extra.firebaseAppId,
 };
+
+if (!firebaseConfig.apiKey) {
+  throw new Error('Firebase config missing. Check app.json extra field.');
+}
 
 const app = initializeApp(firebaseConfig);
 

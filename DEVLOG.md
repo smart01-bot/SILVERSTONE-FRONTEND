@@ -195,4 +195,18 @@ into standalone APK builds by EAS; `process.env` reads return undefined at runti
 - `package.json` → added `expo-constants: ~16.0.0` as explicit dependency
 
 ---
+
+## Session 5 — Hardened Firebase Config + ErrorBoundary
+Date: May 2026
+Status: Complete
+
+### Changes
+- `app.json`: bumped `android.versionCode` to 2
+- `src/config/firebase.js`: switched to optional chaining (`Constants.expoConfig?.extra ?? {}`) and added guard throw if `apiKey` is missing — surfaces the real error instead of a silent crash
+- `App.js`: wrapped entire app in `ErrorBoundary` class component — shows readable error message + stack trace + Retry button instead of blank "keeps stopping" crash screen
+
+### Why
+APK was crashing silently with no visible error. ErrorBoundary surfaces the actual exception so future crashes are debuggable from the device screen alone.
+
+---
 Last updated: May 2026
