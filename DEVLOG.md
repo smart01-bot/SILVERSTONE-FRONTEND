@@ -312,4 +312,59 @@ Dashboard → Sign Out → SecureStore cleared + signOut + sessionUnlocked=false
   user goes Forgot PIN → new PIN → dashboard without re-entering email
 
 ---
+
+## Session 10 — Complete Login Flow Redesign
+Date: May 2026
+Status: Complete
+
+### Auth Flows
+
+**First time:**
+Register → Pending (real-time status via onSnapshot) → Approved → PinSetup (4-digit) → Dashboard
+
+**Returning user, backgrounded < 5 min:**
+App resumes → sessionLocked=false → straight to Dashboard (no PIN)
+
+**Returning user, app killed or backgrounded > 5 min:**
+App opens → onSnapshot fires → pinSet=true → sessionLocked=true → LockStack overlay (PinEntryScreen) → correct PIN or biometric → unlockSession() → Dashboard
+
+**Forgot PIN (inside lock overlay):**
+PinEntryScreen → "Forgot PIN?" → ForgotPinScreen (in LockStack) → enter password → login(email, password) to verify → resetPin() clears SecureStore + sets pinSet=false → unlockSession() → AppNavigator sees sessionLocked=false + pinExists=false → routes to PinSetup → new PIN → unlockSession() → Dashboard (never signed out)
+
+**Logout:**
+Any screen → Sign Out → SecureStore + AsyncStorage cleared + signOut → Email login screen
+
+**Rejected account:**
+status=rejected in Firestore → AppNavigator routes to RejectedScreen → contact support or sign out
+
+### Changes
+
+- `src/utils/pinLockout.js` — NEW: 3 failed attempts → 30-min lockout stored in AsyncStorage; exports `recordFailedAttempt`, `checkLockout`, `clearLockout`
+
+- `src/context/AuthContext.jsx` — REWRITE: uses `onSnapshot` real-time listener (not getDoc); `profileUnsubRef` ref for cleanup; `hasInitializedSession` ref prevents re-locking on profile updates; `sessionLocked` replaces `sessionUnlocked`; removed `reauthenticate`, `resetPinOnly`, `markSessionUnlocked`, `hasPinSet`; added `checkPinExists()`, `resetPin()` (no sign-out), `unlockSession()`; AppState listener uses AsyncStorage timestamp; authLoading covers both auth + first profile load
+
+- `src/navigation/AppNavigator.jsx` — REWRITE: `LockStack` created at file level; when `sessionLocked=true` renders independent `NavigationContainer` with PinEntryScreen + ForgotPinScreen; `getScreen()` returns auth|pending|rejected|pinSetup|subAgent|mainAgent (no pinEntry route — overlay handles all PIN gating)
+
+- `src/navigation/AuthNavigator.jsx` — UPDATED: added `Rejected` screen; removed `ForgotPin` and `PinEntry` (now in LockStack); accepts `initialRouteName` prop
+
+- `src/screens/auth/PinEntryScreen.jsx` — NEW: 4-digit PIN, square boxes (56×56, borderRadius 10); inline custom keypad; biometric support; lockout countdown; `isSessionUnlock` prop navigates to ForgotPin within LockStack; `unlockSession()` on success
+
+- `src/screens/auth/ForgotPinScreen.jsx` — REWRITE: uses `login(user.email, password)` + `resetPin()` + `unlockSession()` (removed `reauthenticate`/`resetPinOnly`)
+
+- `src/screens/auth/PinSetupScreen.jsx` — UPDATED: PIN length changed 6→4; calls `unlockSession()` after `savePin()` (was `markSessionUnlocked`)
+
+- `src/screens/auth/PinLoginScreen.jsx` — STRIPPED: removed all PIN mode logic (PinPad, verifyPin, biometric, handleForgotPin); now email/password form only; AppNavigator + LockStack handle all PIN gating
+
+- `src/screens/auth/PendingScreen.jsx` — UPDATED: removed own Firestore `onSnapshot` listener; reads `profile` from AuthContext (already real-time); removed `navigation.replace('PinSetup')` — AppNavigator handles routing on status change
+
+- `src/screens/auth/RejectedScreen.jsx` — NEW: rejection message, contact support link, sign out button
+
+### Key Design Decisions
+- `sessionLocked` boolean is the single source of truth for PIN gating — starts false, set true on first profile load if `pinSet=true`, also set true by AppState if >5 min background; `unlockSession()` sets it false
+- `hasInitializedSession` ref (not state) prevents every subsequent Firestore update from re-locking the session
+- LockStack uses `independent` NavigationContainer so it works as a full-screen overlay over whichever main navigator is active without routing conflicts
+- PendingScreen no longer manages its own snapshot — AuthContext's listener is already real-time, so AppNavigator re-renders automatically when `profile.status` changes to approved
+- Forgot PIN stays authenticated (re-verify password via `login()`, not `reauthenticate()`) — user goes directly to PinSetup then Dashboard without seeing the login screen
+
+---
 Last updated: May 2026

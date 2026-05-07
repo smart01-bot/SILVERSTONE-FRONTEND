@@ -5,10 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import PinPad from '../../components/PinPad';
 
-export default function PinSetupScreen({ navigation }) {
-  const { savePin, profile, markSessionUnlocked } = useAuth();
+export default function PinSetupScreen() {
+  const { savePin, profile, unlockSession } = useAuth();
   const { theme, tr } = useTheme();
-  const [stage, setStage]       = useState('create');  // create | confirm
+  const [stage, setStage]       = useState('create');
   const [firstPin, setFirstPin] = useState('');
   const [error, setError]       = useState('');
 
@@ -19,7 +19,6 @@ export default function PinSetupScreen({ navigation }) {
       setStage('confirm');
       return;
     }
-    // Confirm stage
     if (pin !== firstPin) {
       setError(tr('pinMismatch'));
       setStage('create');
@@ -28,7 +27,7 @@ export default function PinSetupScreen({ navigation }) {
     }
     try {
       await savePin(pin);
-      markSessionUnlocked(); // newly created PIN = session unlocked, go straight to dashboard
+      unlockSession();
     } catch (e) {
       Alert.alert('Error', e.message);
     }
@@ -45,7 +44,7 @@ export default function PinSetupScreen({ navigation }) {
           {stage === 'create' ? tr('createPinDesc') : `Hi ${profile?.name?.split(' ')[0]}, re-enter your PIN`}
         </Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PinPad length={6} onComplete={handlePin} />
+        <PinPad length={4} onComplete={handlePin} />
       </View>
     </SafeAreaView>
   );

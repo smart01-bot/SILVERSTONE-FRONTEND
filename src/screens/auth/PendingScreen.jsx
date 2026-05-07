@@ -1,18 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const STEPS = [
-  { key: 'received',     label: 'Application Received',  labelSw: 'Maombi Yamepokelewa' },
-  { key: 'identity',     label: 'Identity Verification', labelSw: 'Uthibitishaji wa Utambulisho' },
-  { key: 'review',       label: 'Admin Review',          labelSw: 'Ukaguzi wa Msimamizi' },
-  { key: 'activated',    label: 'Account Activated',     labelSw: 'Akaunti Imewashwa' },
+  { key: 'received',  label: 'Application Received',  labelSw: 'Maombi Yamepokelewa' },
+  { key: 'identity',  label: 'Identity Verification', labelSw: 'Uthibitishaji wa Utambulisho' },
+  { key: 'review',    label: 'Admin Review',          labelSw: 'Ukaguzi wa Msimamizi' },
+  { key: 'activated', label: 'Account Activated',     labelSw: 'Akaunti Imewashwa' },
 ];
 
 function StepIcon({ state, color, pulseAnim }) {
@@ -37,13 +35,14 @@ function StepIcon({ state, color, pulseAnim }) {
   );
 }
 
-export default function PendingScreen({ navigation }) {
-  const { logout, profile, user } = useAuth();
+export default function PendingScreen() {
+  const { logout, profile } = useAuth();
   const { theme, lang, tr } = useTheme();
-  const [agentStatus, setAgentStatus] = useState(profile?.status ?? 'pending');
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Pulse animation for active step
+  // AppNavigator watches profile.status via onSnapshot — no local listener needed.
+  // When status changes to 'approved', AppNavigator routes away automatically.
+
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -55,28 +54,12 @@ export default function PendingScreen({ navigation }) {
     return () => loop.stop();
   }, []);
 
-  // Listen to agent doc — navigate when approved
-  useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = onSnapshot(doc(db, 'agents', user.uid), (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      setAgentStatus(data.status);
-      if (data.status === 'approved') {
-        unsub();
-        navigation.replace('PinSetup');
-      }
-    });
-    return unsub;
-  }, [user?.uid]);
-
-  // Derive which step index is current
-  // 0=received(always done), 1=identity(in-progress), 2=review(waiting), 3=activated(waiting/done)
-  const doneCount = agentStatus === 'approved' ? 4 : 1;
+  const agentStatus = profile?.status ?? 'pending';
+  const doneCount   = agentStatus === 'approved' ? 4 : 1;
 
   const getState = (idx) => {
-    if (idx < doneCount)      return 'done';
-    if (idx === doneCount)     return 'active';
+    if (idx < doneCount)  return 'done';
+    if (idx === doneCount) return 'active';
     return 'waiting';
   };
 
@@ -101,11 +84,10 @@ export default function PendingScreen({ navigation }) {
           {profile?.name ?? 'Agent'}
         </Text>
 
-        {/* KYC Tracker */}
         <View style={[styles.tracker, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           {STEPS.map((step, idx) => {
-            const state = getState(idx);
-            const color = stepColor(state);
+            const state  = getState(idx);
+            const color  = stepColor(state);
             const isLast = idx === STEPS.length - 1;
             return (
               <View key={step.key}>
@@ -150,7 +132,7 @@ export default function PendingScreen({ navigation }) {
         </Text>
 
         <TouchableOpacity
-          onPress={async () => { await logout(); navigation.replace('PinLogin'); }}
+          onPress={logout}
           style={[styles.btn, { backgroundColor: theme.primary }]}
         >
           <Text style={styles.btnText}>{tr('goToLogin')}</Text>
@@ -174,13 +156,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
   name:  { fontSize: 16, fontWeight: '700', textAlign: 'center', marginTop: -8 },
 
-  tracker: {
-    width: '100%', borderRadius: 16, borderWidth: 1,
-    padding: 20, gap: 0,
-  },
-  stepRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4,
-  },
+  tracker: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, gap: 0 },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 },
   stepCircle: {
     width: 32, height: 32, borderRadius: 16, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',

@@ -8,23 +8,21 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function ForgotPinScreen({ navigation }) {
-  const { user, reauthenticate, resetPinOnly } = useAuth();
+  const { user, login, resetPin, unlockSession } = useAuth();
   const { theme } = useTheme();
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
   const handleVerify = async () => {
-    if (!password.trim()) {
-      setError('Please enter your password.');
-      return;
-    }
+    if (!password.trim()) { setError('Please enter your password.'); return; }
     setError('');
     setLoading(true);
     try {
-      await reauthenticate(password);
-      await resetPinOnly();
-      // profile.pinSet is now false — AppNavigator automatically routes to PinSetup
+      await login(user.email, password);
+      await resetPin();
+      unlockSession();
+      // sessionLocked=false + pinExists=false → AppNavigator routes to PinSetup
     } catch (e) {
       const msg = e.message?.replace('Firebase: ', '') ?? 'Verification failed.';
       if (
@@ -59,9 +57,9 @@ export default function ForgotPinScreen({ navigation }) {
             <Text style={{ fontSize: 36 }}>🔐</Text>
           </View>
 
-          <Text style={[styles.title, { color: theme.text }]}>Verify Identity</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Reset Your PIN</Text>
           <Text style={[styles.sub, { color: theme.textDim }]}>
-            Enter your password to confirm it's you. You'll then create a new PIN.
+            Enter your password to verify your identity. You'll then create a new PIN.
           </Text>
 
           <View style={{ width: '100%', gap: 10 }}>
