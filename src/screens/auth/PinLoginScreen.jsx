@@ -12,7 +12,7 @@ import Logo from '../../components/Logo';
 
 export default function PinLoginScreen({ navigation }) {
   const { user, profile, verifyPin, logout, resetPin, login } = useAuth();
-  const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
+  const { theme, lang, setLang, tr } = useTheme();
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
   const [loading, setLoading]           = useState(false);
@@ -105,12 +105,6 @@ export default function PinLoginScreen({ navigation }) {
                 <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={[styles.themeBtn, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}
-            >
-              <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
-            </TouchableOpacity>
           </View>
 
           {user && profile ? (
@@ -219,7 +213,6 @@ const styles = StyleSheet.create({
   brandGroup: { flexDirection: 'row', alignItems: 'center' },
   brand:      { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
   tagline:    { fontSize: 11, marginTop: 2 },
-  themeBtn:   { borderWidth: 1, borderRadius: 20, padding: 8 },
   avatar:     { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 32, fontWeight: '700' },
   greeting:   { fontSize: 22, fontWeight: '700', textAlign: 'center' },

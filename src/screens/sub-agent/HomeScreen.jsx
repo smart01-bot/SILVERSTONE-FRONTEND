@@ -21,7 +21,7 @@ const fmtK = (n) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1000 
 
 export default function HomeScreen({ navigation }) {
   const { user, profile } = useAuth();
-  const { theme, isDark, toggleTheme, tr } = useTheme();
+  const { theme, tr } = useTheme();
   const { isOnline, syncing, syncedCount } = useOfflineQueue(user?.uid, profile?.name);
 
   const [requests, setRequests]   = useState([]);
@@ -101,9 +101,6 @@ export default function HomeScreen({ navigation }) {
             <Text style={[styles.name, { color: theme.text }]}>{firstName} 👋</Text>
           </View>
           <View style={styles.topActions}>
-            <TouchableOpacity onPress={toggleTheme} style={[styles.iconBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text>{isDark ? '☀️' : '🌙'}</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
               <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 16 }}>{firstName[0]}</Text>
             </TouchableOpacity>
@@ -263,7 +260,6 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13 },
   name:   { fontSize: 20, fontWeight: '700', marginTop: 2 },
   topActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  iconBtn: { borderWidth: 1, borderRadius: 20, padding: 8 },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   hero: { borderRadius: 20, padding: 20, gap: 8 },
   heroTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

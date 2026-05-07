@@ -18,7 +18,7 @@ const EDITABLE_FIELDS = [
 
 export default function ProfileScreen({ navigation }) {
   const { profile, logout, user } = useAuth();
-  const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
+  const { theme, setTheme, userPreference, lang, setLang, tr } = useTheme();
 
   const [editKey, setEditKey]   = useState(null);
   const [editVal, setEditVal]   = useState('');
@@ -136,12 +136,25 @@ export default function ProfileScreen({ navigation }) {
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: theme.text }]}>🎨 Theme</Text>
-            <TouchableOpacity onPress={toggleTheme}
-              style={[styles.toggleBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text style={{ color: theme.textDim, fontWeight: '600', fontSize: 13 }}>
-                {isDark ? '☀️ Light' : '🌙 Dark'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.themeOptions}>
+              {['auto', 'light', 'dark'].map((option) => {
+                const active = (userPreference ?? 'auto') === option;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => setTheme(option)}
+                    style={[
+                      styles.themeOptionBtn,
+                      { backgroundColor: active ? theme.primary : theme.surfaceAlt, borderColor: theme.border },
+                    ]}
+                  >
+                    <Text style={{ color: active ? '#fff' : theme.textDim, fontSize: 12, fontWeight: '600' }}>
+                      {option === 'auto' ? '📱 Auto' : option === 'light' ? '☀️ Light' : '🌙 Dark'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <View style={styles.row}>
@@ -215,7 +228,8 @@ const styles = StyleSheet.create({
 
   row:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
   rowLabel:   { fontSize: 15, fontWeight: '600' },
-  toggleBtn:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  themeOptions:   { flexDirection: 'row', gap: 6 },
+  themeOptionBtn: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   langRow:    { flexDirection: 'row', gap: 6 },
   langBtn:    { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
   divider:    { height: 1 },

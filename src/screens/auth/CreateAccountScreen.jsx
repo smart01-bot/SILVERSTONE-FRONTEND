@@ -14,7 +14,7 @@ const STEPS = 3;
 
 export default function CreateAccountScreen({ navigation }) {
   const { register } = useAuth();
-  const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
+  const { theme, lang, setLang, tr } = useTheme();
 
   const [step, setStep]       = useState(1);
   const [loading, setLoading] = useState(false);
@@ -106,9 +106,6 @@ export default function CreateAccountScreen({ navigation }) {
                 <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={toggleTheme} style={[styles.themeBtn, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}>
-              <Text style={{ color: theme.textDim, fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Step indicator */}
@@ -239,7 +236,6 @@ const styles = StyleSheet.create({
   brandGroup: { flexDirection: 'row', alignItems: 'center' },
   brand:      { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
   tagline:    { fontSize: 12, marginTop: 2 },
-  themeBtn:   { borderWidth: 1, borderRadius: 20, padding: 8 },
   stepRow:    { flexDirection: 'row', gap: 6, marginBottom: 8 },
   stepDot:    { flex: 1, height: 4, borderRadius: 2 },
   stepLabel:  { fontSize: 13, marginBottom: 20 },
