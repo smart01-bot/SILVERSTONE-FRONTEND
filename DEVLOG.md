@@ -263,4 +263,53 @@ Status: Complete
 - SplashScreen continues to use `isDark` for gradient (no change needed)
 
 ---
+
+## Session 9 — Full Auth Flow: 5-Min Lock + Forgot PIN
+Date: May 2026
+Status: Complete
+
+### Auth Flows Implemented
+
+**First time:**
+Register → Pending → Approved (admin sets Firestore) → PinSetup → Dashboard
+
+**Returning user, backgrounded < 5 min:**
+App resumes → sessionUnlocked still true → straight to Dashboard (no PIN)
+
+**Returning user, backgrounded > 5 min or app fully killed:**
+App opens → sessionUnlocked=false → PinLogin → correct PIN → Dashboard
+
+**Forgot PIN:**
+PinLogin → "Reset PIN" → ForgotPinScreen → enter password → reauthenticate →
+resetPinOnly() clears SecureStore + sets pinSet=false → AppNavigator routes to
+PinSetup → new PIN → markSessionUnlocked → Dashboard (no sign-out)
+
+**Logout:**
+Dashboard → Sign Out → SecureStore cleared + signOut + sessionUnlocked=false → Email login
+
+### Changes
+- `AuthContext.jsx`: added `sessionUnlocked` state; `AppState` listener locks session
+  after >5 min background; `verifyPin` calls `markSessionUnlocked` on success;
+  added `markSessionUnlocked()`, `reauthenticate(password)`, `resetPinOnly()`;
+  `logout` and `resetPin` both clear sessionUnlocked; imported `EmailAuthProvider`
+  and `reauthenticateWithCredential` from firebase/auth
+- `AppNavigator.jsx`: added `pinLogin` route; reads `sessionUnlocked` from context;
+  route order: auth → pending → pinSetup → pinLogin → dashboard
+- `AuthNavigator.jsx`: added `ForgotPin` screen to stack
+- `ForgotPinScreen.jsx`: new screen — email (read-only) + password input →
+  reauthenticate → resetPinOnly → AppNavigator auto-routes to PinSetup
+- `PinSetupScreen.jsx`: calls `markSessionUnlocked()` after `savePin` so newly
+  created PIN routes directly to dashboard without re-locking
+- `PinLoginScreen.jsx`: "Forgot PIN" navigates to ForgotPinScreen (no longer
+  signs out); biometric success calls `markSessionUnlocked()`; removed Alert import
+
+### Key Design Decisions
+- `sessionUnlocked` lives in AuthContext (not AppNavigator) so it's accessible
+  to all screens that need to unlock the session (biometric, verifyPin, PinSetup)
+- Background timer uses `useRef` (not AsyncStorage) — resets on app kill, which
+  is the correct behavior (killed app always requires PIN)
+- Forgot PIN stays signed in (reauthenticate, not signOut+signIn) — smoother UX,
+  user goes Forgot PIN → new PIN → dashboard without re-entering email
+
+---
 Last updated: May 2026

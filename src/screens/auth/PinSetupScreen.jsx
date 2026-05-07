@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import PinPad from '../../components/PinPad';
 
 export default function PinSetupScreen({ navigation }) {
-  const { savePin, profile } = useAuth();
+  const { savePin, profile, markSessionUnlocked } = useAuth();
   const { theme, tr } = useTheme();
   const [stage, setStage]       = useState('create');  // create | confirm
   const [firstPin, setFirstPin] = useState('');
@@ -28,7 +28,7 @@ export default function PinSetupScreen({ navigation }) {
     }
     try {
       await savePin(pin);
-      // AppNavigator re-routes automatically once profile.pinSet becomes true
+      markSessionUnlocked(); // newly created PIN = session unlocked, go straight to dashboard
     } catch (e) {
       Alert.alert('Error', e.message);
     }

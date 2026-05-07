@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -11,7 +11,7 @@ import PinPad from '../../components/PinPad';
 import Logo from '../../components/Logo';
 
 export default function PinLoginScreen({ navigation }) {
-  const { user, profile, verifyPin, logout, resetPin, login } = useAuth();
+  const { user, profile, verifyPin, logout, login, markSessionUnlocked } = useAuth();
   const { theme, lang, setLang, tr } = useTheme();
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
@@ -35,7 +35,9 @@ export default function PinLoginScreen({ navigation }) {
         fallbackLabel: 'Use PIN instead',
         cancelLabel:   'Cancel',
       });
-      if (!result.success && result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+      if (result.success) {
+        markSessionUnlocked(); // biometric = session unlocked
+      } else if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
         setError('Biometric failed. Use your PIN instead.');
       }
     } catch {
@@ -65,19 +67,8 @@ export default function PinLoginScreen({ navigation }) {
     // Correct PIN — AppNavigator re-routes automatically
   };
 
-  const handleResetPin = () => {
-    Alert.alert(
-      'Reset PIN',
-      'Reset your PIN? You will need to sign in with your password again.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => { await resetPin(); },
-        },
-      ]
-    );
+  const handleForgotPin = () => {
+    navigation.navigate('ForgotPin');
   };
 
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
@@ -130,7 +121,7 @@ export default function PinLoginScreen({ navigation }) {
                   <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text>
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleResetPin} style={{ marginTop: 4 }}>
+              <TouchableOpacity onPress={handleForgotPin} style={{ marginTop: 4 }}>
                 <Text style={{ color: theme.textDim, fontSize: 13 }}>
                   Forgot PIN?{' '}
                   <Text style={{ color: theme.primary }}>Reset PIN</Text>

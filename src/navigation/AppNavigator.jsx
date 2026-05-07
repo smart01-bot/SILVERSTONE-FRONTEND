@@ -10,10 +10,11 @@ import * as SecureStore   from 'expo-secure-store';
 export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
-  const { user, profile, loading } = useAuth();
-  const [state, setState]  = useState({ checked: false, pinExists: false });
+  const { user, profile, loading, sessionUnlocked } = useAuth();
+  const [state, setState]   = useState({ checked: false, pinExists: false });
   const [animDone, setAnimDone] = useState(false);
 
+  // Re-check SecureStore whenever the user or pinSet flag changes
   useEffect(() => {
     if (!user || !profile) {
       setState({ checked: true, pinExists: false });
@@ -35,14 +36,15 @@ export default function AppNavigator() {
   }, [user?.uid, profile?.pinSet]);
 
   const getRoute = () => {
-    if (!user || !profile)            return 'auth';
-    if (profile.status === 'pending') return 'pending';
-    if (!state.checked)               return 'loading';
-    if (!state.pinExists)             return 'pinSetup';
+    if (!user || !profile)            return 'auth';       // not logged in
+    if (profile.status === 'pending') return 'pending';    // awaiting admin approval
+    if (!state.checked)               return 'loading';    // SecureStore check in progress
+    if (!state.pinExists)             return 'pinSetup';   // approved, no PIN yet
+    if (!sessionUnlocked)             return 'pinLogin';   // has PIN, session locked
     return profile.role === 'main-agent' ? 'mainAgent' : 'subAgent';
   };
 
-  const route    = getRoute();
+  const route     = getRoute();
   const authReady = !loading && route !== 'loading';
 
   if (!animDone || !authReady) {
@@ -54,6 +56,7 @@ export default function AppNavigator() {
       {route === 'auth'      && <AuthNavigator />}
       {route === 'pending'   && <AuthNavigator initialRouteName="Pending" />}
       {route === 'pinSetup'  && <AuthNavigator initialRouteName="PinSetup" />}
+      {route === 'pinLogin'  && <AuthNavigator initialRouteName="PinLogin" />}
       {route === 'subAgent'  && <SubAgentNavigator />}
       {route === 'mainAgent' && <MainAgentNavigator />}
     </NavigationContainer>
