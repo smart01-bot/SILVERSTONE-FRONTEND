@@ -35,7 +35,7 @@ export default function PinSetupScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: theme.bg }]}>
       <View style={styles.inner}>
         <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
         <Text style={[styles.title, { color: theme.text }]}>
