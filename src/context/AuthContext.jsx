@@ -98,7 +98,9 @@ export function AuthProvider({ children }) {
 
   // ── Logout ─────────────────────────────────────────────────
   const logout = async () => {
-    if (user) await SecureStore.deleteItemAsync(pinKey(user.uid));
+    try {
+      if (user?.uid) await SecureStore.deleteItemAsync(pinKey(user.uid));
+    } catch {}
     await signOut(auth);
   };
 

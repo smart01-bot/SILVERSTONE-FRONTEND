@@ -11,38 +11,43 @@ export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
   const { user, profile, loading } = useAuth();
-  const [pinChecked, setPinChecked] = useState(false);
-  const [pinSet, setPinSet]         = useState(false);
-  const [animDone, setAnimDone]     = useState(false);
+  const [state, setState]  = useState({ checked: false, pinExists: false });
+  const [animDone, setAnimDone] = useState(false);
 
   useEffect(() => {
-    if (!user) { setPinChecked(false); setPinSet(false); return; }
+    if (!user || !profile) {
+      setState({ checked: true, pinExists: false });
+      return;
+    }
     (async () => {
-      const stored = await SecureStore.getItemAsync(`silverstone_pin_${user.uid}`);
-      const firestorePinSet = profile?.pinSet === true;
-      setPinSet(!!stored && firestorePinSet);
-      setPinChecked(true);
+      try {
+        const stored = await SecureStore.getItemAsync(
+          `silverstone_pin_${user.uid}`
+        );
+        setState({
+          checked: true,
+          pinExists: !!stored && profile.pinSet === true,
+        });
+      } catch {
+        setState({ checked: true, pinExists: false });
+      }
     })();
-  }, [user, profile]);
+  }, [user?.uid, profile?.pinSet]);
 
-  const authReady = !loading && !(user && !pinChecked);
-
-  if (!animDone || !authReady) {
-    return (
-      <SplashScreen
-        onFinish={() => setAnimDone(true)}
-      />
-    );
-  }
-
-  const getInitialRoute = () => {
-    if (!user || !profile)           return 'auth';
+  const getRoute = () => {
+    if (!user || !profile)            return 'auth';
     if (profile.status === 'pending') return 'pending';
-    if (!pinSet)                      return 'pinSetup';
+    if (!state.checked)               return 'loading';
+    if (!state.pinExists)             return 'pinSetup';
     return profile.role === 'main-agent' ? 'mainAgent' : 'subAgent';
   };
 
-  const route = getInitialRoute();
+  const route    = getRoute();
+  const authReady = !loading && route !== 'loading';
+
+  if (!animDone || !authReady) {
+    return <SplashScreen onFinish={() => setAnimDone(true)} />;
+  }
 
   return (
     <NavigationContainer ref={navigationRef}>

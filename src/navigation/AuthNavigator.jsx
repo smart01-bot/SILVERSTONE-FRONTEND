@@ -7,9 +7,9 @@ import PinLoginScreen      from '../screens/auth/PinLoginScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function AuthNavigator() {
+export default function AuthNavigator({ initialRouteName = 'PinLogin' }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PinLogin"      component={PinLoginScreen} />
       <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />
       <Stack.Screen name="Pending"       component={PendingScreen} />

@@ -221,4 +221,27 @@ Status: Complete
 - `PinLoginScreen.jsx`: added "Forgot PIN / Reset PIN" button with confirmation alert
 
 ---
+
+## Session 7 — PIN Routing + Overflow Fix
+Date: May 2026
+Status: Complete
+
+### Root Cause
+`AuthNavigator` accepted no props, so `initialRouteName="PinSetup"` (and `"Pending"`)
+passed from `AppNavigator` were silently dropped. The navigator always defaulted to
+`PinLogin`, causing new users to see the PIN entry screen even before setting a PIN.
+
+### Changes
+- `AuthNavigator.jsx`: added `initialRouteName = 'PinLogin'` prop + passed to `Stack.Navigator` — this is the core fix
+- `AppNavigator.jsx`: refactored to `state = { checked, pinExists }` object; deps changed to `[user?.uid, profile?.pinSet]` so effect re-fires when PIN is saved; `authReady` now derived from `route !== 'loading'`; try-catch around SecureStore read
+- `AuthContext.jsx`: `logout` now wraps SecureStore delete in try/catch and uses optional chaining on `user?.uid`
+- `PinLoginScreen.jsx`: wrapped in `KeyboardAvoidingView` + `ScrollView`; `SafeAreaView` uses `edges={['top','bottom']}`; `paddingBottom: 60` on scroll container; removed duplicate `useAuth()` call; `handleResetPin` extracted to named function
+- `PinSetupScreen.jsx`: `SafeAreaView` uses `edges={['top','bottom']}`; automatic re-routing via `profile.pinSet` state update in `savePin` (no explicit navigate needed)
+
+### Login Flow (post-fix)
+New user: Email login → approved + pinSet=false → PinSetup screen → save PIN → AppNavigator auto-routes to dashboard
+Returning user: App open → user cached + pinExists=true → PinLogin screen → correct PIN → dashboard
+Reset PIN: PinLogin → "Reset PIN" → SecureStore cleared + pinSet=false → signs out → Email login
+
+---
 Last updated: May 2026
