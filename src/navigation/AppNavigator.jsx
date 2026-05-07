@@ -37,7 +37,7 @@ export default function AppNavigator() {
   const getInitialRoute = () => {
     if (!user || !profile)           return 'auth';
     if (profile.status === 'pending') return 'pending';
-    if (!pinSet)                      return 'pinSetup';
+    if (!profile.pinSet)              return 'pinSetup';
     return profile.role === 'main-agent' ? 'mainAgent' : 'subAgent';
   };
 
