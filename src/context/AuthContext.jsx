@@ -81,6 +81,7 @@ export function AuthProvider({ children }) {
     if (!user) throw new Error('Not authenticated');
     await SecureStore.setItemAsync(pinKey(user.uid), pin);
     await updateDoc(doc(db, 'agents', user.uid), { pinSet: true });
+    setProfile(prev => prev ? { ...prev, pinSet: true } : prev);
   };
 
   const verifyPin = async (pin) => {
@@ -92,12 +93,21 @@ export function AuthProvider({ children }) {
   const hasPinSet = async () => {
     if (!user) return false;
     const stored = await SecureStore.getItemAsync(pinKey(user.uid));
-    return !!stored;
+    return !!stored && profile?.pinSet === true;
   };
 
   // ── Logout ─────────────────────────────────────────────────
   const logout = async () => {
     if (user) await SecureStore.deleteItemAsync(pinKey(user.uid));
+    await signOut(auth);
+  };
+
+  // ── PIN reset (clears SecureStore + Firestore, then signs out) ──
+  const resetPin = async () => {
+    if (user) {
+      await SecureStore.deleteItemAsync(pinKey(user.uid));
+      await updateDoc(doc(db, 'agents', user.uid), { pinSet: false });
+    }
     await signOut(auth);
   };
 
@@ -109,7 +119,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
-      register, login, logout,
+      register, login, logout, resetPin,
       savePin, verifyPin, hasPinSet,
       resetPassword, refreshProfile,
     }}>

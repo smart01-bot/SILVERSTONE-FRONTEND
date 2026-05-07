@@ -19,10 +19,11 @@ export default function AppNavigator() {
     if (!user) { setPinChecked(false); setPinSet(false); return; }
     (async () => {
       const stored = await SecureStore.getItemAsync(`silverstone_pin_${user.uid}`);
-      setPinSet(!!stored);
+      const firestorePinSet = profile?.pinSet === true;
+      setPinSet(!!stored && firestorePinSet);
       setPinChecked(true);
     })();
-  }, [user]);
+  }, [user, profile]);
 
   const authReady = !loading && !(user && !pinChecked);
 
@@ -37,7 +38,7 @@ export default function AppNavigator() {
   const getInitialRoute = () => {
     if (!user || !profile)           return 'auth';
     if (profile.status === 'pending') return 'pending';
-    if (!profile.pinSet || !pinSet)   return 'pinSetup';
+    if (!pinSet)                      return 'pinSetup';
     return profile.role === 'main-agent' ? 'mainAgent' : 'subAgent';
   };
 

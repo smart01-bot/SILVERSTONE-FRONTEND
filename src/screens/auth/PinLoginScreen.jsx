@@ -10,7 +10,7 @@ import PinPad from '../../components/PinPad';
 import Logo from '../../components/Logo';
 
 export default function PinLoginScreen({ navigation }) {
-  const { user, profile, verifyPin, logout } = useAuth();
+  const { user, profile, verifyPin, logout, resetPin } = useAuth();
   const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
@@ -103,6 +103,21 @@ export default function PinLoginScreen({ navigation }) {
             <PinPad length={6} onComplete={handlePin} onBiometric={bioAvailable ? handleBiometric : undefined} />
             <TouchableOpacity onPress={async () => { await logout(); setEmailMode(true); }} style={{ marginTop: 16 }}>
               <Text style={{ color: theme.textDim, fontSize: 14 }}>Not {firstName}?  <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text></Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Reset PIN',
+                  'Reset your PIN? You will need to sign in with your password again.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Reset', style: 'destructive', onPress: async () => { await resetPin(); } },
+                  ]
+                )
+              }
+              style={{ marginTop: 4 }}
+            >
+              <Text style={{ color: theme.textDim, fontSize: 13 }}>Forgot PIN? <Text style={{ color: theme.primary }}>Reset PIN</Text></Text>
             </TouchableOpacity>
           </>
         ) : (

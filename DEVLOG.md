@@ -209,4 +209,16 @@ Status: Complete
 APK was crashing silently with no visible error. ErrorBoundary surfaces the actual exception so future crashes are debuggable from the device screen alone.
 
 ---
+
+## Session 6 — PIN Routing Fix
+Date: May 2026
+Status: Complete
+
+### Changes
+- `AuthContext.jsx`: `hasPinSet` now checks both SecureStore AND `profile.pinSet`; `savePin` updates local profile state so AppNavigator re-routes immediately; added `resetPin` (clears SecureStore + Firestore + signs out)
+- `AppNavigator.jsx`: `useEffect` now depends on `[user, profile]` and checks both SecureStore and Firestore before setting `pinSet`; routing simplified to `if (!pinSet) → pinSetup`
+- `PinSetupScreen.jsx`: removed broken `navigation.replace('App')` — AppNavigator re-routes automatically when profile updates
+- `PinLoginScreen.jsx`: added "Forgot PIN / Reset PIN" button with confirmation alert
+
+---
 Last updated: May 2026
