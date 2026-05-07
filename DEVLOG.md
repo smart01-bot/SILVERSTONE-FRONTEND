@@ -367,4 +367,69 @@ status=rejected in Firestore → AppNavigator routes to RejectedScreen → conta
 - Forgot PIN stays authenticated (re-verify password via `login()`, not `reauthenticate()`) — user goes directly to PinSetup then Dashboard without seeing the login screen
 
 ---
+
+## Session 11 — Complete Auth System Rebuild
+Date: May 2026
+Status: Complete
+
+### Auth Flow (final, canonical)
+
+**RULE 1 — Email login shown only when:**
+No Firebase cached user, OR user explicitly logged out, OR tapped "Sign in as different user"
+
+**RULE 2 — PIN entry shown only when:**
+Firebase user exists + profile.status=approved + profile.pinSet=true + SecureStore has PIN
+
+**RULE 3 — PIN setup shown only when:**
+Firebase user exists + profile.status=approved + pinSet=false OR SecureStore empty
+
+**RULE 4 — Pending screen:** profile.status=pending — auto-advances via onSnapshot when admin approves
+
+**RULE 5 — Rejected screen:** profile.status=rejected
+
+**RULE 6 — Dashboard:** only after PIN entry succeeds OR PIN setup completes
+
+**RULE 7 — Session timeout:** 5 min background → PIN overlay on top of dashboard, no navigation away
+
+### Files Changed
+
+**New files:**
+- `src/screens/auth/LoginScreen.jsx` — email/password only; forgot password via resetPassword(); no PIN logic
+- `src/screens/auth/RegisterScreen.jsx` — 3-step form (Personal → Business → Identity); validates per step; routes to Pending automatically
+
+**Rewritten:**
+- `src/utils/pinLockout.js` — updated keys (sstone_*); resets attempt counter after lockout
+- `src/context/AuthContext.jsx` — clean rewrite; onSnapshot listener; hasInitializedSession ref; sessionLocked gate; all required methods
+- `src/navigation/AppNavigator.jsx` — removed LockStack/independent NavigationContainer; PIN overlay now rendered as absoluteFillObject View outside main NavigationContainer; PendingScreen/RejectedScreen/PinSetupScreen rendered directly (no navigator); lockOverlayScreen state switches between PinEntry and ForgotPin inside overlay
+- `src/navigation/AuthNavigator.jsx` — Login + Register only (removed Pending/Rejected/PinSetup/ForgotPin — those are no longer in this navigator)
+- `src/screens/auth/PinSetupScreen.jsx` — inline keypad (no PinPad component); Animated shake on PIN mismatch; unlockSession() after savePin()
+- `src/screens/auth/PinEntryScreen.jsx` — onForgotPin callback prop (no navigation.navigate); isSessionUnlock hides "Switch account"; always calls unlockSession() on success
+- `src/screens/auth/ForgotPinScreen.jsx` — onBack callback prop (no navigation); login()+resetPin() on success; no explicit routing (state cascade auto-routes to PinSetup)
+- `src/screens/auth/PendingScreen.jsx` — reads profile from AuthContext; no own Firestore listener; no manual navigation (AppNavigator watches profile.status)
+- `src/screens/auth/RejectedScreen.jsx` — simple rejection screen; logout() button
+
+**Deleted:**
+- `src/screens/auth/PinLoginScreen.jsx` — replaced by LoginScreen.jsx
+- `src/screens/auth/CreateAccountScreen.jsx` — replaced by RegisterScreen.jsx
+- `src/screens/auth/PinScreens.jsx` — orphaned legacy file (was never imported)
+
+### Key Architecture
+
+**PIN overlay approach:** AppNavigator renders the dashboard (SubAgent/MainAgent navigator) inside NavigationContainer, then conditionally renders PinEntryScreen or ForgotPinScreen as an absolute overlay (StyleSheet.absoluteFillObject) outside the NavigationContainer. This means:
+- Dashboard renders in background (protected by Firebase Auth rules)
+- Overlay covers everything including tab bar
+- `sessionLocked` is the single gate for both cold-start and session-timeout PIN
+- No LockStack, no independent NavigationContainer needed
+
+**Routing state cascade for Forgot PIN:**
+1. User enters wrong password → error shown
+2. Correct password → login() + resetPin() → profile.pinSet=false via onSnapshot
+3. AppNavigator useEffect re-fires → checkPinExists() → false → pinExists=false
+4. Overlay condition: sessionLocked && pinExists → false → overlay gone
+5. Main route: approved && !pinExists → PinSetupScreen shown automatically
+6. User sets new PIN → savePin() + unlockSession() → dashboard
+
+**No manual navigation after auth state changes** — AppNavigator watches [user?.uid, profile?.pinSet, profile?.status] and re-routes automatically.
+
+---
 Last updated: May 2026
