@@ -244,4 +244,23 @@ Returning user: App open → user cached + pinExists=true → PinLogin screen �
 Reset PIN: PinLogin → "Reset PIN" → SecureStore cleared + pinSet=false → signs out → Email login
 
 ---
+
+## Session 8 — Device Theme + Remove Toggle Buttons
+Date: May 2026
+Status: Complete
+
+### Changes
+- `ThemeContext.jsx`: replaced manual `toggleTheme` with `useColorScheme()` device detection; added `userPreference` state (null = auto, 'light', 'dark'); `setTheme('auto'|'light'|'dark')` persists to `silverstone_theme_preference` key; `isDark` derives from user preference first, then device scheme; `toggleTheme` removed from context entirely
+- `PinLoginScreen.jsx`: removed sun/moon toggle button from header; removed `isDark`/`toggleTheme` from `useTheme()` destructuring
+- `CreateAccountScreen.jsx`: same — removed toggle button and unused `themeBtn` style
+- `HomeScreen.jsx`: same — removed toggle icon button from top bar; removed `isDark`/`toggleTheme` from `useTheme()` destructuring; removed unused `iconBtn` style
+- `ProfileScreen.jsx`: replaced single toggle button with 3-button Auto/Light/Dark selector; destructuring updated to `setTheme, userPreference`; added `themeOptions` and `themeOptionBtn` styles; removed `toggleBtn` style
+
+### Theme Behavior
+- Fresh install → follows device dark/light mode automatically (Auto)
+- User can override in Profile → Theme → ☀️ Light / 🌙 Dark / 📱 Auto
+- Preference persists across app restarts via AsyncStorage
+- SplashScreen continues to use `isDark` for gradient (no change needed)
+
+---
 Last updated: May 2026
