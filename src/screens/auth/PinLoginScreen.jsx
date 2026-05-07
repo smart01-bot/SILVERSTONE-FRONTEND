@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, Image, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -82,6 +82,11 @@ export default function PinLoginScreen({ navigation }) {
           <View style={styles.brandGroup}>
             <Logo size={60} />
             <View style={{ marginLeft: 12 }}>
+              <Image
+                source={require('../../../assets/silverS.png')}
+                style={{ width: 60, height: 60, borderRadius: 12, marginBottom: 8 }}
+                resizeMode="contain"
+              />
               <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
               <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
             </View>

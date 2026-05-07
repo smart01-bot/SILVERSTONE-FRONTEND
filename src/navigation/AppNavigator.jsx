@@ -29,7 +29,7 @@ export default function AppNavigator() {
   if (!animDone || !authReady) {
     return (
       <SplashScreen
-        onAnimationDone={() => setAnimDone(true)}
+        onFinish={() => setAnimDone(true)}
       />
     );
   }

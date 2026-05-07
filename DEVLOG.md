@@ -124,7 +124,7 @@ Status: Complete
 - @react-navigation/native-stack: ^7.x
 
 ### Features Still To Build (Session 3)
-- Splash screen PNG logo swap (awaiting silverS.png asset)
+- Splash screen PNG logo swap ✓ (completed Session 6)
 - Push token registration + Expo Push API for cross-device notifications
 - Biometric preference persistence via AsyncStorage
 - Pull to refresh on all lists (MyRequests, QueueScreen, etc.)

@@ -1,55 +1,52 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, Image, Animated, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
 
-export default function SplashScreen({ onAnimationDone }) {
+const { width } = Dimensions.get('window');
+
+export default function SplashScreen({ onFinish }) {
   const { isDark } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.82)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+  const scale   = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1,
-          tension: 60,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(textOpacity, {
+    Animated.parallel([
+      Animated.timing(opacity, {
         toValue: 1,
-        duration: 400,
+        duration: 1200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
     ]).start();
 
-    const timer = setTimeout(onAnimationDone, 2600);
+    const timer = setTimeout(() => {
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => onFinish?.());
+    }, 2800);
+
     return () => clearTimeout(timer);
   }, []);
 
-  const gradientColors = isDark
-    ? ['#1C0000', '#2C0000']
-    : ['#D32F2F', '#B71C1C'];
-
   return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
-      <Animated.View style={[styles.logoWrap, { opacity, transform: [{ scale }] }]}>
-        <Logo size={200} />
-      </Animated.View>
-      <Animated.View style={[styles.textWrap, { opacity: textOpacity }]}>
-        <Text style={styles.name}>SILVERSTONE INC.</Text>
+    <View style={[styles.container, { backgroundColor: isDark ? '#0A0000' : '#D32F2F' }]}>
+      <Animated.View style={[styles.content, { opacity, transform: [{ scale }] }]}>
+        <Image
+          source={require('../../../assets/silverS.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.brand}>SILVERSTONE INC.</Text>
         <Text style={styles.tagline}>Tanzania's First Float Management System</Text>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -59,23 +56,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoWrap: {
+  content: {
     alignItems: 'center',
+    gap: 16,
   },
-  textWrap: {
-    alignItems: 'center',
-    marginTop: 32,
-    gap: 8,
+  logo: {
+    width: 180,
+    height: 180,
   },
-  name: {
+  brand: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: 3,
   },
   tagline: {
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
-    letterSpacing: 0.4,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });
