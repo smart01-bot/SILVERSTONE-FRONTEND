@@ -6,6 +6,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { listenRequests } from '../../utils/firestore';
 import RequestCard from '../../components/RequestCard';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import Toast from '../../components/Toast';
+import { shareReceipt } from '../../utils/sharing';
+import { mediumTap } from '../../utils/haptics';
 
 const FILTERS = ['all', 'pending', 'completed', 'rejected'];
 
@@ -15,6 +18,8 @@ export default function MyRequestsScreen({ navigation }) {
   const [requests, setRequests]   = useState([]);
   const [filter, setFilter]       = useState('all');
   const [selected, setSelected]   = useState(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg]   = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -25,6 +30,15 @@ export default function MyRequestsScreen({ navigation }) {
 
   const handleRetry = (request) => {
     navigation.navigate('NewRequest', { prefill: request });
+  };
+
+  const handleShare = async (request) => {
+    mediumTap();
+    const result = await shareReceipt(request);
+    if (result.copied) {
+      setToastMsg('Receipt copied — paste in WhatsApp');
+      setShowToast(true);
+    }
   };
 
   return (
@@ -54,7 +68,17 @@ export default function MyRequestsScreen({ navigation }) {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <RequestCard request={item} onPress={setSelected} />
+          <View>
+            <RequestCard request={item} onPress={setSelected} />
+            {item.status === 'completed' && (
+              <TouchableOpacity
+                onPress={() => handleShare(item)}
+                style={[styles.shareBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
+              >
+                <Text style={[styles.shareBtnText, { color: theme.primary }]}>↗ Share Receipt</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -73,6 +97,13 @@ export default function MyRequestsScreen({ navigation }) {
         role="sub-agent"
         onRetry={handleRetry}
       />
+
+      <Toast
+        visible={showToast}
+        message={toastMsg}
+        type="success"
+        onHide={() => setShowToast(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -86,6 +117,8 @@ const styles = StyleSheet.create({
   pill:     { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   pillText: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
   list:     { padding: 16, gap: 10, paddingBottom: 100 },
-  empty:    { alignItems: 'center', gap: 12, paddingTop: 60 },
-  emptyText:{ fontSize: 15, fontWeight: '600' },
+  empty:        { alignItems: 'center', gap: 12, paddingTop: 60 },
+  emptyText:    { fontSize: 15, fontWeight: '600' },
+  shareBtn:     { borderWidth: 1, borderRadius: 10, paddingVertical: 9, alignItems: 'center', marginTop: -4, marginBottom: 6 },
+  shareBtnText: { fontSize: 13, fontWeight: '700' },
 });

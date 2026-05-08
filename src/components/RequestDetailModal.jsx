@@ -9,6 +9,8 @@ import StatusBadge from './StatusBadge';
 import { NETWORK_COLORS, NETWORK_WALLETS } from '../constants/networks';
 import { timeAgo } from '../utils/time';
 import { updateRequestStatus, createTransaction } from '../utils/firestore';
+import { mediumTap, heavyTap, successTap, warningTap } from '../utils/haptics';
+import { startKeepAwake, stopKeepAwake } from '../utils/keepAwake';
 
 const fmt = (n) => `TZS ${Number(n).toLocaleString()}`;
 
@@ -65,6 +67,7 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
   };
 
   const handleApprove = async () => {
+    mediumTap();
     setLoading(true);
     try { await updateRequestStatus(request.id, 'approved', user.uid); onClose(); }
     catch (e) { Alert.alert('Error', e.message); }
@@ -72,10 +75,19 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
   };
 
   const handleProcess = async () => {
+    heavyTap();
+    startKeepAwake();
     setLoading(true);
-    try { await createTransaction(request, user.uid); onClose(); }
+    try {
+      await createTransaction(request, user.uid);
+      successTap();
+      onClose();
+    }
     catch (e) { Alert.alert('Error', e.message); }
-    finally { setLoading(false); }
+    finally {
+      stopKeepAwake();
+      setLoading(false);
+    }
   };
 
   const handleReject = () => {
@@ -84,6 +96,7 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
       {
         text: 'Reject', style: 'destructive',
         onPress: async () => {
+          warningTap();
           setLoading(true);
           try { await updateRequestStatus(request.id, 'rejected', user.uid); onClose(); }
           catch (e) { Alert.alert('Error', e.message); }

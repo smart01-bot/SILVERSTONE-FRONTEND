@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { lightTap } from '../utils/haptics';
 
 const DIGITS = [
   ['1','2','3'],
@@ -16,9 +17,11 @@ export default function PinPad({ length = 6, onComplete, onError, onBiometric })
   const press = (val) => {
     if (val === '') return;
     if (val === '⌫') {
+      lightTap();
       setPin(p => p.slice(0, -1));
       return;
     }
+    lightTap();
     if (pin.length >= length) return;
     const next = pin + val;
     setPin(next);

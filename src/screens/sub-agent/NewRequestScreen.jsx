@@ -10,6 +10,7 @@ import { submitRequest } from '../../utils/firestore';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { NETWORKS, NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
 import { validatePhone, validateAmount } from '../../utils/validation';
+import { mediumTap, successTap } from '../../utils/haptics';
 
 const fmt = (n) => n ? `TZS ${Number(n).toLocaleString()}` : '—';
 
@@ -66,6 +67,7 @@ export default function NewRequestScreen({ navigation, route }) {
     setError('');
     const err = validate();
     if (err) return;
+    mediumTap();
     setLoading(true);
     const requestData = {
       sourceNetwork: form.sourceNetwork,
@@ -78,10 +80,12 @@ export default function NewRequestScreen({ navigation, route }) {
     try {
       if (!isOnline) {
         await enqueue(requestData);
+        successTap();
         setSubmitted({ requestId: 'OFFLINE-' + Date.now().toString(36).toUpperCase(), queuePos: 'queued offline' });
         return;
       }
       const id = await submitRequest(user.uid, profile.name, requestData);
+      successTap();
       setSubmitted({ requestId: id, queuePos: '~' + (Math.floor(Math.random() * 5) + 1) });
     } catch (e) {
       setError(e.message ?? tr('error'));

@@ -1,16 +1,20 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import StatusBadge from './StatusBadge';
 import { NETWORK_COLORS } from '../constants/networks';
 import { typography } from '../constants/theme';
 import { timeAgo } from '../utils/time';
+import { lightTap, successTap } from '../utils/haptics';
+import { copyRequestId } from '../utils/sharing';
 
 const fmt = (n) => `TZS ${Number(n).toLocaleString()}`;
 
 export default function RequestCard({ request, onPress, showAgent = false }) {
   const { theme, lang } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
+  const copiedTimer = useRef(null);
+  const [showCopied, setShowCopied] = useState(false);
   const { sourceNetwork, destNetwork, amount, status, urgent, createdAt, agentName } = request;
   const srcColor = NETWORK_COLORS[sourceNetwork] ?? '#888';
   const dstColor = NETWORK_COLORS[destNetwork]   ?? '#888';
@@ -20,10 +24,19 @@ export default function RequestCard({ request, onPress, showAgent = false }) {
   const onPressOut = () =>
     Animated.spring(scale, { toValue: 1.0,  useNativeDriver: true, speed: 50 }).start();
 
+  const handleLongPress = async () => {
+    successTap();
+    await copyRequestId(request.id);
+    setShowCopied(true);
+    clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setShowCopied(false), 1500);
+  };
+
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
-        onPress={() => onPress?.(request)}
+        onPress={() => { lightTap(); onPress?.(request); }}
+        onLongPress={handleLongPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         activeOpacity={1}
@@ -69,6 +82,12 @@ export default function RequestCard({ request, onPress, showAgent = false }) {
             )}
           </View>
           <Text style={[styles.time, { color: theme.textDim }]}>{timeAgo(createdAt, lang)}</Text>
+        </View>
+
+        <View style={styles.idRow}>
+          <Text style={[styles.idText, { color: showCopied ? '#16A34A' : theme.muted ?? theme.textDim }]}>
+            {showCopied ? '✓ Copied!' : `#${request.id?.slice(-8).toUpperCase() ?? '--------'} ⎘`}
+          </Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -118,6 +137,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
-  agent: { fontSize: 12, marginTop: 2 },
-  time:  { fontSize: 12 },
+  agent:  { fontSize: 12, marginTop: 2 },
+  time:   { fontSize: 12 },
+  idRow:  { alignItems: 'flex-end' },
+  idText: { fontSize: 10, fontFamily: 'Courier New' },
 });

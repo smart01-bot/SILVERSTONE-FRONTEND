@@ -432,4 +432,26 @@ Firebase user exists + profile.status=approved + pinSet=false OR SecureStore emp
 **No manual navigation after auth state changes** — AppNavigator watches [user?.uid, profile?.pinSet, profile?.status] and re-routes automatically.
 
 ---
+
+## Session 12 — Haptics, Sharing, Clipboard, Keep Awake
+Date: May 2026
+Status: Complete
+
+### Completed
+- expo-haptics ~13.0.0 installed and wired to all interactions
+- expo-sharing ~12.0.0 installed
+- expo-clipboard ~7.0.0 installed
+- expo-keep-awake ~13.0.0 installed
+- src/utils/haptics.js created (lightTap, mediumTap, heavyTap, successTap, errorTap, warningTap)
+- src/utils/sharing.js created (generateReceiptText, shareReceipt, copyToClipboard, copyRequestId)
+- src/utils/keepAwake.js created (startKeepAwake, stopKeepAwake with tag 'queue-processing')
+- src/components/Toast.jsx created (Animated fade, success/error/info types, 2s auto-hide)
+- RequestCard: lightTap on press; long-press copies short ID to clipboard with 1.5s "✓ Copied!" indicator
+- PinPad: lightTap on every digit and delete press; removed unused Vibration import
+- NewRequestScreen: mediumTap on submit button press; successTap on successful submission
+- RequestDetailModal: mediumTap on Approve; heavyTap + startKeepAwake on Process Transfer; successTap + stopKeepAwake after process completes; warningTap on Reject confirm
+- MyRequestsScreen: Share Receipt button below completed request cards; copies WhatsApp-ready receipt text; Toast confirms copy
+- Receipt sharing falls back to clipboard (Sharing.shareAsync requires file URI); user pastes directly into WhatsApp
+
+---
 Last updated: May 2026
