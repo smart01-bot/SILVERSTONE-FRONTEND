@@ -4,6 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -54,7 +55,7 @@ export default function ForgotPinScreen({ onBack }) {
           </View>
 
           <View style={[styles.iconWrap, { backgroundColor: theme.primaryLight }]}>
-            <Text style={{ fontSize: 36 }}>🔐</Text>
+            <Ionicons name="lock-closed-outline" size={40} color={theme.primary} />
           </View>
 
           <Text style={[styles.title, { color: theme.text }]}>Reset Your PIN</Text>

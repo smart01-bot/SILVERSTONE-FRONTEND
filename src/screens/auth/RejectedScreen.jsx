@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -13,7 +14,7 @@ export default function RejectedScreen() {
       <View style={styles.inner}>
 
         <View style={[styles.icon, { backgroundColor: '#FEE2E2' }]}>
-          <Text style={{ fontSize: 40 }}>❌</Text>
+          <Ionicons name="close-circle" size={48} color="#DC2626" />
         </View>
 
         <Text style={[styles.title, { color: theme.text }]}>Application Rejected</Text>

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity, Animated,
   PanResponder, ScrollView, Alert, ActivityIndicator, Clipboard,
 } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
@@ -143,7 +144,7 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text }]}>Request Details</Text>
             <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text style={{ color: theme.textDim, fontSize: 16 }}>✕</Text>
+              <Ionicons name="close" size={16} color={theme.textDim} />
             </TouchableOpacity>
           </View>
 
@@ -179,7 +180,10 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
           <Text style={[styles.amount, { color: theme.primary }]}>{fmt(request.amount)}</Text>
           {request.urgent && (
             <View style={[styles.urgentBadge, { backgroundColor: '#FEF3C7' }]}>
-              <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 13 }}>⚡ URGENT</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <MaterialIcons name="flash-on" size={14} color="#F59E0B" />
+                <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 13 }}>URGENT</Text>
+              </View>
             </View>
           )}
 
@@ -208,13 +212,21 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
                 onPress={() => { onClose(); onRetry?.(request); }}
                 style={[styles.actionBtn, { backgroundColor: theme.primary }]}
               >
-                <Text style={styles.actionBtnText}>↻ Retry Request</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="refresh" size={16} color="#fff" />
+                  <Text style={styles.actionBtnText}>Retry Request</Text>
+                </View>
               </TouchableOpacity>
             )}
             {role === 'sub-agent' && request.status === 'pending' && (
               <TouchableOpacity onPress={handleCancel} disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>✕ Cancel Request</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="close" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>Cancel Request</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
 
@@ -222,19 +234,32 @@ export default function RequestDetailModal({ request, visible, onClose, role = '
             {role === 'main-agent' && request.status === 'pending' && (
               <TouchableOpacity onPress={handleApprove} disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: theme.teal ?? '#0891B2' }]}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>✓ Approve</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>Approve</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
             {role === 'main-agent' && (request.status === 'pending' || request.status === 'approved') && (
               <TouchableOpacity onPress={handleProcess} disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: theme.primary }]}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>⇄ Process Transfer</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MaterialIcons name="swap-horiz" size={18} color="#fff" />
+                    <Text style={styles.actionBtnText}>Process Transfer</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
             {role === 'main-agent' && (request.status === 'pending' || request.status === 'approved') && (
               <TouchableOpacity onPress={handleReject} disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}>
-                <Text style={styles.actionBtnText}>✕ Reject</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="close" size={16} color="#fff" />
+                  <Text style={styles.actionBtnText}>Reject</Text>
+                </View>
               </TouchableOpacity>
             )}
 

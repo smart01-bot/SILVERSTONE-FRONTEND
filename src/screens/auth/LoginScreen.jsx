@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }) {
   const { login, resetPassword } = useAuth();
@@ -65,7 +65,10 @@ export default function LoginScreen({ navigation }) {
         >
           {/* Logo + branding */}
           <View style={styles.brand}>
-            <Logo size={80} />
+            <Image
+              source={require('../../assets/images/SilverS.png')}
+              style={{ width: 80, height: 80, resizeMode: 'contain' }}
+            />
             <Text style={[styles.appName, { color: theme.primary }]}>Silverstone</Text>
             <Text style={[styles.tagline, { color: theme.textDim }]}>
               Tanzania's First Float Management System
@@ -104,7 +107,7 @@ export default function LoginScreen({ navigation }) {
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={{ color: theme.textDim, fontSize: 18 }}>{showPwd ? '🙈' : '👁'}</Text>
+                <Ionicons name={showPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.textDim} />
               </TouchableOpacity>
             </View>
           </View>

@@ -176,7 +176,8 @@ export default function NewRequestScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
       {!isOnline && (
         <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>⚠ You're offline — request will be saved and sent when connected</Text>
+          <Ionicons name="warning-outline" size={14} color="#fff" />
+          <Text style={styles.offlineText}>You're offline — request will be saved and sent when connected</Text>
         </View>
       )}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   summaryLine:  { fontSize: 14 },
   summaryAmt:   { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
-  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, alignItems: 'center' },
+  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
   offlineText:   { color: '#fff', fontSize: 12, fontWeight: '600' },
   error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
   btn:     { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
