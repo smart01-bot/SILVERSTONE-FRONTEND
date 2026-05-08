@@ -4,6 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { typography } from '../../constants/theme';
@@ -90,7 +91,7 @@ export default function CreateAccountScreen({ navigation }) {
               <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
             </View>
             <TouchableOpacity onPress={toggleTheme} style={[styles.themeBtn, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}>
-              <Text style={{ color: theme.textDim, fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
+              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={theme.textDim} />
             </TouchableOpacity>
           </View>
 

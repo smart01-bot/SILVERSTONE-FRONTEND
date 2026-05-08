@@ -4,6 +4,7 @@ import {
   StyleSheet, Switch, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { submitRequest } from '../../utils/firestore';
@@ -66,7 +67,7 @@ export default function NewRequestScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <View style={styles.successWrap}>
         <View style={[styles.successIcon, { backgroundColor: '#DCFCE7' }]}>
-          <Text style={{ fontSize: 48 }}>✅</Text>
+          <Ionicons name="checkmark-circle" size={48} color="#16A34A" />
         </View>
         <Text style={[styles.successTitle, { color: theme.text }]}>{tr('requestSent')}</Text>
         <Text style={[styles.successDesc, { color: theme.textDim }]}>{tr('requestSentDesc')}</Text>
@@ -155,7 +156,10 @@ export default function NewRequestScreen({ navigation }) {
           {/* Urgent toggle */}
           <View style={[styles.urgentRow, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.urgentLabel, { color: theme.text }]}>⚡ {tr('markUrgent')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialIcons name="flash-on" size={16} color={form.urgent ? theme.amber : theme.textDim} />
+                <Text style={[styles.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
+              </View>
               <Text style={[styles.urgentDesc, { color: theme.textDim }]}>{tr('urgentDesc')}</Text>
             </View>
             <Switch
@@ -174,7 +178,12 @@ export default function NewRequestScreen({ navigation }) {
                 {form.sourceNetwork} ({NETWORK_WALLETS[form.sourceNetwork]}) → {form.destNetwork} ({NETWORK_WALLETS[form.destNetwork]})
               </Text>
               <Text style={[styles.summaryAmt, { color: theme.text }]}>{fmt(form.amount)}</Text>
-              {form.urgent && <Text style={{ color: '#F59E0B', fontWeight: '600', fontSize: 13 }}>⚡ URGENT</Text>}
+              {form.urgent && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <MaterialIcons name="flash-on" size={13} color="#F59E0B" />
+                  <Text style={{ color: '#F59E0B', fontWeight: '600', fontSize: 13 }}>URGENT</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -184,7 +193,7 @@ export default function NewRequestScreen({ navigation }) {
             style={[styles.btn, { backgroundColor: theme.primary, marginTop: 8 }]}>
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnText}>{tr('submitRequest')} →</Text>
+              : <Text style={styles.btnText}>{tr('submitRequest')}</Text>
             }
           </TouchableOpacity>
 

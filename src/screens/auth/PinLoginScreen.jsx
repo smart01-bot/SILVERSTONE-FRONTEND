@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import PinPad from '../../components/PinPad';
+import Avatar from '../../components/Avatar';
 
 export default function PinLoginScreen({ navigation }) {
   const { user, profile, verifyPin, logout } = useAuth();
   const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
-  const [email, setEmail]     = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [emailMode, setEmailMode] = useState(!user); // show email/pass if no user
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
   const { login } = useAuth();
 
   // If no Firebase user — show email login
@@ -55,21 +56,19 @@ export default function PinLoginScreen({ navigation }) {
             <Text style={[styles.tagline, { color: theme.textDim }]}>{tr('tagline')}</Text>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={[styles.themeBtn, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}>
-            <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
+            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={theme.textDim} />
           </TouchableOpacity>
         </View>
 
         {user && profile ? (
           // PIN mode
           <>
-            <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-              <Text style={[styles.avatarText, { color: theme.primary }]}>{firstName[0]}</Text>
-            </View>
+            <Avatar name={firstName} size={80} />
             <Text style={[styles.greeting, { color: theme.text }]}>Welcome back, {firstName}</Text>
             <Text style={[styles.sub, { color: theme.textDim }]}>{tr('enterPin')}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <PinPad length={6} onComplete={handlePin} />
-            <TouchableOpacity onPress={async () => { await logout(); setEmailMode(true); }} style={{ marginTop: 16 }}>
+            <TouchableOpacity onPress={async () => { await logout(); }} style={{ marginTop: 16 }}>
               <Text style={{ color: theme.textDim, fontSize: 14 }}>Not {firstName}?  <Text style={{ color: theme.primary, fontWeight: '600' }}>Switch account</Text></Text>
             </TouchableOpacity>
           </>
@@ -125,9 +124,6 @@ export default function PinLoginScreen({ navigation }) {
   );
 }
 
-// Need to import TextInput
-import { TextInput } from 'react-native';
-
 const styles = StyleSheet.create({
   safe:    { flex: 1 },
   inner:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
@@ -135,8 +131,6 @@ const styles = StyleSheet.create({
   brand:   { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
   tagline: { fontSize: 11, marginTop: 2 },
   themeBtn:{ borderWidth: 1, borderRadius: 20, padding: 8 },
-  avatar:  { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 32, fontWeight: '700' },
   greeting:{ fontSize: 22, fontWeight: '700', textAlign: 'center' },
   sub:     { fontSize: 14, textAlign: 'center' },
   error:   { color: '#DC2626', fontSize: 14, textAlign: 'center' },

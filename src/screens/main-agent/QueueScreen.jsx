@@ -4,6 +4,7 @@ import {
   Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenAllRequests, updateRequestStatus, createTransaction } from '../../utils/firestore';
@@ -104,13 +105,22 @@ export default function QueueScreen() {
         renderItem={({ item }) => (
           <RequestCard request={item} onPress={setSelected} showAgent />
         )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>✅</Text>
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('queueEmpty')}</Text>
-            <Text style={[styles.emptyDesc, { color: theme.textDim }]}>{tr('queueEmptyDesc')}</Text>
-          </View>
-        }
+        ListEmptyComponent={(() => {
+          const EMPTY_ICON_MAP = {
+            pending:   { name: 'checkmark-circle-outline', color: '#F59E0B' },
+            approved:  { name: 'swap-horizontal-outline',  color: '#0891B2' },
+            completed: { name: 'cube-outline',             color: '#16A34A' },
+            all:       { name: 'mail-open-outline',        color: '#909090' },
+          };
+          const emptyIcon = EMPTY_ICON_MAP[filter] ?? EMPTY_ICON_MAP.all;
+          return (
+            <View style={styles.empty}>
+              <Ionicons name={emptyIcon.name} size={48} color={emptyIcon.color} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('queueEmpty')}</Text>
+              <Text style={[styles.emptyDesc, { color: theme.textDim }]}>{tr('queueEmptyDesc')}</Text>
+            </View>
+          );
+        })()}
       />
 
       {/* Action modal */}
@@ -130,7 +140,7 @@ export default function QueueScreen() {
                 ['Amount',  fmt(selected.amount)],
                 ['Source',  `${selected.sourcePhone} (${NETWORK_WALLETS[selected.sourceNetwork]})`],
                 ['Dest',    `${selected.destPhone} (${NETWORK_WALLETS[selected.destNetwork]})`],
-                ['Priority',selected.urgent ? '⚡ URGENT' : 'Normal'],
+                ['Priority',selected.urgent ? 'URGENT' : 'Normal'],
               ].map(([label, value]) => (
                 <View key={label} style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: theme.textDim }]}>{label}</Text>
@@ -143,19 +153,32 @@ export default function QueueScreen() {
               {selected.status === 'pending' && (
                 <TouchableOpacity onPress={handleApprove} disabled={loading}
                   style={[styles.actionBtn, { backgroundColor: theme.info ?? '#0891B2' }]}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>✓ {tr('approve')}</Text>}
+                  {loading ? <ActivityIndicator color="#fff" /> : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>{tr('approve')}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )}
               {(selected.status === 'pending' || selected.status === 'approved') && (
                 <TouchableOpacity onPress={handleProcess} disabled={loading}
                   style={[styles.actionBtn, { backgroundColor: theme.primary }]}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionBtnText}>⇄ {tr('processTransfer')}</Text>}
+                  {loading ? <ActivityIndicator color="#fff" /> : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <MaterialIcons name="swap-horiz" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>{tr('processTransfer')}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )}
               {selected.status === 'pending' && (
                 <TouchableOpacity onPress={handleReject} disabled={loading}
                   style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}>
-                  <Text style={styles.actionBtnText}>✕ {tr('reject')}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="close" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>{tr('reject')}</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => setSelected(null)}

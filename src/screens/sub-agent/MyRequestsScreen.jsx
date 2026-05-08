@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenRequests } from '../../utils/firestore';
@@ -50,7 +51,7 @@ export default function MyRequestsScreen({ navigation }) {
         renderItem={({ item }) => <RequestCard request={item} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>📭</Text>
+            <Ionicons name="mail-open-outline" size={48} color={theme.muted ?? theme.textDim} />
             <Text style={[styles.emptyText, { color: theme.textDim }]}>No {filter === 'all' ? '' : filter} requests</Text>
           </View>
         }

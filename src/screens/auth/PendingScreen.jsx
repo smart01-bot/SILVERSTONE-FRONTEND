@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -12,7 +13,7 @@ export default function PendingScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <View style={styles.inner}>
         <View style={[styles.icon, { backgroundColor: theme.primaryLight }]}>
-          <Text style={{ fontSize: 48 }}>⏳</Text>
+          <Ionicons name="time-outline" size={48} color={theme.primary} />
         </View>
         <Text style={[styles.title, { color: theme.text }]}>{tr('applicationSent')}</Text>
         <Text style={[styles.name, { color: theme.primary }]}>
@@ -21,7 +22,7 @@ export default function PendingScreen({ navigation }) {
         <Text style={[styles.desc, { color: theme.textDim }]}>{tr('pendingDesc')}</Text>
 
         <View style={[styles.note, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text style={[styles.noteText, { color: theme.textDim }]}>💡 {tr('pendingNote')}</Text>
+          <Text style={[styles.noteText, { color: theme.textDim }]}>{tr('pendingNote')}</Text>
         </View>
 
         <TouchableOpacity

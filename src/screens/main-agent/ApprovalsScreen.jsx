@@ -3,8 +3,10 @@ import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { listenAgents, approveAgent, rejectAgent } from '../../utils/firestore';
+import Avatar from '../../components/Avatar';
 
 export default function ApprovalsScreen() {
   const { theme, tr } = useTheme();
@@ -73,9 +75,7 @@ export default function ApprovalsScreen() {
           return (
             <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
               <View style={styles.top}>
-                <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-                  <Text style={[styles.avatarText, { color: theme.primary }]}>{item.name?.[0]}</Text>
-                </View>
+                <Avatar name={item.name ?? 'A'} size={44} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
                   <Text style={[styles.phone, { color: theme.textDim }]}>{item.phone}</Text>
@@ -101,13 +101,21 @@ export default function ApprovalsScreen() {
                 <View style={styles.actions}>
                   <TouchableOpacity onPress={() => handleReject(item.id)} disabled={isLoading}
                     style={[styles.actionBtn, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
-                    <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 14 }}>✕ Reject</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="close" size={14} color="#DC2626" />
+                      <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 14 }}>Reject</Text>
+                    </View>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleApprove(item.id)} disabled={isLoading}
                     style={[styles.actionBtn, { backgroundColor: theme.primary }]}>
                     {isLoading
                       ? <ActivityIndicator color="#fff" size="small" />
-                      : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>✓ Approve</Text>
+                      : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="checkmark" size={14} color="#fff" />
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Approve</Text>
+                        </View>
+                      )
                     }
                   </TouchableOpacity>
                 </View>
@@ -117,7 +125,11 @@ export default function ApprovalsScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>{filter === 'pending' ? '🎉' : '📭'}</Text>
+            <Ionicons
+              name={filter === 'pending' ? 'checkmark-circle-outline' : 'mail-open-outline'}
+              size={48}
+              color={filter === 'pending' ? theme.green : theme.muted ?? theme.textDim}
+            />
             <Text style={[{ fontSize: 15, fontWeight: '700', color: theme.text }]}>
               No {filter} applications
             </Text>

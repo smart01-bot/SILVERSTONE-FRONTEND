@@ -1,22 +1,24 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import NetworkBadge from '../../components/NetworkBadge';
+import Avatar from '../../components/Avatar';
 
 export default function ProfileScreen({ navigation }) {
   const { profile, logout } = useAuth();
-  const { theme, isDark, toggleTheme, lang, setLang, tr } = useTheme();
+  const { theme, isDark, setThemeMode, themeMode, lang, setLang, tr } = useTheme();
 
   const menuItems = [
-    { icon: '📊', title: tr('myRequests'),   sub: 'View request history',    onPress: () => navigation.navigate('MyRequests') },
-    { icon: '🔔', title: 'Notifications',    sub: 'Alerts & updates',         onPress: () => {} },
-    { icon: '📱', title: 'My Networks',      sub: profile?.networks?.join(' · ') || 'No networks set', onPress: () => {} },
-    { icon: '🔐', title: 'Security',         sub: 'PIN & biometrics',          onPress: () => {} },
-    { icon: '❓', title: 'FAQs',             sub: 'Common questions',           onPress: () => {} },
-    { icon: '📞', title: 'Contact & Support',sub: 'Get help from our team',     onPress: () => {} },
-    { icon: '📄', title: 'Terms of Service', sub: 'Legal & privacy',            onPress: () => {} },
+    { iconName: 'time-outline',         title: tr('myRequests'),      sub: 'View request history',      onPress: () => navigation.navigate('MyRequests') },
+    { iconName: 'notifications-outline',title: 'Notifications',       sub: 'Alerts & updates',          onPress: () => {} },
+    { iconName: 'phone-portrait-outline',title: 'My Networks',        sub: profile?.networks?.join(' · ') || 'No networks set', onPress: () => {} },
+    { iconName: 'lock-closed-outline',  title: 'Security',            sub: 'PIN & biometrics',          onPress: () => {} },
+    { iconName: 'help-circle-outline',  title: 'FAQs',                sub: 'Common questions',          onPress: () => {} },
+    { iconName: 'call-outline',         title: 'Contact & Support',   sub: 'Get help from our team',    onPress: () => {} },
+    { iconName: 'document-outline',     title: 'Terms of Service',    sub: 'Legal & privacy',           onPress: () => {} },
   ];
 
   const handleLogout = () => {
@@ -32,11 +34,7 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-          <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-            <Text style={[styles.avatarText, { color: theme.primary }]}>
-              {profile?.name?.[0] ?? 'A'}
-            </Text>
-          </View>
+          <Avatar name={profile?.name ?? 'A'} size={72} />
           <Text style={[styles.name, { color: theme.text }]}>{profile?.name ?? '—'}</Text>
           <Text style={[styles.phone, { color: theme.textDim }]}>{profile?.phone ?? '—'}</Text>
           <View style={[styles.roleBadge, { backgroundColor: theme.primaryLight }]}>
@@ -52,17 +50,26 @@ export default function ProfileScreen({ navigation }) {
         {/* Theme + Language */}
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>🎨 Theme</Text>
-            <TouchableOpacity onPress={toggleTheme}
-              style={[styles.toggleBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text style={{ color: theme.textDim, fontWeight: '600', fontSize: 13 }}>
-                {isDark ? '☀️ Light' : '🌙 Dark'}
-              </Text>
-            </TouchableOpacity>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Theme</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([mode, label]) => (
+                <TouchableOpacity key={mode}
+                  onPress={() => { if (typeof setThemeMode === 'function') setThemeMode(mode); }}
+                  style={[styles.langBtn, {
+                    backgroundColor: (themeMode === mode || (!themeMode && mode === 'auto')) ? theme.primary : theme.surfaceAlt,
+                    borderColor: theme.border,
+                  }]}>
+                  <Text style={{
+                    color: (themeMode === mode || (!themeMode && mode === 'auto')) ? '#fff' : theme.textDim,
+                    fontSize: 12, fontWeight: '700',
+                  }}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>🌍 Language</Text>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Language</Text>
             <View style={styles.langRow}>
               {[['en','EN'],['sw','SW']].map(([code, label]) => (
                 <TouchableOpacity key={code} onPress={() => setLang(code)}
@@ -79,7 +86,9 @@ export default function ProfileScreen({ navigation }) {
           {menuItems.map((item, idx) => (
             <React.Fragment key={item.title}>
               <TouchableOpacity onPress={item.onPress} style={styles.menuItem}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuIconWrap}>
+                  <Ionicons name={item.iconName} size={20} color={theme.textDim} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.menuTitle, { color: theme.text }]}>{item.title}</Text>
                   <Text style={[styles.menuSub, { color: theme.textDim }]}>{item.sub}</Text>
@@ -94,7 +103,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Sign out */}
         <TouchableOpacity onPress={handleLogout}
           style={[styles.signOutBtn, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
-          <Text style={styles.signOutText}>← {tr('signOut')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+            <Text style={styles.signOutText}>{tr('signOut')}</Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={[styles.version, { color: theme.muted }]}>Silverstone v1.0.0</Text>
@@ -108,8 +120,6 @@ const styles = StyleSheet.create({
   safe:       { flex: 1 },
   scroll:     { padding: 16, gap: 12, paddingBottom: 100 },
   profileCard:{ borderRadius: 20, borderWidth: 1, padding: 20, alignItems: 'center', gap: 8 },
-  avatar:     { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28, fontWeight: '700' },
   name:       { fontSize: 20, fontWeight: '800' },
   phone:      { fontSize: 14 },
   roleBadge:  { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5 },
@@ -118,12 +128,11 @@ const styles = StyleSheet.create({
   card:       { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   row:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
   rowLabel:   { fontSize: 15, fontWeight: '600' },
-  toggleBtn:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   langRow:    { flexDirection: 'row', gap: 6 },
   langBtn:    { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
   divider:    { height: 1 },
   menuItem:   { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  menuIcon:   { fontSize: 22, width: 30 },
+  menuIconWrap: { width: 28, alignItems: 'center' },
   menuTitle:  { fontSize: 15, fontWeight: '600' },
   menuSub:    { fontSize: 12, marginTop: 1 },
   chevron:    { fontSize: 22 },
