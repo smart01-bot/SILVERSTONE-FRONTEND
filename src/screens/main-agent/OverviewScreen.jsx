@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, BarChart } from 'react-native-chart-kit';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenDashboardStats } from '../../utils/firestore';
@@ -29,10 +30,10 @@ export default function OverviewScreen() {
   }, []);
 
   const statCards = [
-    { label: tr('totalRequests'), value: stats?.totalRequests ?? 0,  icon: '📋', delta: `${stats?.pendingCount ?? 0} pending` },
-    { label: tr('totalTx'),       value: stats?.totalTx ?? 0,        icon: '⇄',  delta: 'completed' },
-    { label: tr('activeAgents'),  value: stats?.activeAgents ?? 0,   icon: '👥', delta: `${stats?.pendingAgents ?? 0} awaiting` },
-    { label: 'Total Volume',      value: fmtK(stats?.totalVolume ?? 0), icon: '💰', delta: 'moved' },
+    { label: tr('totalRequests'), value: stats?.totalRequests ?? 0,  iconName: 'list-outline',   iconLib: 'Ionicons',  delta: `${stats?.pendingCount ?? 0} pending` },
+    { label: tr('totalTx'),       value: stats?.totalTx ?? 0,        iconName: 'swap-horiz',     iconLib: 'Material',  delta: 'completed' },
+    { label: tr('activeAgents'),  value: stats?.activeAgents ?? 0,   iconName: 'people-outline', iconLib: 'Ionicons',  delta: `${stats?.pendingAgents ?? 0} awaiting` },
+    { label: 'Total Volume',      value: fmtK(stats?.totalVolume ?? 0), iconName: 'cash-outline', iconLib: 'Ionicons',  delta: 'moved' },
   ];
 
   // Chart data: last 6 months — computed from real Firestore data
@@ -87,9 +88,12 @@ export default function OverviewScreen() {
 
         {/* Stat cards */}
         <View style={styles.statsGrid}>
-          {statCards.map(({ label, value, icon, delta }) => (
+          {statCards.map(({ label, value, iconName, iconLib, delta }) => (
             <View key={label} style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-              <Text style={styles.statIcon}>{icon}</Text>
+              {iconLib === 'Material'
+                ? <MaterialIcons name={iconName} size={24} color={theme.primary} />
+                : <Ionicons name={iconName} size={24} color={theme.primary} />
+              }
               <Text style={[styles.statVal, { color: theme.text }]}>{value}</Text>
               <Text style={[styles.statLabel, { color: theme.textDim }]}>{label}</Text>
               <Text style={[styles.statDelta, { color: theme.primary }]}>{delta}</Text>
@@ -147,7 +151,6 @@ const styles = StyleSheet.create({
   sub:       { fontSize: 13, marginTop: -10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard:  { width: '47%', borderRadius: 16, borderWidth: 1, padding: 14, gap: 4 },
-  statIcon:  { fontSize: 24 },
   statVal:   { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
   statLabel: { fontSize: 12 },
   statDelta: { fontSize: 12, fontWeight: '600' },

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -17,7 +18,7 @@ function StepIcon({ state, color, pulseAnim }) {
   if (state === 'done') {
     return (
       <View style={[styles.stepCircle, { backgroundColor: '#16A34A', borderColor: '#16A34A' }]}>
-        <Text style={styles.stepCheck}>✓</Text>
+        <Ionicons name="checkmark" size={16} color="#fff" />
       </View>
     );
   }
@@ -39,9 +40,6 @@ export default function PendingScreen() {
   const { logout, profile } = useAuth();
   const { theme, lang, tr } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  // AppNavigator watches profile.status via onSnapshot — no local listener needed.
-  // When status changes to 'approved', AppNavigator routes away automatically.
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -74,7 +72,7 @@ export default function PendingScreen() {
       <View style={styles.inner}>
 
         <View style={[styles.icon, { backgroundColor: theme.primaryLight }]}>
-          <Text style={{ fontSize: 40 }}>⏳</Text>
+          <Ionicons name="time-outline" size={40} color={theme.primary} />
         </View>
 
         <Text style={[styles.title, { color: theme.text }]}>
@@ -162,7 +160,6 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  stepCheck:    { color: '#fff', fontWeight: '800', fontSize: 15 },
   stepInnerDot: { width: 10, height: 10, borderRadius: 5 },
   stepLabel:    { fontSize: 14 },
   stepSub:      { fontSize: 11, marginTop: 2 },

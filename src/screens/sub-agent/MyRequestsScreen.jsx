@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenRequests } from '../../utils/firestore';
@@ -75,17 +76,18 @@ export default function MyRequestsScreen({ navigation }) {
                 onPress={() => handleShare(item)}
                 style={[styles.shareBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
               >
-                <Text style={[styles.shareBtnText, { color: theme.primary }]}>↗ Share Receipt</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="share-outline" size={15} color={theme.primary} />
+                  <Text style={[styles.shareBtnText, { color: theme.primary }]}>Share Receipt</Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>📭</Text>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>
-              No {filter === 'all' ? '' : filter} requests
-            </Text>
+            <Ionicons name="mail-open-outline" size={48} color={theme.muted ?? theme.textDim} />
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>No {filter === 'all' ? '' : filter} requests</Text>
           </View>
         }
       />

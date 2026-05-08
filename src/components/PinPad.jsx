@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { lightTap } from '../utils/haptics';
 
 const DIGITS = [
-  ['1','2','3'],
-  ['4','5','6'],
-  ['7','8','9'],
-  ['','0','⌫'],
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['', '0', 'del'],
 ];
 
 export default function PinPad({ length = 6, onComplete, onError, onBiometric }) {
@@ -16,7 +17,7 @@ export default function PinPad({ length = 6, onComplete, onError, onBiometric })
 
   const press = (val) => {
     if (val === '') return;
-    if (val === '⌫') {
+    if (val === 'del') {
       lightTap();
       setPin(p => p.slice(0, -1));
       return;
@@ -26,27 +27,19 @@ export default function PinPad({ length = 6, onComplete, onError, onBiometric })
     const next = pin + val;
     setPin(next);
     if (next.length === length) {
-      setTimeout(() => {
-        onComplete?.(next);
-        setPin('');
-      }, 120);
+      setTimeout(() => { onComplete?.(next); setPin(''); }, 120);
     }
   };
 
-  const dots = Array.from({ length });
-
   return (
     <View style={styles.wrap}>
-      {/* Dots */}
+      {/* PIN dots */}
       <View style={styles.dots}>
-        {dots.map((_, i) => (
-          <View key={i} style={[
-            styles.dot,
-            {
-              backgroundColor: i < pin.length ? theme.primary : 'transparent',
-              borderColor: i < pin.length ? theme.primary : theme.border,
-            }
-          ]} />
+        {Array.from({ length }).map((_, i) => (
+          <View key={i} style={[styles.dot, {
+            backgroundColor: i < pin.length ? theme.primary : 'transparent',
+            borderColor:     i < pin.length ? theme.primary : theme.border,
+          }]} />
         ))}
       </View>
 
@@ -55,35 +48,28 @@ export default function PinPad({ length = 6, onComplete, onError, onBiometric })
         {DIGITS.map((row, ri) => (
           <View key={ri} style={styles.row}>
             {row.map((d, di) => {
-              // Bottom-left empty slot → biometric button when available
-              if (d === '' && onBiometric) {
-                return (
-                  <TouchableOpacity
-                    key={di}
-                    onPress={onBiometric}
-                    activeOpacity={0.7}
-                    style={[styles.key, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                  >
-                    <Text style={[styles.keyText, { color: theme.primary }]}>⊙</Text>
-                  </TouchableOpacity>
-                );
-              }
+              const isBio   = d === '' && !!onBiometric;
+              const isEmpty = d === '' && !onBiometric;
+              const isDel   = d === 'del';
+
               return (
                 <TouchableOpacity
                   key={di}
-                  onPress={() => press(d)}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.key,
-                    {
-                      backgroundColor: d === '' ? 'transparent' : theme.surface,
-                      borderColor: d === '' ? 'transparent' : theme.border,
-                    }
-                  ]}
+                  onPress={() => isBio ? onBiometric() : press(d)}
+                  activeOpacity={isEmpty ? 1 : 0.7}
+                  disabled={isEmpty}
+                  style={[styles.key, {
+                    backgroundColor: isEmpty ? 'transparent' : theme.surface,
+                    borderColor:     isEmpty ? 'transparent' : theme.border,
+                  }]}
                 >
-                  <Text style={[styles.keyText, { color: d === '⌫' ? theme.primary : theme.text }]}>
-                    {d}
-                  </Text>
+                  {isBio ? (
+                    <Ionicons name="finger-print" size={26} color={theme.primary} />
+                  ) : isDel ? (
+                    <Ionicons name="backspace-outline" size={24} color={theme.primary} />
+                  ) : (
+                    <Text style={[styles.keyText, { color: theme.text }]}>{d}</Text>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -97,25 +83,9 @@ export default function PinPad({ length = 6, onComplete, onError, onBiometric })
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 32 },
   dots: { flexDirection: 'row', gap: 14 },
-  dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-  },
-  pad: { gap: 12, alignItems: 'center' },
-  row: { flexDirection: 'row', gap: 12 },
-  key: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyText: {
-    fontSize: 26,
-    fontWeight: '500',
-    fontFamily: 'Courier New',
-  },
+  dot:  { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+  pad:  { gap: 12, alignItems: 'center' },
+  row:  { flexDirection: 'row', gap: 12 },
+  key:  { width: 80, height: 80, borderRadius: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  keyText: { fontSize: 26, fontWeight: '500', fontFamily: 'Courier New' },
 });

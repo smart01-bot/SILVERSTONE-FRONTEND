@@ -1,7 +1,8 @@
 import React from 'react';
+import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
@@ -14,11 +15,17 @@ import NetworksScreen   from '../screens/sub-agent/NetworksScreen';
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const Icon = ({ emoji, focused }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-);
+function TabIcon({ name, activeName, focused, color }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      {focused && (
+        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color, marginBottom: 3 }} />
+      )}
+      <Ionicons name={focused ? activeName : name} size={24} color={color} />
+    </View>
+  );
+}
 
-// Profile stack wraps ProfileScreen + NetworksScreen
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -41,30 +48,34 @@ export default function SubAgentNavigator() {
           backgroundColor: theme.surface,
           borderTopColor: theme.border,
           borderTopWidth: 1,
-          paddingBottom: 6,
-          paddingTop: 6,
+          paddingBottom: 8,
+          paddingTop: 8,
           height: 64,
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}
     >
       <Tab.Screen name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: tr('home'),    tabBarIcon: ({ focused }) => <Icon emoji="🏠" focused={focused} /> }}
+        options={{ tabBarLabel: tr('home'), tabBarIcon: ({ focused, color }) =>
+          <TabIcon name="home-outline" activeName="home" focused={focused} color={color} /> }}
       />
       <Tab.Screen name="NewRequest"
         component={NewRequestScreen}
-        options={{ tabBarLabel: tr('request'), tabBarIcon: ({ focused }) => <Icon emoji="➕" focused={focused} /> }}
+        options={{ tabBarLabel: tr('request'), tabBarIcon: ({ focused, color }) =>
+          <TabIcon name="add-circle-outline" activeName="add-circle" focused={focused} color={color} /> }}
       />
       <Tab.Screen name="MyRequests"
         component={MyRequestsScreen}
-        options={{ tabBarLabel: tr('history'), tabBarIcon: ({ focused }) => <Icon emoji="📋" focused={focused} /> }}
+        options={{ tabBarLabel: tr('history'), tabBarIcon: ({ focused, color }) =>
+          <TabIcon name="time-outline" activeName="time" focused={focused} color={color} /> }}
       />
       <Tab.Screen name="Profile"
         component={ProfileStack}
-        options={{ tabBarLabel: tr('profile'), tabBarIcon: ({ focused }) => <Icon emoji="👤" focused={focused} /> }}
+        options={{ tabBarLabel: tr('profile'), tabBarIcon: ({ focused, color }) =>
+          <TabIcon name="person-outline" activeName="person" focused={focused} color={color} /> }}
       />
     </Tab.Navigator>
   );

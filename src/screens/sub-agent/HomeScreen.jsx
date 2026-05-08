@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LineChart } from 'react-native-chart-kit';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { listenRequests } from '../../utils/firestore';
@@ -13,6 +14,7 @@ import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import RequestCard from '../../components/RequestCard';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import NetworkBadge from '../../components/NetworkBadge';
+import Avatar from '../../components/Avatar';
 import { NETWORK_COLORS } from '../../constants/networks';
 
 const W = Dimensions.get('window').width;
@@ -21,7 +23,7 @@ const fmtK = (n) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1000 
 
 export default function HomeScreen({ navigation }) {
   const { user, profile } = useAuth();
-  const { theme, tr } = useTheme();
+  const { theme, tr, isDark, toggleTheme } = useTheme();
   const { isOnline, syncing, syncedCount } = useOfflineQueue(user?.uid, profile?.name);
 
   const [requests, setRequests]   = useState([]);
@@ -71,20 +73,29 @@ export default function HomeScreen({ navigation }) {
   const recentRequests = requests.slice(0, 4);
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
 
+  const quickActions = [
+    { label: tr('newRequest'), iconName: 'add-circle-outline', screen: 'NewRequest' },
+    { label: tr('myRequests'), iconName: 'time-outline',       screen: 'MyRequests' },
+    { label: tr('trackStatus'),iconName: 'search-outline',     screen: 'MyRequests' },
+    { label: tr('profile'),    iconName: 'person-outline',     screen: 'Profile' },
+  ];
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
 
       {/* Offline banner */}
       {!isOnline && (
         <View style={styles.offlineBanner}>
+          <Ionicons name={syncing ? 'refresh-outline' : 'warning-outline'} size={14} color="#fff" />
           <Text style={styles.offlineText}>
-            {syncing ? '⟳ Syncing offline requests...' : '⚠ You\'re offline — requests will sync when connected'}
+            {syncing ? 'Syncing offline requests...' : 'You\'re offline — requests will sync when connected'}
           </Text>
         </View>
       )}
       {syncedCount > 0 && (
         <View style={[styles.offlineBanner, { backgroundColor: '#16A34A' }]}>
-          <Text style={styles.offlineText}>✓ {syncedCount} request{syncedCount > 1 ? 's' : ''} synced</Text>
+          <Ionicons name="checkmark-circle-outline" size={14} color="#fff" />
+          <Text style={styles.offlineText}>{syncedCount} request{syncedCount > 1 ? 's' : ''} synced</Text>
         </View>
       )}
 
@@ -98,12 +109,13 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.topBar}>
           <View>
             <Text style={[styles.greeting, { color: theme.textDim }]}>Good day,</Text>
-            <Text style={[styles.name, { color: theme.text }]}>{firstName} 👋</Text>
+            <Text style={[styles.name, { color: theme.text }]}>{firstName}</Text>
           </View>
           <View style={styles.topActions}>
-            <TouchableOpacity style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-              <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 16 }}>{firstName[0]}</Text>
+            <TouchableOpacity onPress={toggleTheme} style={[styles.iconBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={16} color={theme.textDim} />
             </TouchableOpacity>
+            <Avatar name={firstName} size={40} />
           </View>
         </View>
 
@@ -116,50 +128,34 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.heroTop}>
             <Text style={styles.heroLabel}>{tr('totalVolume')}</Text>
             <TouchableOpacity onPress={() => setHideAmount(h => !h)}>
-              <Text style={styles.heroEye}>{hideAmount ? '👁' : '🙈'}</Text>
+              <Ionicons name={hideAmount ? 'eye-outline' : 'eye-off-outline'} size={20} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           </View>
           <Text style={styles.heroAmount}>
             {hideAmount ? 'TZS ••••••' : fmt(totalVol)}
           </Text>
 
-          <View style={styles.heroTiles}>
-            {[
-              { label: tr('completed'), value: completed.length, icon: '✅' },
-              { label: tr('pending'),   value: pending.length,   icon: '⏳' },
-            ].map(({ label, value, icon }) => (
-              <View key={label} style={styles.heroTile}>
-                <Text style={styles.heroTileIcon}>{icon}</Text>
-                <Text style={styles.heroTileVal}>{value}</Text>
-                <Text style={styles.heroTileLabel}>{label}</Text>
-              </View>
-            ))}
+          <View style={styles.heroStats}>
+            <View style={styles.heroStatCol}>
+              <Text style={styles.heroStatVal}>{completed.length}</Text>
+              <Text style={styles.heroStatLabel}>{tr('completed')}</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatCol}>
+              <Text style={styles.heroStatVal}>{pending.length}</Text>
+              <Text style={styles.heroStatLabel}>{tr('pending')}</Text>
+            </View>
           </View>
         </LinearGradient>
 
         {/* Quick actions */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>{tr('quickActions')}</Text>
         <View style={styles.actionsGrid}>
-          {[
-            { label: tr('newRequest'), icon: '➕', screen: 'NewRequest' },
-            {
-              label: tr('myRequests'), icon: '📋', screen: 'MyRequests',
-              badge: pending.length > 0 ? pending.length : null,
-            },
-            { label: tr('trackStatus'), icon: '🔍', screen: 'MyRequests' },
-            { label: tr('profile'),     icon: '👤', screen: 'Profile' },
-          ].map(({ label, icon, screen, badge }) => (
+          {quickActions.map(({ label, iconName, screen }) => (
             <TouchableOpacity key={label}
               onPress={() => navigation.navigate(screen)}
               style={[styles.actionBtn, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-              <View style={{ position: 'relative' }}>
-                <Text style={{ fontSize: 28, marginBottom: 6 }}>{icon}</Text>
-                {badge && (
-                  <View style={styles.actionBadge}>
-                    <Text style={styles.actionBadgeText}>{badge}</Text>
-                  </View>
-                )}
-              </View>
+              <Ionicons name={iconName} size={28} color={theme.primary} style={{ marginBottom: 6 }} />
               <Text style={[styles.actionLabel, { color: theme.text }]}>{label}</Text>
             </TouchableOpacity>
           ))}
@@ -225,7 +221,7 @@ export default function HomeScreen({ navigation }) {
 
         {recentRequests.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={{ fontSize: 36 }}>📭</Text>
+            <Ionicons name="document-outline" size={48} color={theme.muted ?? theme.textDim} />
             <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('noRequests')}</Text>
             <Text style={[styles.emptyDesc, { color: theme.textDim }]}>{tr('noRequestsDesc')}</Text>
           </View>
@@ -252,7 +248,7 @@ const styles = StyleSheet.create({
   safe:   { flex: 1 },
   offlineBanner: {
     backgroundColor: '#DC2626', paddingVertical: 7,
-    paddingHorizontal: 16, alignItems: 'center',
+    paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   offlineText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   scroll: { padding: 16, paddingBottom: 100, gap: 16 },
@@ -260,17 +256,20 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13 },
   name:   { fontSize: 20, fontWeight: '700', marginTop: 2 },
   topActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  hero: { borderRadius: 20, padding: 20, gap: 8 },
+  iconBtn: { borderWidth: 1, borderRadius: 20, padding: 8 },
+  hero: {
+    borderRadius: 20, padding: 20, gap: 8,
+    shadowColor: '#FFA500', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 16, elevation: 10,
+  },
   heroTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroLabel:  { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500' },
-  heroEye:    { fontSize: 18 },
   heroAmount: { color: '#fff', fontSize: 32, fontWeight: '800', fontFamily: 'Courier New', letterSpacing: -0.5 },
-  heroTiles:  { flexDirection: 'row', gap: 10, marginTop: 8 },
-  heroTile:   { flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 12, alignItems: 'center', gap: 4 },
-  heroTileIcon: { fontSize: 20 },
-  heroTileVal:  { color: '#fff', fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
-  heroTileLabel:{ color: 'rgba(255,255,255,0.8)', fontSize: 11 },
+  heroStats:      { flexDirection: 'row', marginTop: 8 },
+  heroStatCol:    { flex: 1, alignItems: 'center', gap: 4 },
+  heroStatVal:    { color: '#fff', fontSize: 24, fontWeight: '800', fontFamily: 'Courier New' },
+  heroStatLabel:  { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
+  heroStatDivider:{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
   sectionTitle: { fontSize: 17, fontWeight: '700' },
   sectionHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   actionsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

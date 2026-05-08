@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { listenAgents } from '../../utils/firestore';
 import NetworkBadge from '../../components/NetworkBadge';
 import StatusBadge from '../../components/StatusBadge';
+import Avatar from '../../components/Avatar';
 
 export default function AgentsScreen() {
   const { theme, tr } = useTheme();
@@ -30,9 +32,7 @@ export default function AgentsScreen() {
         renderItem={({ item }) => (
           <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
             <View style={styles.top}>
-              <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-                <Text style={[styles.avatarText, { color: theme.primary }]}>{item.name?.[0] ?? 'A'}</Text>
-              </View>
+              <Avatar name={item.name ?? 'A'} size={48} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
                 <Text style={[styles.phone, { color: theme.textDim }]}>{item.phone}</Text>
@@ -49,7 +49,7 @@ export default function AgentsScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>👥</Text>
+            <Ionicons name="people-outline" size={48} color={theme.muted ?? theme.textDim} />
             <Text style={[{ fontSize: 15, fontWeight: '700', color: theme.text }]}>No approved agents yet</Text>
           </View>
         }

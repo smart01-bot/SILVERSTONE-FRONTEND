@@ -6,29 +6,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import NetworkBadge from '../../components/NetworkBadge';
+import Avatar from '../../components/Avatar';
 
 const EDITABLE_FIELDS = [
-  { key: 'name',             label: 'Full Name',          keyboard: 'default' },
-  { key: 'phone',            label: 'Phone Number',        keyboard: 'phone-pad' },
-  { key: 'businessLocation', label: 'Business Location',   keyboard: 'default' },
+  { key: 'name',             label: 'Full Name',        keyboard: 'default' },
+  { key: 'phone',            label: 'Phone Number',      keyboard: 'phone-pad' },
+  { key: 'businessLocation', label: 'Business Location', keyboard: 'default' },
 ];
 
 export default function ProfileScreen({ navigation }) {
   const { profile, logout, user } = useAuth();
   const { theme, setTheme, userPreference, lang, setLang, tr } = useTheme();
 
-  const [editKey, setEditKey]   = useState(null);
-  const [editVal, setEditVal]   = useState('');
-  const [saving, setSaving]     = useState(false);
+  const [editKey, setEditKey] = useState(null);
+  const [editVal, setEditVal] = useState('');
+  const [saving, setSaving]   = useState(false);
 
-  const startEdit = (key) => {
-    setEditKey(key);
-    setEditVal(profile?.[key] ?? '');
-  };
-
+  const startEdit = (key) => { setEditKey(key); setEditVal(profile?.[key] ?? ''); };
   const cancelEdit = () => { setEditKey(null); setEditVal(''); };
 
   const saveEdit = async () => {
@@ -53,13 +51,13 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const menuItems = [
-    { icon: '📊', title: tr('myRequests'),    sub: 'View request history',     onPress: () => navigation.navigate('MyRequests') },
-    { icon: '🔔', title: 'Notifications',     sub: 'Alerts & updates',          onPress: () => {} },
-    { icon: '📱', title: 'My Networks',       sub: profile?.networks?.join(' · ') || 'No networks set', onPress: () => navigation.navigate('Networks') },
-    { icon: '🔐', title: 'Security',          sub: 'PIN & biometrics',           onPress: () => {} },
-    { icon: '❓', title: 'FAQs',              sub: 'Common questions',            onPress: () => {} },
-    { icon: '📞', title: 'Contact & Support', sub: 'Get help from our team',      onPress: () => {} },
-    { icon: '📄', title: 'Terms of Service',  sub: 'Legal & privacy',             onPress: () => {} },
+    { iconName: 'time-outline',           title: tr('myRequests'),    sub: 'View request history',                                    onPress: () => navigation.navigate('MyRequests') },
+    { iconName: 'notifications-outline',  title: 'Notifications',     sub: 'Alerts & updates',                                        onPress: () => {} },
+    { iconName: 'phone-portrait-outline', title: 'My Networks',       sub: profile?.networks?.join(' · ') || 'No networks set',       onPress: () => navigation.navigate('Networks') },
+    { iconName: 'lock-closed-outline',    title: 'Security',          sub: 'PIN & biometrics',                                        onPress: () => {} },
+    { iconName: 'help-circle-outline',    title: 'FAQs',              sub: 'Common questions',                                        onPress: () => {} },
+    { iconName: 'call-outline',           title: 'Contact & Support', sub: 'Get help from our team',                                  onPress: () => {} },
+    { iconName: 'document-outline',       title: 'Terms of Service',  sub: 'Legal & privacy',                                         onPress: () => {} },
   ];
 
   return (
@@ -68,11 +66,7 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-          <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-            <Text style={[styles.avatarText, { color: theme.primary }]}>
-              {profile?.name?.[0] ?? 'A'}
-            </Text>
-          </View>
+          <Avatar name={profile?.name ?? 'A'} size={72} />
           <Text style={[styles.name, { color: theme.text }]}>{profile?.name ?? '—'}</Text>
           <Text style={[styles.phone, { color: theme.textDim }]}>{profile?.phone ?? '—'}</Text>
           <View style={[styles.roleBadge, { backgroundColor: theme.primaryLight }]}>
@@ -110,7 +104,7 @@ export default function ProfileScreen({ navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={cancelEdit}
                       style={[styles.cancelBtn, { borderColor: theme.border }]}>
-                      <Text style={[styles.cancelBtnText, { color: theme.textDim }]}>✕</Text>
+                      <Ionicons name="close" size={16} color={theme.textDim} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -124,7 +118,7 @@ export default function ProfileScreen({ navigation }) {
                   </View>
                   <TouchableOpacity onPress={() => startEdit(field.key)}
                     style={[styles.editBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-                    <Text style={{ color: theme.primary, fontSize: 14 }}>✏️</Text>
+                    <Feather name="edit-2" size={14} color={theme.primary} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -135,22 +129,17 @@ export default function ProfileScreen({ navigation }) {
         {/* Theme + Language */}
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>🎨 Theme</Text>
-            <View style={styles.themeOptions}>
-              {['auto', 'light', 'dark'].map((option) => {
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Theme</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([option, label]) => {
                 const active = (userPreference ?? 'auto') === option;
                 return (
                   <TouchableOpacity
                     key={option}
                     onPress={() => setTheme(option)}
-                    style={[
-                      styles.themeOptionBtn,
-                      { backgroundColor: active ? theme.primary : theme.surfaceAlt, borderColor: theme.border },
-                    ]}
+                    style={[styles.langBtn, { backgroundColor: active ? theme.primary : theme.surfaceAlt, borderColor: theme.border }]}
                   >
-                    <Text style={{ color: active ? '#fff' : theme.textDim, fontSize: 12, fontWeight: '600' }}>
-                      {option === 'auto' ? '📱 Auto' : option === 'light' ? '☀️ Light' : '🌙 Dark'}
-                    </Text>
+                    <Text style={{ color: active ? '#fff' : theme.textDim, fontSize: 12, fontWeight: '700' }}>{label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -158,7 +147,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>🌍 Language</Text>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Language</Text>
             <View style={styles.langRow}>
               {[['en', 'EN'], ['sw', 'SW']].map(([code, label]) => (
                 <TouchableOpacity key={code} onPress={() => setLang(code)}
@@ -175,7 +164,9 @@ export default function ProfileScreen({ navigation }) {
           {menuItems.map((item, idx) => (
             <React.Fragment key={item.title}>
               <TouchableOpacity onPress={item.onPress} style={styles.menuItem}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuIconWrap}>
+                  <Ionicons name={item.iconName} size={20} color={theme.textDim} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.menuTitle, { color: theme.text }]}>{item.title}</Text>
                   <Text style={[styles.menuSub, { color: theme.textDim }]}>{item.sub}</Text>
@@ -190,7 +181,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Sign out */}
         <TouchableOpacity onPress={handleLogout}
           style={[styles.signOutBtn, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
-          <Text style={styles.signOutText}>← {tr('signOut')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+            <Text style={styles.signOutText}>{tr('signOut')}</Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={[styles.version, { color: theme.muted }]}>Silverstone v1.0.0</Text>
@@ -204,8 +198,6 @@ const styles = StyleSheet.create({
   safe:       { flex: 1 },
   scroll:     { padding: 16, gap: 12, paddingBottom: 100 },
   profileCard:{ borderRadius: 20, borderWidth: 1, padding: 20, alignItems: 'center', gap: 8 },
-  avatar:     { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28, fontWeight: '700' },
   name:       { fontSize: 20, fontWeight: '800' },
   phone:      { fontSize: 14 },
   roleBadge:  { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5 },
@@ -224,20 +216,17 @@ const styles = StyleSheet.create({
   saveBtn:      { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, minWidth: 60, alignItems: 'center' },
   saveBtnText:  { color: '#fff', fontWeight: '700', fontSize: 13 },
   cancelBtn:    { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
-  cancelBtnText:{ fontWeight: '600', fontSize: 13 },
 
-  row:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
-  rowLabel:   { fontSize: 15, fontWeight: '600' },
-  themeOptions:   { flexDirection: 'row', gap: 6 },
-  themeOptionBtn: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
-  langRow:    { flexDirection: 'row', gap: 6 },
-  langBtn:    { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  divider:    { height: 1 },
-  menuItem:   { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  menuIcon:   { fontSize: 22, width: 30 },
-  menuTitle:  { fontSize: 15, fontWeight: '600' },
-  menuSub:    { fontSize: 12, marginTop: 1 },
-  chevron:    { fontSize: 22 },
+  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
+  rowLabel: { fontSize: 15, fontWeight: '600' },
+  langRow:  { flexDirection: 'row', gap: 6 },
+  langBtn:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  divider:  { height: 1 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  menuIconWrap: { width: 28, alignItems: 'center' },
+  menuTitle: { fontSize: 15, fontWeight: '600' },
+  menuSub:   { fontSize: 12, marginTop: 1 },
+  chevron:   { fontSize: 22 },
   signOutBtn: { borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center' },
   signOutText:{ color: '#DC2626', fontWeight: '700', fontSize: 15 },
   version:    { textAlign: 'center', fontSize: 12 },

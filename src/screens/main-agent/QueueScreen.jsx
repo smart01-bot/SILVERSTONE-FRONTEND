@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { listenAllRequests } from '../../utils/firestore';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
@@ -12,8 +12,13 @@ import RequestDetailModal from '../../components/RequestDetailModal';
 
 const FILTERS = ['pending', 'approved', 'completed', 'all'];
 
-const EMPTY_ICONS = { pending: '✅', approved: '⇄', completed: '📦', all: '📭' };
-const EMPTY_MSGS  = {
+const EMPTY_ICON_MAP = {
+  pending:   { name: 'checkmark-circle-outline', color: '#F59E0B' },
+  approved:  { name: 'swap-horizontal-outline',  color: '#0891B2' },
+  completed: { name: 'cube-outline',             color: '#16A34A' },
+  all:       { name: 'mail-open-outline',        color: '#6B7280' },
+};
+const EMPTY_MSGS = {
   pending:   'No pending requests',
   approved:  'No approved requests',
   completed: 'No completed requests',
@@ -47,7 +52,8 @@ export default function QueueScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
       {!isOnline && (
         <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>⚠ You're offline — live queue updates paused</Text>
+          <Ionicons name="warning-outline" size={14} color="#fff" />
+          <Text style={styles.offlineText}>You're offline — live queue updates paused</Text>
         </View>
       )}
       <View style={styles.header}>
@@ -62,7 +68,7 @@ export default function QueueScreen() {
         Urgent requests are sorted first
       </Text>
 
-      {/* Filter */}
+      {/* Filter pills */}
       <View style={styles.pills}>
         {FILTERS.map(f => (
           <TouchableOpacity key={f} onPress={() => setFilter(f)}
@@ -86,7 +92,11 @@ export default function QueueScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 40 }}>{EMPTY_ICONS[filter]}</Text>
+            <Ionicons
+              name={EMPTY_ICON_MAP[filter]?.name ?? 'mail-open-outline'}
+              size={48}
+              color={EMPTY_ICON_MAP[filter]?.color ?? theme.textDim}
+            />
             <Text style={[styles.emptyTitle, { color: theme.text }]}>{EMPTY_MSGS[filter]}</Text>
             <Text style={[styles.emptyDesc, { color: theme.textDim }]}>
               {filter === 'pending' ? 'All caught up — nothing waiting.' : ''}
@@ -116,7 +126,7 @@ const styles = StyleSheet.create({
   pill:   { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
   pillText: { fontSize: 12, fontWeight: '600' },
   list:   { padding: 16, gap: 10, paddingBottom: 100 },
-  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, alignItems: 'center' },
+  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
   offlineText:   { color: '#fff', fontSize: 12, fontWeight: '600' },
   empty:  { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyTitle: { fontSize: 16, fontWeight: '700' },

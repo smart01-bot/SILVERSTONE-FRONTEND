@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { listenTransactions } from '../../utils/firestore';
 import { NETWORK_COLORS } from '../../constants/networks';
@@ -38,7 +40,7 @@ export default function TransfersScreen() {
                 <View style={[styles.dot, { backgroundColor: NETWORK_COLORS[item.sourceNetwork] ?? '#888' }]} />
                 <Text style={[styles.netName, { color: theme.text }]}>{item.sourceNetwork}</Text>
               </View>
-              <Text style={[styles.arrow, { color: theme.textDim }]}>→</Text>
+              <Feather name="arrow-right" size={14} color={theme.textDim} />
               <View style={styles.netItem}>
                 <View style={[styles.dot, { backgroundColor: NETWORK_COLORS[item.destNetwork] ?? '#888' }]} />
                 <Text style={[styles.netName, { color: theme.text }]}>{item.destNetwork}</Text>
@@ -52,7 +54,7 @@ export default function TransfersScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>📊</Text>
+            <Ionicons name="swap-horizontal-outline" size={48} color={theme.muted ?? theme.textDim} />
             <Text style={[{ fontSize: 15, fontWeight: '700', color: theme.text }]}>No transactions yet</Text>
           </View>
         }
@@ -74,7 +76,6 @@ const styles = StyleSheet.create({
   netItem:{ flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot:    { width: 8, height: 8, borderRadius: 4 },
   netName:{ fontSize: 14, fontWeight: '600' },
-  arrow:  { fontSize: 16 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   amount: { fontSize: 18, fontWeight: '800', fontFamily: 'Courier New' },
   agent:  { fontSize: 13 },
