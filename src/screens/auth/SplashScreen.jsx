@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { View, Text, Image, Animated, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
 
 export default function SplashScreen({ onFinish }) {
   const { isDark } = useTheme();
@@ -43,7 +42,10 @@ export default function SplashScreen({ onFinish }) {
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
       <Animated.View style={[styles.logoWrap, { opacity, transform: [{ scale }] }]}>
-        <Logo size={200} />
+        <Image
+          source={require('../../assets/images/SilverS.png')}
+          style={{ width: 180, height: 180, resizeMode: 'contain' }}
+        />
       </Animated.View>
       <Animated.View style={[styles.textWrap, { opacity: textOpacity }]}>
         <Text style={styles.name}>SILVERSTONE INC.</Text>
