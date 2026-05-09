@@ -43,7 +43,7 @@ export default function SplashScreen({ onFinish }) {
     <LinearGradient colors={gradientColors} style={styles.container}>
       <Animated.View style={[styles.logoWrap, { opacity, transform: [{ scale }] }]}>
         <Image
-          source={require('../../assets/images/SilverS.png')}
+          source={require('../../../assets/images/SilverS.png')}
           style={{ width: 180, height: 180, resizeMode: 'contain' }}
         />
       </Animated.View>

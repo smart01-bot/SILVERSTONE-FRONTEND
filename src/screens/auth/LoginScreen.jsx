@@ -66,7 +66,7 @@ export default function LoginScreen({ navigation }) {
           {/* Logo + branding */}
           <View style={styles.brand}>
             <Image
-              source={require('../../assets/images/SilverS.png')}
+              source={require('../../../assets/images/SilverS.png')}
               style={{ width: 80, height: 80, resizeMode: 'contain' }}
             />
             <Text style={[styles.appName, { color: theme.primary }]}>Silverstone</Text>
