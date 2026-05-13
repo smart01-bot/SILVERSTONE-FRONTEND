@@ -1,4 +1,5 @@
 // src/navigation/AppNavigator.jsx
+import SplashScreen from '../screens/auth/SplashScreen';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -23,6 +24,12 @@ export default function AppNavigator() {
   const [checking,     setChecking]     = useState(true);
   const [pinVerified,  setPinVerified]  = useState(false);
   const [showForgot,   setShowForgot]   = useState(false);
+  const [showSplash,   setShowSplash]   = useState(true);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 1800);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Re-check PIN in SecureStore whenever user or pinSet changes
   useEffect(() => {
@@ -48,6 +55,9 @@ export default function AppNavigator() {
   }, [sessionLocked]);
 
   // ── Loading spinner ───────────────────────────────────────
+  if (showSplash) {
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
   if (authLoading || (user && profile && checking)) {
     return (
       <View style={[styles.center, { backgroundColor: theme.bg }]}>

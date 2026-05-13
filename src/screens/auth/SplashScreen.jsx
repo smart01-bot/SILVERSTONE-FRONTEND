@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function SplashScreen({ navigation }) {
+export default function SplashScreen({ navigation, onDone }) {
   const { theme } = useTheme();
   const dot1 = useRef(new Animated.Value(0.4)).current;
   const dot2 = useRef(new Animated.Value(0.4)).current;
@@ -45,7 +45,7 @@ export default function SplashScreen({ navigation }) {
     pulse(dot3, 400);
 
     const timer = setTimeout(() => {
-      navigation.replace('RoleSelect');
+      onDone ? onDone() : navigation?.replace('RoleSelect');
     }, 1800);
 
     return () => clearTimeout(timer);
