@@ -42,7 +42,10 @@ function HomeTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: false,
+        headerShown:       false,
+        animation:         'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled:    true,
         tabBarStyle: {
           backgroundColor: theme.surface,
           borderTopColor:  theme.border,
@@ -50,6 +53,8 @@ function HomeTabs() {
           paddingBottom:   8,
           paddingTop:      8,
           height:          64,
+          lazy: true,
+          tabBarHideOnKeyboard: true,
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,

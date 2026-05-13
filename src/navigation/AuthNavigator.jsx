@@ -21,7 +21,12 @@ export default function AuthNavigator({ initialRoute }) {
   return (
     <Stack.Navigator
       initialRouteName={initial}
-      screenOptions={{ headerShown: false, animation: 'fade' }}
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled: true,
+      }}
     >
       <Stack.Screen name="Splash"      component={SplashScreen} />
       <Stack.Screen name="RoleSelect"  component={RoleSelectScreen} />
