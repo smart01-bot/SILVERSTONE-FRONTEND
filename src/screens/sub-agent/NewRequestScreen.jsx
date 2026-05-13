@@ -1,248 +1,342 @@
-import React, { useState } from 'react';
+// src/screens/sub-agent/NewRequestScreen.jsx
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, ScrollView, TouchableOpacity,
-  StyleSheet, Switch, ActivityIndicator, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, StatusBar, SafeAreaView,
+  ScrollView, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { submitRequest } from '../../utils/firestore';
-import { useOfflineQueue } from '../../hooks/useOfflineQueue';
-import { NETWORKS, NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
-import { validatePhone, validateAmount } from '../../utils/validation';
+import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
-const fmt = (n) => n ? `TZS ${Number(n).toLocaleString()}` : '—';
+const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
+const NETWORK_COLORS = {
+  Voda:    '#E40000',
+  Yas:     '#0070B8',
+  Airtel:  '#FF0000',
+  Halotel: '#D4A017',
+};
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
-  const { theme, tr } = useTheme();
-  const { isOnline, enqueue } = useOfflineQueue(user?.uid, profile?.name);
+  const { theme, isDark }  = useTheme();
 
   const prefill = route?.params?.prefill;
-  const [form, setForm] = useState({
-    ...( prefill ? {
-      sourceNetwork: prefill.sourceNetwork ?? '',
-      destNetwork:   prefill.destNetwork   ?? '',
-      sourcePhone:   prefill.sourcePhone   ?? '',
-      destPhone:     prefill.destPhone     ?? '',
-      amount:        prefill.amount ? String(prefill.amount) : '',
-      urgent:        prefill.urgent ?? false,
-    } : {
-      sourceNetwork: '',
-      destNetwork:   '',
-      sourcePhone:   '',
-      destPhone:     '',
-      amount:        '',
-      urgent:        false,
-    }),
-  });
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [error, setError]     = useState('');
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(null);
 
-  const set = (k) => (v) => {
-    setForm(f => ({ ...f, [k]: v }));
-    if (fieldErrors[k]) setFieldErrors(e => { const n = { ...e }; delete n[k]; return n; });
+  const [sourceNetwork, setSourceNetwork] = useState(prefill?.sourceNetwork ?? '');
+  const [destNetwork,   setDestNetwork]   = useState(prefill?.destNetwork   ?? '');
+  const [sourcePhone,   setSourcePhone]   = useState(prefill?.sourcePhone   ?? '');
+  const [destPhone,     setDestPhone]     = useState(prefill?.destPhone     ?? '');
+  const [amount,        setAmount]        = useState(prefill?.amount ? String(prefill.amount) : '');
+  const [urgent,        setUrgent]        = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+  const [queuePos,      setQueuePos]      = useState(null);
+
+  // Pre-fill source phone from saved network phones
+  useEffect(() => {
+    if (sourceNetwork && profile?.agentPhoneNumbers?.[sourceNetwork]) {
+      setSourcePhone(profile.agentPhoneNumbers[sourceNetwork]);
+    }
+  }, [sourceNetwork]);
+
+  const formatAmount = (val) => {
+    const digits = val.replace(/\D/g, '');
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const handleAmountChange = (val) => {
+    setAmount(formatAmount(val));
+  };
+
+  const addQuick = (n) => {
+    const current = Number(amount.replace(/,/g, '')) || 0;
+    setAmount(formatAmount(String(current + n)));
   };
 
   const validate = () => {
-    const errs = {};
-    if (!form.sourceNetwork) errs.sourceNetwork = 'Select source network.';
-    if (!form.destNetwork)   errs.destNetwork = 'Select destination network.';
-    if (form.sourceNetwork && form.destNetwork && form.sourceNetwork === form.destNetwork)
-      errs.destNetwork = 'Destination must differ from source.';
-    const sp = validatePhone(form.sourcePhone);
-    if (!sp.valid) errs.sourcePhone = sp.message;
-    const dp = validatePhone(form.destPhone);
-    if (!dp.valid) errs.destPhone = dp.message;
-    const amt = validateAmount(form.amount);
-    if (!amt.valid) errs.amount = amt.message;
-    setFieldErrors(errs);
-    return Object.keys(errs).length > 0 ? Object.values(errs)[0] : null;
+    if (!sourceNetwork)  return 'Select source network.';
+    if (!destNetwork)    return 'Select destination network.';
+    if (sourceNetwork === destNetwork)
+      return 'Source and destination must be different.';
+    if (!sourcePhone)    return 'Enter source phone number.';
+    if (!destPhone)      return 'Enter destination phone number.';
+    if (!amount)         return 'Enter an amount.';
+    const num = Number(amount.replace(/,/g, ''));
+    if (num <= 0)        return 'Enter a valid amount.';
+    return null;
   };
 
-  const submit = async () => {
-    setError('');
+  const handleSubmit = async () => {
     const err = validate();
-    if (err) return;
+    if (err) { setError(err); return; }
+    setError('');
     setLoading(true);
-    const requestData = {
-      sourceNetwork: form.sourceNetwork,
-      destNetwork:   form.destNetwork,
-      sourcePhone:   form.sourcePhone.trim(),
-      destPhone:     form.destPhone.trim(),
-      amount:        Number(form.amount),
-      urgent:        form.urgent,
-    };
+
     try {
-      if (!isOnline) {
-        await enqueue(requestData);
-        setSubmitted({ requestId: 'OFFLINE-' + Date.now().toString(36).toUpperCase(), queuePos: 'queued offline' });
-        return;
-      }
-      const id = await submitRequest(user.uid, profile.name, requestData);
-      setSubmitted({ requestId: id, queuePos: '~' + (Math.floor(Math.random() * 5) + 1) });
+      // Get queue position
+      const q = query(
+        collection(db, 'requests'),
+        where('status', '==', 'pending')
+      );
+      const snap = await getDocs(q);
+      const pos  = snap.size + 1;
+      setQueuePos(pos);
+
+      await addDoc(collection(db, 'requests'), {
+        agentId:       user.uid,
+        agentName:     profile?.name ?? 'Agent',
+        sourceNetwork,
+        destNetwork,
+        sourcePhone,
+        destPhone,
+        amount:        Number(amount.replace(/,/g, '')),
+        urgent,
+        status:        'pending',
+        queuePosition: pos,
+        createdAt:     Timestamp.now(),
+      });
+
+      navigation.replace('RequestSuccess', {
+        queuePosition: pos,
+        sourceNetwork,
+        destNetwork,
+        amount: Number(amount.replace(/,/g, '')),
+      });
     } catch (e) {
-      setError(e.message ?? tr('error'));
+      setError('Failed to submit request. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Success screen ─────────────────────────────────────────
-  if (submitted) return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <View style={styles.successWrap}>
-        <View style={[styles.successIcon, { backgroundColor: '#DCFCE7' }]}>
-          <Text style={{ fontSize: 48 }}>✅</Text>
-        </View>
-        <Text style={[styles.successTitle, { color: theme.text }]}>{tr('requestSent')}</Text>
-        <Text style={[styles.successDesc, { color: theme.textDim }]}>{tr('requestSentDesc')}</Text>
-
-        <View style={[styles.infoCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          {[
-            [tr('requestId'),  submitted.requestId.slice(-8).toUpperCase()],
-            [tr('queuePos'),   submitted.queuePos],
-            ['Status',         'Pending'],
-          ].map(([label, val]) => (
-            <View key={label} style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: theme.textDim }]}>{label}</Text>
-              <Text style={[styles.infoVal,   { color: theme.text }]}>{val}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          onPress={() => {
-            setSubmitted(null);
-            setForm({ sourceNetwork:'', destNetwork:'', sourcePhone:'', destPhone:'', amount:'', urgent:false });
-            setFieldErrors({});
-            navigation.navigate('Home');
-          }}
-          style={[styles.btn, { backgroundColor: theme.primary }]}>
-          <Text style={styles.btnText}>{tr('backHome')}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-
-  // ── Form ───────────────────────────────────────────────────
-  const NetworkPicker = ({ label, selected, onSelect, exclude, errorKey }) => (
-    <View style={{ gap: 8, marginBottom: 4 }}>
+  const NetworkPicker = ({ label, selected, onSelect }) => (
+    <View style={styles.pickerWrap}>
       <Text style={[styles.label, { color: theme.textDim }]}>{label}</Text>
-      <View style={styles.netGrid}>
-        {NETWORKS.map(n => {
-          const isDisabled = n === exclude;
-          const isSelected = n === selected;
-          return (
-            <TouchableOpacity key={n}
-              onPress={() => { if (!isDisabled) { onSelect(n); if (fieldErrors[errorKey]) setFieldErrors(e => { const x = { ...e }; delete x[errorKey]; return x; }); } }}
-              style={[
-                styles.netBtn,
-                { borderColor: isSelected ? NETWORK_COLORS[n] : (fieldErrors[errorKey] ? '#DC262630' : theme.border),
-                  backgroundColor: isSelected ? NETWORK_COLORS[n] + '18' : theme.surfaceAlt,
-                  opacity: isDisabled ? 0.35 : 1,
-                }
-              ]}>
-              <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[n] }]} />
-              <Text style={[styles.netBtnText, { color: isSelected ? NETWORK_COLORS[n] : theme.text }]}>{n}</Text>
-              <Text style={[styles.netWallet, { color: theme.textDim }]}>{NETWORK_WALLETS[n]}</Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.networkGrid}>
+        {NETWORKS.map(net => (
+          <TouchableOpacity
+            key={net}
+            onPress={() => onSelect(net)}
+            style={[
+              styles.netBtn,
+              {
+                backgroundColor: selected === net
+                  ? NETWORK_COLORS[net] + '20'
+                  : theme.surfaceAlt,
+                borderColor: selected === net
+                  ? NETWORK_COLORS[net]
+                  : theme.border,
+              },
+            ]}
+            activeOpacity={0.75}
+          >
+            <View style={[
+              styles.netColorDot,
+              { backgroundColor: NETWORK_COLORS[net] },
+            ]} />
+            <Text style={[
+              styles.netBtnText,
+              {
+                color: selected === net
+                  ? NETWORK_COLORS[net]
+                  : theme.text,
+                fontWeight: selected === net ? '700' : '500',
+              },
+            ]}>
+              {net}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
-      {fieldErrors[errorKey] ? <Text style={styles.fieldError}>{fieldErrors[errorKey]}</Text> : null}
     </View>
   );
 
-  const fe = (k) => fieldErrors[k] ? <Text style={styles.fieldError}>{fieldErrors[k]}</Text> : null;
-
-  const inp = (key) => [
-    styles.input,
-    {
-      backgroundColor: theme.surfaceAlt,
-      borderColor: fieldErrors[key] ? '#DC2626' : theme.border,
-      color: theme.text,
-    },
-  ];
-
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>⚠ You're offline — request will be saved and sent when connected</Text>
-        </View>
-      )}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-          <Text style={[styles.title, { color: theme.text }]}>{tr('floatRequest')}</Text>
-          <Text style={[styles.sub, { color: theme.textDim }]}>{tr('submitRequest')}</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>New Request</Text>
+        <Text style={styles.headerSub}>Submit a float transfer request</Text>
+      </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Network pickers */}
           <NetworkPicker
-            label={tr('sourceNetwork')}
-            selected={form.sourceNetwork}
-            onSelect={set('sourceNetwork')}
-            exclude={form.destNetwork}
-            errorKey="sourceNetwork"
-          />
-          <NetworkPicker
-            label={tr('destNetwork')}
-            selected={form.destNetwork}
-            onSelect={set('destNetwork')}
-            exclude={form.sourceNetwork}
-            errorKey="destNetwork"
+            label="From Network"
+            selected={sourceNetwork}
+            onSelect={setSourceNetwork}
           />
 
-          <Text style={[styles.label, { color: theme.textDim }]}>{tr('sourcePhone')}</Text>
-          <TextInput style={inp('sourcePhone')} value={form.sourcePhone} onChangeText={set('sourcePhone')}
-            placeholder="e.g. 0741234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
-          {fe('sourcePhone')}
+          {sourceNetwork === destNetwork && destNetwork !== '' && (
+            <Text style={styles.sameNetworkError}>
+              Source and destination must be different
+            </Text>
+          )}
 
-          <Text style={[styles.label, { color: theme.textDim }]}>{tr('destPhone')}</Text>
-          <TextInput style={inp('destPhone')} value={form.destPhone} onChangeText={set('destPhone')}
-            placeholder="e.g. 0651234567" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
-          {fe('destPhone')}
+          <NetworkPicker
+            label="To Network"
+            selected={destNetwork}
+            onSelect={setDestNetwork}
+          />
 
-          <Text style={[styles.label, { color: theme.textDim }]}>{tr('amount')}</Text>
-          <TextInput style={inp('amount')} value={form.amount} onChangeText={set('amount')}
-            placeholder="e.g. 50000 (min 1,000)" placeholderTextColor={theme.muted} keyboardType="numeric" />
-          {fe('amount')}
-
-          {/* Urgent toggle */}
-          <View style={[styles.urgentRow, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.urgentLabel, { color: theme.text }]}>⚡ {tr('markUrgent')}</Text>
-              <Text style={[styles.urgentDesc, { color: theme.textDim }]}>{tr('urgentDesc')}</Text>
-            </View>
-            <Switch
-              value={form.urgent}
-              onValueChange={set('urgent')}
-              trackColor={{ true: theme.primary, false: theme.border }}
-              thumbColor="#fff"
+          {/* Phones */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: theme.textDim }]}>Source Phone</Text>
+            <TextInput
+              style={[styles.input, {
+                backgroundColor: theme.surfaceAlt,
+                borderColor:     theme.border,
+                color:           theme.text,
+              }]}
+              value={sourcePhone}
+              onChangeText={setSourcePhone}
+              placeholder="07XX XXX XXX"
+              placeholderTextColor={theme.muted}
+              keyboardType="phone-pad"
             />
           </View>
 
-          {/* Summary */}
-          {(form.sourceNetwork && form.destNetwork && form.amount) && (
-            <View style={[styles.summaryCard, { backgroundColor: theme.primaryLight, borderColor: theme.primary + '30' }]}>
-              <Text style={[styles.summaryTitle, { color: theme.primary }]}>{tr('summary')}</Text>
-              <Text style={[styles.summaryLine, { color: theme.textMid }]}>
-                {form.sourceNetwork} ({NETWORK_WALLETS[form.sourceNetwork]}) → {form.destNetwork} ({NETWORK_WALLETS[form.destNetwork]})
-              </Text>
-              <Text style={[styles.summaryAmt, { color: theme.text }]}>{fmt(form.amount)}</Text>
-              {form.urgent && <Text style={{ color: '#F59E0B', fontWeight: '600', fontSize: 13 }}>⚡ URGENT</Text>}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: theme.textDim }]}>Destination Phone</Text>
+            <TextInput
+              style={[styles.input, {
+                backgroundColor: theme.surfaceAlt,
+                borderColor:     theme.border,
+                color:           theme.text,
+              }]}
+              value={destPhone}
+              onChangeText={setDestPhone}
+              placeholder="07XX XXX XXX"
+              placeholderTextColor={theme.muted}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          {/* Amount */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: theme.textDim }]}>Amount (TZS)</Text>
+            <View style={[styles.amountInput, {
+              backgroundColor: theme.surfaceAlt,
+              borderColor:     theme.border,
+            }]}>
+              <Text style={[styles.currency, { color: theme.textDim }]}>TZS</Text>
+              <TextInput
+                style={[styles.amountText, { color: theme.text }]}
+                value={amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor={theme.muted}
+                keyboardType="numeric"
+              />
             </View>
-          )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+            {/* Quick add buttons */}
+            <View style={styles.quickRow}>
+              {[10000, 50000, 100000, 500000].map(n => (
+                <TouchableOpacity
+                  key={n}
+                  onPress={() => addQuick(n)}
+                  style={[styles.quickBtn, {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor:     theme.border,
+                  }]}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.quickBtnText, { color: theme.primary }]}>
+                    +{n >= 1000 ? `${n/1000}k` : n}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-          <TouchableOpacity onPress={submit} disabled={loading}
-            style={[styles.btn, { backgroundColor: theme.primary, marginTop: 8 }]}>
+          {/* Urgent toggle */}
+          <TouchableOpacity
+            onPress={() => setUrgent(v => !v)}
+            style={[styles.urgentRow, {
+              backgroundColor: urgent ? '#F59E0B14' : theme.surfaceAlt,
+              borderColor:     urgent ? '#F59E0B'   : theme.border,
+            }]}
+            activeOpacity={0.75}
+          >
+            <View>
+              <Text style={[styles.urgentLabel, { color: theme.text }]}>
+                Mark as Urgent
+              </Text>
+              <Text style={[styles.urgentSub, { color: theme.textDim }]}>
+                Urgent requests are prioritized in the queue
+              </Text>
+            </View>
+            <View style={[
+              styles.toggle,
+              { backgroundColor: urgent ? '#F59E0B' : theme.border },
+            ]}>
+              <View style={[
+                styles.toggleKnob,
+                { transform: [{ translateX: urgent ? 18 : 2 }] },
+              ]} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Error */}
+          {error ? (
+            <Text style={styles.error}>{error}</Text>
+          ) : null}
+
+          {/* Summary card */}
+          {sourceNetwork && destNetwork && sourceNetwork !== destNetwork && amount ? (
+            <View style={[styles.summary, {
+              backgroundColor: theme.surfaceAlt,
+              borderColor:     theme.border,
+            }]}>
+              <Text style={[styles.summaryTitle, { color: theme.text }]}>
+                Summary
+              </Text>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Route</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>
+                  {sourceNetwork} → {destNetwork}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Amount</Text>
+                <Text style={[styles.summaryValue, { color: theme.primary }]}>
+                  TZS {amount}
+                </Text>
+              </View>
+              {urgent && (
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Priority</Text>
+                  <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>URGENT</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {/* Submit button */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={loading}
+            style={[styles.submitBtn, { backgroundColor: theme.primary }]}
+            activeOpacity={0.85}
+          >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnText}>{tr('submitRequest')} →</Text>
+              : <Text style={styles.submitText}>Submit Request</Text>
             }
           </TouchableOpacity>
 
@@ -253,37 +347,129 @@ export default function NewRequestScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  scroll:  { padding: 16, paddingBottom: 100, gap: 6 },
-  title:   { fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  sub:     { fontSize: 14, marginBottom: 8 },
-  label:   { fontSize: 13, fontWeight: '500', marginTop: 4 },
-  input:   { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, marginTop: 4 },
-  fieldError: { color: '#DC2626', fontSize: 12, marginTop: 3 },
-  netGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  netBtn:  { width: '47%', borderWidth: 1.5, borderRadius: 12, padding: 10, gap: 3 },
-  netDot:  { width: 8, height: 8, borderRadius: 4 },
-  netBtnText: { fontSize: 14, fontWeight: '700' },
-  netWallet:  { fontSize: 11 },
-  urgentRow:  { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 14, gap: 12, marginTop: 4 },
-  urgentLabel:{ fontSize: 15, fontWeight: '600' },
-  urgentDesc: { fontSize: 12, marginTop: 2 },
-  summaryCard:  { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6, marginTop: 4 },
-  summaryTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryLine:  { fontSize: 14 },
-  summaryAmt:   { fontSize: 22, fontWeight: '800', fontFamily: 'Courier New' },
-  offlineBanner: { backgroundColor: '#DC2626', paddingVertical: 7, paddingHorizontal: 16, alignItems: 'center' },
-  offlineText:   { color: '#fff', fontSize: 12, fontWeight: '600' },
-  error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
-  btn:     { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  // Success
-  successWrap:  { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
-  successIcon:  { width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center' },
-  successTitle: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  successDesc:  { fontSize: 15, textAlign: 'center', lineHeight: 24 },
-  infoCard:     { width: '100%', borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  infoRow:      { flexDirection: 'row', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: '#00000010' },
-  infoLabel:    { fontSize: 13 },
-  infoVal:      { fontSize: 13, fontWeight: '700', fontFamily: 'Courier New' },
+  safe:   { flex: 1 },
+  scroll: { padding: 16, paddingBottom: 100 },
+
+  header: {
+    backgroundColor:       '#C8102E',
+    paddingHorizontal:     18,
+    paddingTop:            10,
+    paddingBottom:         14,
+    borderBottomLeftRadius:  24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+
+  pickerWrap: { marginTop: 16 },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: 8 },
+  networkGrid: {
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           8,
+  },
+  netBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               6,
+    paddingHorizontal: 14,
+    paddingVertical:   10,
+    borderRadius:      12,
+    borderWidth:       1.5,
+  },
+  netColorDot: {
+    width:        8,
+    height:       8,
+    borderRadius: 4,
+  },
+  netBtnText:       { fontSize: 14 },
+  sameNetworkError: { color: '#C8102E', fontSize: 13, marginTop: 4 },
+
+  fieldWrap: { marginTop: 16 },
+  input: {
+    height:            52,
+    borderWidth:       1.5,
+    borderRadius:      12,
+    paddingHorizontal: 16,
+    fontSize:          15,
+  },
+  amountInput: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    height:            52,
+    borderWidth:       1.5,
+    borderRadius:      12,
+    paddingHorizontal: 16,
+  },
+  currency:    { fontSize: 15, marginRight: 8 },
+  amountText:  { flex: 1, fontSize: 22, fontWeight: '700' },
+  quickRow: {
+    flexDirection: 'row',
+    gap:           8,
+    marginTop:     8,
+  },
+  quickBtn: {
+    flex:           1,
+    height:         34,
+    borderRadius:   8,
+    borderWidth:    1,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  quickBtnText: { fontSize: 12, fontWeight: '700' },
+
+  urgentRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    padding:        14,
+    borderRadius:   12,
+    borderWidth:    1.5,
+    marginTop:      16,
+  },
+  urgentLabel: { fontSize: 14, fontWeight: '600' },
+  urgentSub:   { fontSize: 12, marginTop: 2 },
+  toggle: {
+    width:        40,
+    height:       24,
+    borderRadius: 12,
+    justifyContent:'center',
+  },
+  toggleKnob: {
+    width:           20,
+    height:          20,
+    borderRadius:    10,
+    backgroundColor: '#fff',
+  },
+
+  error: {
+    color:     '#C8102E',
+    fontSize:  13,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+
+  summary: {
+    borderRadius: 14,
+    borderWidth:  1,
+    padding:      14,
+    marginTop:    16,
+    gap:          8,
+  },
+  summaryTitle: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  summaryRow: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: { fontSize: 13 },
+  summaryValue: { fontSize: 13, fontWeight: '600' },
+
+  submitBtn: {
+    height:         52,
+    borderRadius:   14,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginTop:      20,
+  },
+  submitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
