@@ -5,7 +5,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useTheme } from '../context/ThemeContext';
+//import { useTheme } from '../context/ThemeContext';
 // Navigators
 import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
