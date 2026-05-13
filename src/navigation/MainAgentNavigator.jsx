@@ -46,6 +46,8 @@ export default function MainAgentNavigator() {
           paddingBottom:   8,
           paddingTop:      8,
           height:          64,
+          sceneAnimationEnabled: true,
+          sceneAnimationType: 'shifting',
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,

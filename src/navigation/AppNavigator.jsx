@@ -4,7 +4,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-
+import { useTheme } from '../context/ThemeContext';
 // Navigators
 import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
@@ -59,7 +59,18 @@ export default function AppNavigator() {
   // ── No user → show auth flow ──────────────────────────────
   if (!user) {
     return (
-      <NavigationContainer>
+      <NavigationContainer
+      theme={{
+        dark:   isDark,
+        colors: {
+          primary:    theme.primary,
+          background: theme.bg,
+          card:       theme.surface,
+          text:       theme.text,
+          border:     theme.border,
+          notification: theme.primary,
+        },
+      }}>
         <AuthNavigator />
       </NavigationContainer>
     );
