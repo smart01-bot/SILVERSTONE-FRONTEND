@@ -1,16 +1,21 @@
 // src/navigation/SubAgentNavigator.jsx
+import RequestSuccessScreen from '../screens/sub-agent/RequestSuccessScreen';
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
-import HomeScreen       from '../screens/sub-agent/HomeScreen';
-import NewRequestScreen from '../screens/sub-agent/NewRequestScreen';
-import MyRequestsScreen from '../screens/sub-agent/MyRequestsScreen';
-import ProfileScreen    from '../screens/sub-agent/ProfileScreen';
+import HomeScreen            from '../screens/sub-agent/HomeScreen';
+import NewRequestScreen      from '../screens/sub-agent/NewRequestScreen';
+import RequestSuccessScreen  from '../screens/sub-agent/RequestSuccessScreen';
+import MyRequestsScreen      from '../screens/sub-agent/MyRequestsScreen';
+import ProfileScreen         from '../screens/sub-agent/ProfileScreen';
+import NetworksScreen        from '../screens/sub-agent/NetworksScreen';
 
-const Tab = createBottomTabNavigator();
+const Tab   = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 function TabIcon({ name, focused, color, badge }) {
   return (
@@ -31,7 +36,7 @@ function TabIcon({ name, focused, color, badge }) {
   );
 }
 
-export default function SubAgentNavigator() {
+function HomeTabs() {
   const { theme } = useTheme();
 
   return (
@@ -99,17 +104,27 @@ export default function SubAgentNavigator() {
   );
 }
 
+export default function SubAgentNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs"           component={HomeTabs} />
+      <Stack.Screen name="RequestSuccess" component={RequestSuccessScreen} />
+      <Stack.Screen name="Networks"       component={NetworksScreen} />
+    </Stack.Navigator>
+  );
+}
+
 const styles = StyleSheet.create({
   badge: {
-    position:        'absolute',
-    top:             -4,
-    right:           -8,
-    backgroundColor: '#C8102E',
-    borderRadius:    9999,
-    minWidth:        16,
-    height:          16,
-    alignItems:      'center',
-    justifyContent:  'center',
+    position:          'absolute',
+    top:               -4,
+    right:             -8,
+    backgroundColor:   '#C8102E',
+    borderRadius:      9999,
+    minWidth:          16,
+    height:            16,
+    alignItems:        'center',
+    justifyContent:    'center',
     paddingHorizontal: 4,
   },
   badgeText: {

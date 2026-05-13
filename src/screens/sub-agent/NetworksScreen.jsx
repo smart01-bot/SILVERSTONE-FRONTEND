@@ -1,187 +1,258 @@
-import React, { useEffect, useState } from 'react';
+// src/screens/sub-agent/NetworksScreen.jsx
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ScrollView,
-  TouchableOpacity, Switch, ActivityIndicator, Alert,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, StatusBar, SafeAreaView,
+  ScrollView, Switch, Alert, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { updateAgentNetworks } from '../../utils/firestore';
-import { validatePhone } from '../../utils/validation';
-import { NETWORKS, NETWORK_COLORS, NETWORK_WALLETS } from '../../constants/networks';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+
+const NETWORKS = [
+  { name: 'Voda',    wallet: 'M-Pesa',    color: '#E40000', short: 'VOD' },
+  { name: 'Yas',     wallet: 'Mixx',      color: '#0070B8', short: 'YAS' },
+  { name: 'Airtel',  wallet: 'Airtel Money', color: '#FF0000', short: 'AIR' },
+  { name: 'Halotel', wallet: 'Halopesa',  color: '#D4A017', short: 'HAL' },
+];
 
 export default function NetworksScreen({ navigation }) {
   const { user, profile } = useAuth();
-  const { theme, tr } = useTheme();
-  const [saving, setSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const { theme, isDark } = useTheme();
 
-  // Local state: { Voda: { active: bool, phone: string }, ... }
-  const [nets, setNets] = useState(() => {
-    const init = {};
-    NETWORKS.forEach(n => {
-      init[n] = {
-        active: profile?.networks?.includes(n) ?? false,
-        phone:  profile?.agentPhoneNumbers?.[n] ?? '',
-      };
-    });
-    return init;
-  });
+  const [phones,  setPhones]  = useState({});
+  const [active,  setActive]  = useState([]);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
 
-  const setNet = (network, key, value) => {
-    setNets(prev => ({ ...prev, [network]: { ...prev[network], [key]: value } }));
-    if (key === 'phone' && fieldErrors[network]) {
-      setFieldErrors(e => { const n = { ...e }; delete n[network]; return n; });
+  useEffect(() => {
+    if (profile) {
+      setPhones(profile.agentPhoneNumbers ?? {});
+      setActive(profile.networks ?? []);
     }
+  }, [profile]);
+
+  const toggleNetwork = (name) => {
+    setActive(prev =>
+      prev.includes(name)
+        ? prev.filter(n => n !== name)
+        : [...prev, name]
+    );
   };
 
-  const validate = () => {
-    const errs = {};
-    NETWORKS.forEach(n => {
-      if (nets[n].active) {
-        const result = validatePhone(nets[n].phone);
-        if (!result.valid) errs[n] = result.message;
+  const validatePhone = (phone) => {
+    if (!phone) return true;
+    return /^(07|06|\+2557|\+2556)\d{8}$/.test(phone.replace(/\s/g, ''));
+  };
+
+  const handleSave = async () => {
+    for (const net of NETWORKS) {
+      if (phones[net.name] && !validatePhone(phones[net.name])) {
+        Alert.alert('Invalid Phone', `Enter a valid Tanzanian number for ${net.name}.`);
+        return;
       }
-    });
-    setFieldErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+    }
 
-  const save = async () => {
-    if (!validate()) return;
     setSaving(true);
     try {
-      const activeNetworks = NETWORKS.filter(n => nets[n].active);
-      const phoneNumbers   = {};
-      NETWORKS.forEach(n => { if (nets[n].phone.trim()) phoneNumbers[n] = nets[n].phone.trim(); });
-      await updateAgentNetworks(user.uid, activeNetworks, phoneNumbers);
-      Alert.alert('Saved', 'Your network details have been updated.');
-      navigation.goBack();
+      await updateDoc(doc(db, 'agents', user.uid), {
+        agentPhoneNumbers: phones,
+        networks:          active,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch (e) {
-      Alert.alert('Error', e.message ?? 'Could not save networks.');
+      Alert.alert('Error', 'Failed to save network settings.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={[styles.backArrow, { color: theme.primary }]}>‹</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
+          <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.text }]}>My Networks</Text>
+        <Text style={styles.headerTitle}>My Networks</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-
-        <Text style={[styles.subtitle, { color: theme.textDim }]}>
-          Activate the networks you operate on and enter your wallet phone numbers.
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
+        <Text style={[styles.desc, { color: theme.textDim }]}>
+          Set your phone number for each network and toggle which networks you operate on.
         </Text>
 
-        {NETWORKS.map(network => {
-          const color = NETWORK_COLORS[network];
-          const active = nets[network].active;
-          return (
-            <View key={network} style={[styles.networkCard, {
-              backgroundColor: theme.surface,
-              borderColor: active ? color + '60' : theme.border,
-              borderLeftColor: color,
-              borderLeftWidth: 4,
-              ...theme.shadow,
-            }]}>
-              {/* Network header row */}
-              <View style={styles.netHeader}>
-                <View style={styles.netInfo}>
-                  <View style={[styles.netDot, { backgroundColor: color }]} />
-                  <View>
-                    <Text style={[styles.netName, { color: theme.text }]}>{network}</Text>
-                    <Text style={[styles.netWallet, { color: theme.textDim }]}>{NETWORK_WALLETS[network]}</Text>
-                  </View>
-                </View>
-                <Switch
-                  value={active}
-                  onValueChange={v => setNet(network, 'active', v)}
-                  trackColor={{ true: color, false: theme.border }}
-                  thumbColor="#fff"
-                />
+        {NETWORKS.map(net => (
+          <View
+            key={net.name}
+            style={[styles.card, {
+              backgroundColor: theme.surfaceAlt,
+              borderColor:     active.includes(net.name)
+                ? net.color + '60'
+                : theme.border,
+            }]}
+          >
+            {/* Network header */}
+            <View style={styles.cardHeader}>
+              <View style={[styles.netAvatar, { backgroundColor: net.color + '20' }]}>
+                <Text style={[styles.netShort, { color: net.color }]}>
+                  {net.short}
+                </Text>
               </View>
+              <View style={styles.netInfo}>
+                <Text style={[styles.netName, { color: theme.text }]}>
+                  {net.name}
+                </Text>
+                <Text style={[styles.netWallet, { color: theme.textDim }]}>
+                  {net.wallet}
+                </Text>
+              </View>
+              <Switch
+                value={active.includes(net.name)}
+                onValueChange={() => toggleNetwork(net.name)}
+                thumbColor="#fff"
+                trackColor={{
+                  true:  net.color,
+                  false: theme.border,
+                }}
+              />
+            </View>
 
-              {/* Phone input — shown when active */}
-              {active && (
-                <View style={styles.phoneWrap}>
-                  <Text style={[styles.phoneLabel, { color: theme.textDim }]}>
-                    {NETWORK_WALLETS[network]} phone number
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.phoneInput,
-                      {
-                        backgroundColor: theme.surfaceAlt,
-                        borderColor: fieldErrors[network] ? '#DC2626' : theme.border,
-                        color: theme.text,
-                      },
-                    ]}
-                    value={nets[network].phone}
-                    onChangeText={v => setNet(network, 'phone', v)}
-                    placeholder="e.g. 0754123456"
-                    placeholderTextColor={theme.muted}
-                    keyboardType="phone-pad"
-                  />
-                  {fieldErrors[network] ? (
-                    <Text style={styles.fieldError}>{fieldErrors[network]}</Text>
-                  ) : null}
-                </View>
+            {/* Phone input */}
+            <View style={[styles.phoneWrap, { borderTopColor: theme.border }]}>
+              <Text style={[styles.phoneLabel, { color: theme.textDim }]}>
+                Phone Number
+              </Text>
+              <TextInput
+                style={[styles.phoneInput, {
+                  backgroundColor: theme.bg,
+                  borderColor:     phones[net.name] && !validatePhone(phones[net.name])
+                    ? '#C8102E'
+                    : theme.border,
+                  color: theme.text,
+                }]}
+                value={phones[net.name] ?? ''}
+                onChangeText={val => setPhones(p => ({ ...p, [net.name]: val }))}
+                placeholder="07XX XXX XXX"
+                placeholderTextColor={theme.muted}
+                keyboardType="phone-pad"
+              />
+              {phones[net.name] && !validatePhone(phones[net.name]) && (
+                <Text style={styles.phoneError}>
+                  Enter a valid Tanzanian phone number
+                </Text>
               )}
             </View>
-          );
-        })}
+          </View>
+        ))}
 
-      </ScrollView>
-
-      <View style={[styles.footer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+        {/* Save button */}
         <TouchableOpacity
-          onPress={save}
+          onPress={handleSave}
           disabled={saving}
-          style={[styles.saveBtn, { backgroundColor: theme.primary }]}
+          style={[styles.saveBtn, {
+            backgroundColor: saved ? '#16A34A' : theme.primary,
+          }]}
+          activeOpacity={0.85}
         >
           {saving
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.saveBtnText}>Save Networks</Text>
+            : <Text style={styles.saveBtnText}>
+                {saved ? 'Saved!' : 'Save Settings'}
+              </Text>
           }
         </TouchableOpacity>
-      </View>
 
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  header:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { width: 36, alignItems: 'flex-start' },
-  backArrow: { fontSize: 32, fontWeight: '300', lineHeight: 34 },
-  title:   { fontSize: 20, fontWeight: '800' },
-  scroll:  { padding: 16, gap: 12, paddingBottom: 120 },
-  subtitle:{ fontSize: 13, lineHeight: 20, marginBottom: 4 },
+  safe:   { flex: 1 },
+  scroll: { padding: 16, paddingBottom: 100 },
 
-  networkCard: {
-    borderRadius: 16, borderWidth: 1, padding: 14, gap: 10,
+  header: {
+    backgroundColor:       '#C8102E',
+    paddingHorizontal:     18,
+    paddingTop:            10,
+    paddingBottom:         14,
+    flexDirection:         'row',
+    alignItems:            'center',
+    justifyContent:        'space-between',
+    borderBottomLeftRadius:  24,
+    borderBottomRightRadius: 24,
   },
-  netHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  netInfo:   { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  netDot:    { width: 12, height: 12, borderRadius: 6 },
-  netName:   { fontSize: 16, fontWeight: '700' },
-  netWallet: { fontSize: 12, marginTop: 1 },
+  backBtn:     { width: 36, height: 36, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
 
-  phoneWrap:  { gap: 6 },
-  phoneLabel: { fontSize: 12, fontWeight: '500' },
-  phoneInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  fieldError: { color: '#DC2626', fontSize: 12 },
+  desc: {
+    fontSize:     14,
+    lineHeight:   22,
+    marginBottom: 16,
+  },
 
-  footer:  { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1 },
-  saveBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  card: {
+    borderRadius:  16,
+    borderWidth:   1.5,
+    marginBottom:  12,
+    overflow:      'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           12,
+    padding:       14,
+  },
+  netAvatar: {
+    width:          44,
+    height:         44,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+    flexShrink:     0,
+  },
+  netShort:  { fontSize: 13, fontWeight: '800' },
+  netInfo:   { flex: 1 },
+  netName:   { fontSize: 15, fontWeight: '700' },
+  netWallet: { fontSize: 12, marginTop: 2 },
+
+  phoneWrap: {
+    borderTopWidth:    1,
+    padding:           14,
+  },
+  phoneLabel: { fontSize: 12, fontWeight: '500', marginBottom: 8 },
+  phoneInput: {
+    height:            48,
+    borderWidth:       1.5,
+    borderRadius:      10,
+    paddingHorizontal: 14,
+    fontSize:          15,
+  },
+  phoneError: {
+    color:     '#C8102E',
+    fontSize:  12,
+    marginTop: 4,
+  },
+
+  saveBtn: {
+    height:         52,
+    borderRadius:   14,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginTop:      8,
+  },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
