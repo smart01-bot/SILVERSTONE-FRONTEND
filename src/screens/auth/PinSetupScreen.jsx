@@ -1,162 +1,305 @@
-import React, { useState, useRef, useCallback } from 'react';
+// src/screens/auth/PinSetupScreen.jsx
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  Animated, Vibration, Alert,
+  View, Text, TouchableOpacity, StyleSheet,
+  StatusBar, SafeAreaView, Image, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth }  from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
-const PIN_LENGTH = 4;
-const DIGITS = [
-  ['1','2','3'],
-  ['4','5','6'],
-  ['7','8','9'],
-  [null,'0','⌫'],
-];
+export default function PinSetupScreen({ onComplete }) {
+  const { savePin, profile } = useAuth();
+  const { theme, isDark } = useTheme();
 
-export default function PinSetupScreen() {
-  const { savePin, profile, unlockSession } = useAuth();
-  const { theme } = useTheme();
-
-  const [stage,    setStage]    = useState('create'); // 'create' | 'confirm'
-  const [firstPin, setFirstPin] = useState('');
   const [pin,      setPin]      = useState('');
+  const [firstPin, setFirstPin] = useState('');
+  const [stage,    setStage]    = useState('create'); // 'create' | 'confirm'
   const [error,    setError]    = useState('');
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
 
   const shake = () => {
-    Vibration.vibrate(400);
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 12,  duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -12, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 8,   duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8,  duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0,   duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8,  duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6,  duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 60, useNativeDriver: true }),
     ]).start();
   };
 
-  const submitPin = useCallback(async (entered) => {
-    if (stage === 'create') {
-      setFirstPin(entered);
-      setStage('confirm');
-      return;
-    }
-    // Confirm stage
-    if (entered !== firstPin) {
-      setError("PINs don't match. Try again.");
-      shake();
-      setStage('create');
-      setFirstPin('');
-      return;
-    }
-    try {
-      await savePin(entered);
-      unlockSession(); // pinSet=true → sessionLocked=false → dashboard
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    }
-  }, [stage, firstPin, savePin, unlockSession]);
-
-  const press = (val) => {
-    if (val === null) return;
-    if (val === '⌫') { setPin(p => p.slice(0, -1)); return; }
-    if (pin.length >= PIN_LENGTH) return;
-    const next = pin + val;
+  const handleDigit = async (digit) => {
+    if (pin.length >= 4) return;
+    const next = pin + digit;
     setPin(next);
-    if (next.length === PIN_LENGTH) {
-      setTimeout(() => { setPin(''); submitPin(next); }, 100);
+    setError('');
+
+    if (next.length === 4) {
+      if (stage === 'create') {
+        setTimeout(() => {
+          setFirstPin(next);
+          setPin('');
+          setStage('confirm');
+        }, 150);
+      } else {
+        // Confirm stage
+        if (next === firstPin) {
+          try {
+            await savePin(next);
+            onComplete?.();
+          } catch (e) {
+            setError('Failed to save PIN. Try again.');
+            setPin('');
+          }
+        } else {
+          shake();
+          setError('PINs do not match. Try again.');
+          setTimeout(() => {
+            setPin('');
+            setFirstPin('');
+            setStage('create');
+            setError('');
+          }, 800);
+        }
+      }
     }
   };
 
-  // Reset error when user starts entering
-  const handlePress = (val) => {
-    if (error) setError('');
-    press(val);
+  const handleDelete = () => {
+    setPin(p => p.slice(0, -1));
+    setError('');
   };
 
-  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
+  const KEYS = [
+    ['1','2','3'],
+    ['4','5','6'],
+    ['7','8','9'],
+    ['',  '0','del'],
+  ];
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <View style={styles.inner}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.bg}
+      />
 
-        {/* Logo text */}
-        <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
-
-        <Text style={[styles.heading, { color: theme.primary }]}>
-          {stage === 'create' ? 'Create Your PIN' : 'Confirm Your PIN'}
+      {/* Logo row */}
+      <View style={styles.logoRow}>
+        <View style={styles.logoTile}>
+          <Image
+            source={require('../../../assets/images/SilverS.png')}
+            style={styles.logoImg}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={[styles.logoText, { color: theme.text }]}>
+          silverstone
         </Text>
-        <Text style={[styles.sub, { color: theme.textDim }]}>
-          {stage === 'create'
-            ? 'Choose a 4-digit code you will remember'
-            : `Hi ${firstName}, re-enter your PIN to confirm`}
-        </Text>
+      </View>
 
-        {/* PIN boxes */}
-        <Animated.View style={[styles.boxes, { transform: [{ translateX: shakeAnim }] }]}>
-          {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+      {/* Icon */}
+      <View style={styles.iconWrap}>
+        <View style={[styles.iconTile, {
+          backgroundColor: theme.primaryLight,
+          borderColor:     theme.primary + '33',
+        }]}>
+          <Ionicons name="lock-closed-outline" size={42} color={theme.primary} />
+        </View>
+      </View>
+
+      {/* Heading */}
+      <Text style={[styles.heading, { color: theme.primary }]}>
+        {stage === 'create' ? 'Create your PIN' : 'Confirm your PIN'}
+      </Text>
+      <Text style={[styles.sub, { color: theme.textDim }]}>
+        {stage === 'create'
+          ? `Welcome, `
+          : 'Enter your PIN again'}
+        {stage === 'create' && (
+          <Text style={{ color: theme.text, fontWeight: '700' }}>{firstName}</Text>
+        )}
+      </Text>
+
+      {/* PIN dots */}
+      <Animated.View style={[
+        styles.dotsRow,
+        { transform: [{ translateX: shakeAnim }] },
+      ]}>
+        {[0,1,2,3].map(i => {
+          const filled = i < pin.length;
+          return (
             <View
               key={i}
               style={[
-                styles.box,
+                styles.dot,
                 {
-                  backgroundColor: i < pin.length ? theme.primary : theme.surfaceAlt,
-                  borderColor:     i < pin.length ? theme.primary : theme.border,
+                  backgroundColor: filled ? '#16A34A14' : theme.surfaceAlt,
+                  borderWidth:     filled ? 1.5 : 0,
+                  borderColor:     filled ? '#16A34A' : 'transparent',
                 },
               ]}
-            />
-          ))}
-        </Animated.View>
+            >
+              {filled && (
+                <View style={styles.dotInner} />
+              )}
+            </View>
+          );
+        })}
+      </Animated.View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+      {/* Error */}
+      {error ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : <View style={{ height: 20 }} />}
 
-        {/* Keypad */}
-        <View style={styles.pad}>
-          {DIGITS.map((row, ri) => (
-            <View key={ri} style={styles.row}>
-              {row.map((d, di) => {
-                const isEmpty = d === null;
+      {/* Spacer */}
+      <View style={{ flex: 1 }} />
+
+      {/* Keypad */}
+      <View style={[styles.keypad, { backgroundColor: theme.surfaceAlt }]}>
+        {KEYS.map((row, ri) => (
+          <View key={ri} style={styles.keyRow}>
+            {row.map((key, ki) => {
+              if (key === '') {
+                return <View key={ki} style={styles.keyEmpty} />;
+              }
+              if (key === 'del') {
                 return (
                   <TouchableOpacity
-                    key={di}
-                    onPress={() => !isEmpty && handlePress(d)}
-                    activeOpacity={isEmpty ? 1 : 0.7}
-                    style={[
-                      styles.key,
-                      {
-                        backgroundColor: isEmpty ? 'transparent' : theme.surface,
-                        borderColor:     isEmpty ? 'transparent' : theme.border,
-                      },
-                    ]}
+                    key={ki}
+                    onPress={handleDelete}
+                    style={styles.keyGhost}
+                    activeOpacity={0.6}
                   >
-                    <Text style={[styles.keyText, { color: d === '⌫' ? theme.primary : theme.text }]}>
-                      {isEmpty ? '' : d}
-                    </Text>
+                    <Ionicons
+                      name="backspace-outline"
+                      size={24}
+                      color={theme.text}
+                    />
                   </TouchableOpacity>
                 );
-              })}
-            </View>
-          ))}
-        </View>
-
+              }
+              return (
+                <TouchableOpacity
+                  key={ki}
+                  onPress={() => handleDigit(key)}
+                  activeOpacity={0.7}
+                  style={[styles.key, { backgroundColor: theme.surface }]}
+                >
+                  <Text style={[styles.keyText, { color: theme.text }]}>
+                    {key}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  inner:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 20 },
-  brand:   { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  heading: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
-  sub:     { fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  boxes:   { flexDirection: 'row', gap: 14 },
-  box:     { width: 56, height: 56, borderRadius: 10, borderWidth: 2 },
-  error:   { color: '#DC2626', fontSize: 13, textAlign: 'center' },
-  pad:     { gap: 12, alignItems: 'center' },
-  row:     { flexDirection: 'row', gap: 12 },
-  key:     { width: 80, height: 80, borderRadius: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  keyText: { fontSize: 26, fontWeight: '500', fontFamily: 'Courier New' },
+  safe: { flex: 1 },
+  logoRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            10,
+    paddingTop:     14,
+  },
+  logoTile: {
+    width:           32,
+    height:          32,
+    borderRadius:    9,
+    backgroundColor: '#C8102E',
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         6,
+  },
+  logoImg:  { width: '100%', height: '100%' },
+  logoText: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  iconWrap: { alignItems: 'center', marginTop: 24 },
+  iconTile: {
+    width:          84,
+    height:         84,
+    borderRadius:   18,
+    borderWidth:    1,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  heading: {
+    fontSize:      18,
+    fontWeight:    '700',
+    letterSpacing: -0.2,
+    textAlign:     'center',
+    marginTop:     18,
+  },
+  sub: {
+    fontSize:  14,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  dotsRow: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    gap:            14,
+    marginTop:      22,
+  },
+  dot: {
+    width:          48,
+    height:         48,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  dotInner: {
+    width:           12,
+    height:          12,
+    borderRadius:    6,
+    backgroundColor: '#16A34A',
+  },
+  error: {
+    color:     '#C8102E',
+    fontSize:  13,
+    textAlign: 'center',
+    marginTop: 8,
+    height:    20,
+  },
+  keypad: {
+    paddingHorizontal: 10,
+    paddingTop:        12,
+    paddingBottom:     6,
+  },
+  keyRow: {
+    flexDirection: 'row',
+    gap:           8,
+    marginBottom:  8,
+  },
+  key: {
+    flex:           1,
+    height:         54,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+    shadowColor:    '#000',
+    shadowOffset:   { width: 0, height: 1 },
+    shadowOpacity:  0.04,
+    shadowRadius:   2,
+    elevation:      1,
+  },
+  keyGhost: {
+    flex:           1,
+    height:         54,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  keyEmpty: { flex: 1, height: 54 },
+  keyText: {
+    fontSize:   26,
+    fontWeight: '500',
+  },
 });

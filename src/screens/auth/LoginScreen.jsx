@@ -1,147 +1,190 @@
+// src/screens/auth/LoginScreen.jsx
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, StatusBar, SafeAreaView,
+  ActivityIndicator, KeyboardAvoidingView,
+  Platform, ScrollView, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth }  from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
 
-export default function LoginScreen({ navigation }) {
-  const { login, resetPassword } = useAuth();
-  const { theme } = useTheme();
+export default function LoginScreen({ navigation, route }) {
+  const { login } = useAuth();
+  const { theme, isDark } = useTheme();
 
-  const [email,       setEmail]       = useState('');
-  const [password,    setPassword]    = useState('');
-  const [showPwd,     setShowPwd]     = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
-  const [resetMsg,    setResetMsg]    = useState('');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const handleLogin = async () => {
-    setError(''); setResetMsg('');
-    if (!email.trim())    { setError('Email is required.'); return; }
-    if (!password.trim()) { setError('Password is required.'); return; }
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    setError('');
     setLoading(true);
     try {
       await login(email.trim(), password);
-      // AppNavigator handles routing via onAuthStateChanged
+      // AppNavigator handles routing after login
     } catch (e) {
-      const msg = e.message?.replace('Firebase: ', '') ?? 'Sign in failed.';
-      if (msg.includes('invalid-credential') || msg.includes('INVALID_LOGIN_CREDENTIALS') || msg.includes('wrong-password')) {
-        setError('Incorrect email or password.');
-      } else if (msg.includes('user-not-found')) {
-        setError('No account found with this email.');
-      } else {
-        setError(msg);
-      }
+      setError(
+        e.message
+          ?.replace('Firebase: ', '')
+          ?.replace('(auth/invalid-credential).', 'Incorrect email or password.')
+          ?.replace('(auth/user-not-found).', 'No account found with that email.')
+          ?.replace('(auth/wrong-password).', 'Incorrect password.')
+          ?? 'Login failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    setError(''); setResetMsg('');
-    if (!email.trim()) { setError('Enter your email address above first.'); return; }
-    try {
-      await resetPassword(email.trim());
-      setResetMsg('Password reset email sent. Check your inbox.');
-    } catch (e) {
-      setError(e.message?.replace('Firebase: ', '') ?? 'Could not send reset email.');
-    }
-  };
-
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.bg}
+      />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          contentContainerStyle={[styles.inner, { paddingBottom: 80 }]}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo + branding */}
-          <View style={styles.brand}>
-            <Logo size={80} />
-            <Text style={[styles.appName, { color: theme.primary }]}>Silverstone</Text>
-            <Text style={[styles.tagline, { color: theme.textDim }]}>
-              Tanzania's First Float Management System
+          {/* Logo row */}
+          <View style={styles.logoRow}>
+            <View style={styles.logoTile}>
+              <Image
+                source={require('../../../assets/images/SilverS.png')}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={[styles.logoText, { color: theme.text }]}>
+              silverstone
             </Text>
           </View>
 
-          {/* Form */}
-          <Text style={[styles.heading, { color: theme.text }]}>Sign In</Text>
+          {/* Heading */}
+          <View style={styles.headingWrap}>
+            <Text style={[styles.heading, { color: theme.text }]}>
+              Welcome back.
+            </Text>
+            <Text style={[styles.sub, { color: theme.textDim }]}>
+              Sign in to continue
+            </Text>
+          </View>
 
-          <View style={styles.fields}>
+          {/* Email */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: theme.textDim }]}>
+              Email
+            </Text>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }]}
-              placeholder="Email address"
-              placeholderTextColor={theme.muted}
+              style={[styles.input, {
+                backgroundColor: theme.surfaceAlt,
+                borderColor:     theme.border,
+                color:           theme.text,
+              }]}
               value={email}
-              onChangeText={v => { setEmail(v); setError(''); }}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={theme.muted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              returnKeyType="next"
             />
+          </View>
 
-            <View style={styles.pwdWrap}>
+          {/* Password */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: theme.textDim }]}>
+              Password
+            </Text>
+            <View>
               <TextInput
-                style={[styles.input, styles.pwdInput, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }]}
-                placeholder="Password"
-                placeholderTextColor={theme.muted}
+                style={[styles.input, {
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor:     theme.border,
+                  color:           theme.text,
+                  paddingRight:    48,
+                }]}
                 value={password}
-                onChangeText={v => { setPassword(v); setError(''); }}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={theme.muted}
                 secureTextEntry={!showPwd}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
+                autoCapitalize="none"
               />
               <TouchableOpacity
                 onPress={() => setShowPwd(v => !v)}
                 style={styles.eyeBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={{ color: theme.textDim, fontSize: 18 }}>{showPwd ? '🙈' : '👁'}</Text>
+                <Ionicons
+                  name={showPwd ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={theme.textDim}
+                />
               </TouchableOpacity>
             </View>
           </View>
 
-          {error    ? <Text style={styles.error}>{error}</Text>   : null}
-          {resetMsg ? <Text style={styles.success}>{resetMsg}</Text> : null}
+          {/* Error */}
+          {error ? (
+            <Text style={styles.error}>{error}</Text>
+          ) : null}
 
+          {/* Sign in button */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
-            style={[styles.btn, { backgroundColor: theme.primary, opacity: loading ? 0.7 : 1 }]}
+            style={[styles.btn, { backgroundColor: theme.primary }]}
+            activeOpacity={0.85}
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnText}>Sign In</Text>}
+              : <Text style={styles.btnText}>Sign In</Text>
+            }
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleForgotPassword} style={styles.linkBtn}>
-            <Text style={{ color: theme.textDim, fontSize: 13 }}>
-              Forgot password?{'  '}
-              <Text style={{ color: theme.primary, fontWeight: '600' }}>Reset it</Text>
+          {/* Forgot password */}
+          <TouchableOpacity
+            onPress={() => {}}
+            style={styles.forgotWrap}
+          >
+            <Text style={[styles.forgot, { color: theme.primary }]}>
+              Forgot password?
             </Text>
           </TouchableOpacity>
 
           {/* Divider */}
-          <View style={styles.divider}>
-            <View style={[styles.line, { backgroundColor: theme.border }]} />
-            <Text style={[styles.dividerText, { color: theme.muted }]}>or</Text>
-            <View style={[styles.line, { backgroundColor: theme.border }]} />
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+            <Text style={[styles.dividerText, { color: theme.textDim }]}>or</Text>
+            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.linkBtn}>
-            <Text style={{ color: theme.textDim, fontSize: 14 }}>
-              Don't have an account?{'  '}
-              <Text style={{ color: theme.primary, fontWeight: '600' }}>Register</Text>
+          {/* Register */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}
+            style={styles.registerWrap}
+          >
+            <Text style={[styles.registerText, { color: theme.textDim }]}>
+              Don't have an account?{' '}
+              <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                Register
+              </Text>
             </Text>
           </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -149,26 +192,114 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1 },
-  inner:   { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 16 },
-  brand:   { alignItems: 'center', gap: 8, marginBottom: 8 },
-  appName: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
-  tagline: { fontSize: 13, textAlign: 'center' },
-  heading: { fontSize: 22, fontWeight: '700', alignSelf: 'flex-start' },
-  fields:  { width: '100%', gap: 12 },
-  input:   {
-    width: '100%', borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 13, fontSize: 15,
+  safe:   { flex: 1 },
+  scroll: {
+    flexGrow:          1,
+    padding:           24,
+    paddingBottom:     48,
   },
-  pwdWrap:  { position: 'relative', width: '100%' },
-  pwdInput: { paddingRight: 48 },
-  eyeBtn:   { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
-  error:    { color: '#DC2626', fontSize: 13, textAlign: 'center', alignSelf: 'stretch' },
-  success:  { color: '#16A34A', fontSize: 13, textAlign: 'center', alignSelf: 'stretch' },
-  btn:      { width: '100%', borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  btnText:  { color: '#fff', fontWeight: '700', fontSize: 15 },
-  linkBtn:  { marginTop: 4 },
-  divider:  { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, marginVertical: 4 },
-  line:     { flex: 1, height: 1 },
-  dividerText: { fontSize: 12 },
+  logoRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            10,
+    marginBottom:   40,
+    marginTop:      16,
+  },
+  logoTile: {
+    width:           32,
+    height:          32,
+    borderRadius:    9,
+    backgroundColor: '#C8102E',
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         6,
+  },
+  logoImg: {
+    width:  '100%',
+    height: '100%',
+  },
+  logoText: {
+    fontSize:      20,
+    fontWeight:    '800',
+    letterSpacing: -0.5,
+  },
+  headingWrap: {
+    marginBottom: 32,
+  },
+  heading: {
+    fontSize:      24,
+    fontWeight:    '800',
+    letterSpacing: -0.6,
+  },
+  sub: {
+    fontSize:  14,
+    marginTop: 6,
+  },
+  fieldWrap: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize:     13,
+    fontWeight:   '500',
+    marginBottom: 6,
+  },
+  input: {
+    height:            52,
+    borderWidth:       1.5,
+    borderRadius:      12,
+    paddingHorizontal: 16,
+    fontSize:          15,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right:    14,
+    top:      14,
+  },
+  error: {
+    color:        '#C8102E',
+    fontSize:     13,
+    marginBottom: 12,
+    textAlign:    'center',
+  },
+  btn: {
+    height:         52,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginTop:      8,
+  },
+  btnText: {
+    color:      '#fff',
+    fontSize:   15,
+    fontWeight: '700',
+  },
+  forgotWrap: {
+    alignItems: 'center',
+    marginTop:  16,
+  },
+  forgot: {
+    fontSize:   13,
+    fontWeight: '500',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           12,
+    marginTop:     24,
+    marginBottom:  24,
+  },
+  dividerLine: {
+    flex:   1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+  },
+  registerWrap: {
+    alignItems: 'center',
+  },
+  registerText: {
+    fontSize: 14,
+  },
 });

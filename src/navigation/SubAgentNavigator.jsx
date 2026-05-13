@@ -1,37 +1,38 @@
+// src/navigation/SubAgentNavigator.jsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../hooks/useNotifications';
+
 import HomeScreen       from '../screens/sub-agent/HomeScreen';
 import NewRequestScreen from '../screens/sub-agent/NewRequestScreen';
 import MyRequestsScreen from '../screens/sub-agent/MyRequestsScreen';
 import ProfileScreen    from '../screens/sub-agent/ProfileScreen';
-import NetworksScreen   from '../screens/sub-agent/NetworksScreen';
 
-const Tab   = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
-const Icon = ({ emoji, focused }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-);
-
-// Profile stack wraps ProfileScreen + NetworksScreen
-function ProfileStack() {
+function TabIcon({ name, focused, color, badge }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
-      <Stack.Screen name="Networks"    component={NetworksScreen} />
-    </Stack.Navigator>
+    <View>
+      <Ionicons
+        name={focused ? name : `${name}-outline`}
+        size={24}
+        color={color}
+      />
+      {badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {badge > 99 ? '99+' : badge}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 export default function SubAgentNavigator() {
-  const { user } = useAuth();
-  const { theme, tr } = useTheme();
-  useNotifications(user?.uid);
+  const { theme } = useTheme();
 
   return (
     <Tab.Navigator
@@ -39,33 +40,81 @@ export default function SubAgentNavigator() {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: theme.surface,
-          borderTopColor: theme.border,
-          borderTopWidth: 1,
-          paddingBottom: 6,
-          paddingTop: 6,
-          height: 64,
+          borderTopColor:  theme.border,
+          borderTopWidth:  1,
+          paddingBottom:   8,
+          paddingTop:      8,
+          height:          64,
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: {
+          fontSize:   10,
+          fontWeight: '600',
+          marginTop:  2,
+        },
       }}
     >
-      <Tab.Screen name="Home"
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: tr('home'),    tabBarIcon: ({ focused }) => <Icon emoji="🏠" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name="home" focused={focused} color={color} />
+          ),
+        }}
       />
-      <Tab.Screen name="NewRequest"
+      <Tab.Screen
+        name="NewRequest"
         component={NewRequestScreen}
-        options={{ tabBarLabel: tr('request'), tabBarIcon: ({ focused }) => <Icon emoji="➕" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'Request',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name="add-circle" focused={focused} color={color} />
+          ),
+        }}
       />
-      <Tab.Screen name="MyRequests"
+      <Tab.Screen
+        name="MyRequests"
         component={MyRequestsScreen}
-        options={{ tabBarLabel: tr('history'), tabBarIcon: ({ focused }) => <Icon emoji="📋" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'History',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name="time" focused={focused} color={color} />
+          ),
+        }}
       />
-      <Tab.Screen name="Profile"
-        component={ProfileStack}
-        options={{ tabBarLabel: tr('profile'), tabBarIcon: ({ focused }) => <Icon emoji="👤" focused={focused} /> }}
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Me',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name="person" focused={focused} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position:        'absolute',
+    top:             -4,
+    right:           -8,
+    backgroundColor: '#C8102E',
+    borderRadius:    9999,
+    minWidth:        16,
+    height:          16,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color:      '#fff',
+    fontSize:   9,
+    fontWeight: '800',
+  },
+});

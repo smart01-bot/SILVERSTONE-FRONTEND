@@ -1,55 +1,106 @@
+// src/screens/auth/SplashScreen.jsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View, Text, Image, Animated, StyleSheet, StatusBar,
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
 
-export default function SplashScreen({ onFinish }) {
-  const { isDark } = useTheme();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.82)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+export default function SplashScreen({ navigation }) {
+  const { theme, isDark } = useTheme();
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale   = useRef(new Animated.Value(0.85)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1,
-          tension: 60,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(textOpacity, {
-        toValue: 1,
-        duration: 400,
+    // Logo entrance
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1, duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1, tension: 60, friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
 
-    const timer = setTimeout(onFinish, 2600);
+    // Dot pulse loop
+    const pulse = (dot, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 0.9, duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0.3, duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+    pulse(dot1, 0);
+    pulse(dot2, 200);
+    pulse(dot3, 400);
+
+    // Auto advance after 1800ms
+    const timer = setTimeout(() => {
+      navigation.replace('RoleSelect');
+    }, 1800);
+
     return () => clearTimeout(timer);
   }, []);
 
-  const gradientColors = isDark
-    ? ['#1C0000', '#2C0000']
-    : ['#D32F2F', '#B71C1C'];
-
   return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
-      <Animated.View style={[styles.logoWrap, { opacity, transform: [{ scale }] }]}>
-        <Logo size={200} />
-      </Animated.View>
-      <Animated.View style={[styles.textWrap, { opacity: textOpacity }]}>
-        <Text style={styles.name}>SILVERSTONE INC.</Text>
-        <Text style={styles.tagline}>Tanzania's First Float Management System</Text>
-      </Animated.View>
-    </LinearGradient>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.bg}
+      />
+
+      {/* Center content */}
+      <View style={styles.center}>
+        <Animated.View style={{
+          opacity: logoOpacity,
+          transform: [{ scale: logoScale }],
+          alignItems: 'center',
+        }}>
+          {/* Logo tile */}
+          <View style={styles.logoTile}>
+            <Image
+              source={require('../../../assets/images/SilverS.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Wordmark */}
+          <Text style={[styles.wordmark, { color: theme.text }]}>
+            silverstone
+          </Text>
+
+          {/* Tagline */}
+          <Text style={[styles.tagline, { color: theme.textDim }]}>
+            FLOAT, ON DEMAND
+          </Text>
+
+          {/* Dots */}
+          <View style={styles.dots}>
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot2 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot3 }]} />
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* Footer */}
+      <Text style={[styles.footer, { color: theme.textDim }]}>
+        v1.0.0 · Silverstone Inc.
+      </Text>
+    </View>
   );
 }
 
@@ -59,23 +110,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoWrap: {
+  center: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  textWrap: {
-    alignItems: 'center',
-    marginTop: 32,
-    gap: 8,
+  logoTile: {
+    width:           96,
+    height:          96,
+    borderRadius:    22,
+    backgroundColor: '#C8102E',
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         16,
   },
-  name: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: 3,
+  logoImage: {
+    width:  '100%',
+    height: '100%',
+  },
+  wordmark: {
+    fontSize:      30,
+    fontWeight:    '800',
+    letterSpacing: -0.8,
+    marginTop:     28,
   },
   tagline: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 13,
+    fontSize:      13,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginTop:     8,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap:           6,
+    marginTop:     40,
+  },
+  dot: {
+    width:           7,
+    height:          7,
+    borderRadius:    4,
+    backgroundColor: '#C8102E',
+  },
+  footer: {
+    fontSize:      11,
     letterSpacing: 0.4,
+    textAlign:     'center',
+    paddingBottom: 24,
   },
 });
