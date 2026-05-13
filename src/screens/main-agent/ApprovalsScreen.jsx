@@ -1,154 +1,364 @@
+// src/screens/main-agent/ApprovalsScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, StatusBar, SafeAreaView,
+  RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { listenAgents, approveAgent, rejectAgent } from '../../utils/firestore';
+import {
+  collection, query, where, onSnapshot,
+  doc, updateDoc, Timestamp,
+} from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 export default function ApprovalsScreen() {
-  const { theme, tr } = useTheme();
-  const [agents, setAgents]     = useState([]);
-  const [filter, setFilter]     = useState('pending');
-  const [loading, setLoading]   = useState({});
+  const { theme, isDark } = useTheme();
+
+  const [agents,     setAgents]     = useState([]);
+  const [filter,     setFilter]     = useState('Pending');
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading,    setLoading]    = useState(null);
+
+  const FILTERS = ['Pending', 'Approved', 'Rejected'];
 
   useEffect(() => {
-    return listenAgents(setAgents);
+    const unsub = onSnapshot(
+      query(collection(db, 'agents'), where('role', '==', 'sub-agent')),
+      snap => setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+    return unsub;
   }, []);
 
-  const filtered = agents.filter(a => a.status === filter);
+  const filtered = agents.filter(a => {
+    if (filter === 'Pending')  return a.status === 'pending';
+    if (filter === 'Approved') return a.status === 'approved';
+    if (filter === 'Rejected') return a.status === 'rejected';
+    return true;
+  });
+
   const pendingCount = agents.filter(a => a.status === 'pending').length;
 
-  const handleApprove = async (agentId) => {
-    setLoading(l => ({ ...l, [agentId]: true }));
+  const handleApprove = async (agent) => {
+    setLoading(agent.id + '_approve');
     try {
-      await approveAgent(agentId);
-    } catch (e) { Alert.alert('Error', e.message); }
-    finally { setLoading(l => ({ ...l, [agentId]: false })); }
+      await updateDoc(doc(db, 'agents', agent.id), {
+        status:     'approved',
+        approvedAt: Timestamp.now(),
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to approve agent.');
+    } finally {
+      setLoading(null);
+    }
   };
 
-  const handleReject = async (agentId) => {
-    Alert.alert('Reject Agent', 'Reject this agent application?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reject', style: 'destructive',
-        onPress: async () => {
-          setLoading(l => ({ ...l, [agentId]: true }));
-          try { await rejectAgent(agentId); }
-          catch (e) { Alert.alert('Error', e.message); }
-          finally { setLoading(l => ({ ...l, [agentId]: false })); }
-        },
-      },
-    ]);
+  const handleReject = (agent) => {
+    Alert.alert(
+      'Reject Application',
+      'Select a reason:',
+      [
+        { text: 'Does not meet requirements', onPress: () => doReject(agent, 'Does not meet requirements') },
+        { text: 'Invalid documentation',       onPress: () => doReject(agent, 'Invalid documentation') },
+        { text: 'Duplicate application',       onPress: () => doReject(agent, 'Duplicate application') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const doReject = async (agent, reason) => {
+    setLoading(agent.id + '_reject');
+    try {
+      await updateDoc(doc(db, 'agents', agent.id), {
+        status:          'rejected',
+        rejectionReason: reason,
+        rejectedAt:      Timestamp.now(),
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to reject agent.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const daysAgo = (ts) => {
+    if (!ts?.toDate) return '';
+    const days = Math.floor((Date.now() - ts.toDate().getTime()) / 86400000);
+    if (days === 0) return 'TODAY';
+    if (days === 1) return 'YESTERDAY';
+    return `${days}D AGO`;
+  };
+
+  const avatarColor = (name) => {
+    const colors = ['#C8102E', '#0891B2', '#16A34A', '#7C3AED', '#F59E0B'];
+    return colors[(name?.charCodeAt(0) ?? 0) % colors.length];
+  };
+
+  const initials = (name) =>
+    name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.text }]}>{tr('agentApprovals')}</Text>
-        {pendingCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: theme.primary }]}>
-            <Text style={styles.badgeText}>{pendingCount}</Text>
+        <Text style={styles.headerTitle}>Agent Approvals</Text>
+        <Text style={styles.headerSub}>Review applications & ID docs</Text>
+      </View>
+
+      {/* Filter pills */}
+      <View style={[styles.filters, { backgroundColor: theme.bg }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.filterRow}>
+            {FILTERS.map(f => (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setFilter(f)}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
+                    borderColor:     filter === f ? theme.primary : theme.border,
+                  },
+                ]}
+              >
+                <Text style={[
+                  styles.pillText,
+                  { color: filter === f ? '#fff' : theme.textDim },
+                ]}>
+                  {f}
+                  {f === 'Pending' && pendingCount > 0
+                    ? `  ${pendingCount}`
+                    : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
+        </ScrollView>
       </View>
 
-      <View style={styles.pills}>
-        {['pending','approved','rejected'].map(f => (
-          <TouchableOpacity key={f} onPress={() => setFilter(f)}
-            style={[styles.pill, { backgroundColor: filter===f ? theme.primary : theme.surfaceAlt, borderColor: filter===f ? theme.primary : theme.border }]}>
-            <Text style={[styles.pillText, { color: filter===f ? '#fff' : theme.textDim }]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)} {f==='pending' ? `(${pendingCount})` : ''}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#C8102E']}
+            tintColor="#C8102E"
+          />
+        }
+      >
+        {filtered.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="checkmark-circle-outline" size={56} color={theme.muted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              No {filter.toLowerCase()} applications
             </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
-          const isLoading = loading[item.id];
-          return (
-            <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, ...theme.shadow }]}>
-              <View style={styles.top}>
-                <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-                  <Text style={[styles.avatarText, { color: theme.primary }]}>{item.name?.[0]}</Text>
+          </View>
+        ) : (
+          filtered.map(agent => (
+            <View
+              key={agent.id}
+              style={[styles.card, {
+                backgroundColor: theme.surfaceAlt,
+                borderColor:     theme.border,
+              }]}
+            >
+              {/* Top row */}
+              <View style={styles.cardTop}>
+                <View style={[
+                  styles.avatar,
+                  { backgroundColor: avatarColor(agent.name) + '20' },
+                ]}>
+                  <Text style={[
+                    styles.avatarText,
+                    { color: avatarColor(agent.name) },
+                  ]}>
+                    {initials(agent.name)}
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
-                  <Text style={[styles.phone, { color: theme.textDim }]}>{item.phone}</Text>
+                <View style={styles.agentInfo}>
+                  <Text style={[styles.agentName, { color: theme.text }]}>
+                    {agent.name}
+                  </Text>
+                  <Text style={[styles.agentSub, { color: theme.textDim }]}>
+                    {agent.businessLocation} · {agent.networks?.length ?? 0} tills
+                  </Text>
+                  {agent.rejectionReason && (
+                    <Text style={styles.rejectionReason}>
+                      {agent.rejectionReason}
+                    </Text>
+                  )}
                 </View>
+                <Text style={[styles.daysAgo, { color: theme.textDim }]}>
+                  {daysAgo(agent.createdAt)}
+                </Text>
               </View>
 
-              <View style={[styles.details, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              {/* Details */}
+              <View style={[styles.details, { borderTopColor: theme.border }]}>
                 {[
-                  ['Business',  item.businessName],
-                  ['Location',  item.businessLocation],
-                  ['Reg No',    item.regNo],
-                  ['TIN',       item.tin],
-                  ['NIDA',      item.nida],
-                ].map(([label, value]) => (
-                  <View key={label} style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textDim }]}>{label}</Text>
-                    <Text style={[styles.detailVal, { color: theme.text }]}>{value}</Text>
+                  { label: 'Phone',    value: agent.phone },
+                  { label: 'Business', value: agent.businessName },
+                  { label: 'Reg No',   value: agent.regNo },
+                  { label: 'TIN',      value: agent.tin },
+                  { label: 'NIDA',     value: agent.nida },
+                ].map(row => (
+                  <View key={row.label} style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textDim }]}>
+                      {row.label}
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.text }]}>
+                      {row.value ?? '—'}
+                    </Text>
                   </View>
                 ))}
               </View>
 
-              {filter === 'pending' && (
+              {/* Actions — only for pending */}
+              {agent.status === 'pending' && (
                 <View style={styles.actions}>
-                  <TouchableOpacity onPress={() => handleReject(item.id)} disabled={isLoading}
-                    style={[styles.actionBtn, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
-                    <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 14 }}>✕ Reject</Text>
+                  <TouchableOpacity
+                    style={[styles.btnOutline, { borderColor: theme.border }]}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.btnOutlineText, { color: theme.textDim }]}>
+                      View docs
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleApprove(item.id)} disabled={isLoading}
-                    style={[styles.actionBtn, { backgroundColor: theme.primary }]}>
-                    {isLoading
-                      ? <ActivityIndicator color="#fff" size="small" />
-                      : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>✓ Approve</Text>
+                  <TouchableOpacity
+                    onPress={() => handleApprove(agent)}
+                    style={[styles.btnFilled, { backgroundColor: '#C8102E' }]}
+                    activeOpacity={0.85}
+                  >
+                    {loading === agent.id + '_approve'
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={styles.btnFilledText}>Approve</Text>
+                    }
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleReject(agent)}
+                    style={[styles.btnOutline, { borderColor: '#C8102E' }]}
+                    activeOpacity={0.75}
+                  >
+                    {loading === agent.id + '_reject'
+                      ? <ActivityIndicator size="small" color="#C8102E" />
+                      : <Text style={[styles.btnOutlineText, { color: '#C8102E' }]}>
+                          Reject
+                        </Text>
                     }
                   </TouchableOpacity>
                 </View>
               )}
             </View>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>{filter === 'pending' ? '🎉' : '📭'}</Text>
-            <Text style={[{ fontSize: 15, fontWeight: '700', color: theme.text }]}>
-              No {filter} applications
-            </Text>
-          </View>
-        }
-      />
+          ))
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe:   { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, paddingBottom: 4 },
-  title:  { fontSize: 22, fontWeight: '800' },
-  badge:  { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  pills:  { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  pill:   { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  pillText: { fontSize: 12, fontWeight: '600' },
-  list:   { padding: 16, gap: 14, paddingBottom: 100 },
-  card:   { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  top:    { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '700' },
-  name:   { fontSize: 15, fontWeight: '700' },
-  phone:  { fontSize: 13 },
-  details:{ borderTopWidth: 1, borderBottomWidth: 1, overflow: 'hidden' },
-  detailRow:  { flexDirection: 'row', justifyContent: 'space-between', padding: 10, borderBottomWidth: 0.5, borderBottomColor: '#00000010' },
-  detailLabel:{ fontSize: 12 },
-  detailVal:  { fontSize: 12, fontWeight: '600' },
-  actions:{ flexDirection: 'row', gap: 10, padding: 12 },
-  actionBtn:  { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  empty:  { alignItems: 'center', gap: 12, paddingTop: 60 },
+  scroll: { padding: 16, paddingBottom: 100 },
+
+  header: {
+    backgroundColor:       '#C8102E',
+    paddingHorizontal:     18,
+    paddingTop:            10,
+    paddingBottom:         14,
+    borderBottomLeftRadius:  24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+
+  filters:   { paddingVertical: 10, paddingHorizontal: 16 },
+  filterRow: { flexDirection: 'row', gap: 8 },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical:   7,
+    borderRadius:      9999,
+    borderWidth:       1,
+  },
+  pillText: { fontSize: 13, fontWeight: '600' },
+
+  empty: {
+    alignItems: 'center',
+    paddingTop: 60,
+    gap:        12,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '700' },
+
+  card: {
+    borderRadius: 16,
+    borderWidth:  1,
+    marginBottom: 12,
+    overflow:     'hidden',
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems:    'flex-start',
+    gap:           12,
+    padding:       14,
+  },
+  avatar: {
+    width:          44,
+    height:         44,
+    borderRadius:   22,
+    alignItems:     'center',
+    justifyContent: 'center',
+    flexShrink:     0,
+  },
+  avatarText:       { fontSize: 16, fontWeight: '700' },
+  agentInfo:        { flex: 1, gap: 2 },
+  agentName:        { fontSize: 15, fontWeight: '700' },
+  agentSub:         { fontSize: 12 },
+  rejectionReason:  { fontSize: 12, color: '#C8102E', marginTop: 2 },
+  daysAgo:          { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+
+  details: {
+    borderTopWidth:    1,
+    paddingHorizontal: 14,
+    paddingVertical:   10,
+    gap:               6,
+  },
+  detailRow: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+  },
+  detailLabel: { fontSize: 12 },
+  detailValue: { fontSize: 12, fontWeight: '600' },
+
+  actions: {
+    flexDirection:     'row',
+    gap:               8,
+    padding:           14,
+    paddingTop:        0,
+  },
+  btnOutline: {
+    flex:           1,
+    height:         38,
+    borderRadius:   10,
+    borderWidth:    1.5,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  btnOutlineText: { fontSize: 13, fontWeight: '600' },
+  btnFilled: {
+    flex:           1,
+    height:         38,
+    borderRadius:   10,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  btnFilledText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
