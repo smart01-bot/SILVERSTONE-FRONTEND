@@ -6,15 +6,14 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 
 export default function SplashScreen({ navigation }) {
-  const { theme, isDark } = useTheme();
-  const dot1 = useRef(new Animated.Value(0.3)).current;
-  const dot2 = useRef(new Animated.Value(0.3)).current;
-  const dot3 = useRef(new Animated.Value(0.3)).current;
+  const { theme } = useTheme();
+  const dot1 = useRef(new Animated.Value(0.4)).current;
+  const dot2 = useRef(new Animated.Value(0.4)).current;
+  const dot3 = useRef(new Animated.Value(0.4)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale   = useRef(new Animated.Value(0.85)).current;
 
   useEffect(() => {
-    // Logo entrance
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1, duration: 600,
@@ -26,17 +25,16 @@ export default function SplashScreen({ navigation }) {
       }),
     ]).start();
 
-    // Dot pulse loop
     const pulse = (dot, delay) =>
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(dot, {
-            toValue: 0.9, duration: 400,
+            toValue: 1, duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(dot, {
-            toValue: 0.3, duration: 400,
+            toValue: 0.4, duration: 400,
             useNativeDriver: true,
           }),
         ])
@@ -46,7 +44,6 @@ export default function SplashScreen({ navigation }) {
     pulse(dot2, 200);
     pulse(dot3, 400);
 
-    // Auto advance after 1800ms
     const timer = setTimeout(() => {
       navigation.replace('RoleSelect');
     }, 1800);
@@ -55,13 +52,9 @@ export default function SplashScreen({ navigation }) {
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.bg}
-      />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      {/* Center content */}
       <View style={styles.center}>
         <Animated.View style={{
           opacity: logoOpacity,
@@ -78,14 +71,10 @@ export default function SplashScreen({ navigation }) {
           </View>
 
           {/* Wordmark */}
-          <Text style={[styles.wordmark, { color: theme.text }]}>
-            silverstone
-          </Text>
+          <Text style={styles.wordmark}>silverstone</Text>
 
           {/* Tagline */}
-          <Text style={[styles.tagline, { color: theme.textDim }]}>
-            FLOAT, ON DEMAND
-          </Text>
+          <Text style={styles.tagline}>FLOAT, ON DEMAND</Text>
 
           {/* Dots */}
           <View style={styles.dots}>
@@ -97,29 +86,28 @@ export default function SplashScreen({ navigation }) {
       </View>
 
       {/* Footer */}
-      <Text style={[styles.footer, { color: theme.textDim }]}>
-        v1.0.0 · Silverstone Inc.
-      </Text>
+      <Text style={styles.footer}>v1.0.0 · Silverstone Inc.</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex:            1,
+    backgroundColor: '#C8102E',
+    alignItems:      'center',
+    justifyContent:  'center',
   },
   center: {
-    flex: 1,
-    alignItems: 'center',
+    flex:           1,
+    alignItems:     'center',
     justifyContent: 'center',
   },
   logoTile: {
     width:           96,
     height:          96,
     borderRadius:    22,
-    backgroundColor: '#C8102E',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems:      'center',
     justifyContent:  'center',
     padding:         16,
@@ -132,29 +120,32 @@ const styles = StyleSheet.create({
     fontSize:      30,
     fontWeight:    '800',
     letterSpacing: -0.8,
+    color:         '#FFFFFF',
     marginTop:     28,
   },
   tagline: {
     fontSize:      13,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
+    color:         'rgba(255,255,255,0.75)',
     marginTop:     8,
   },
   dots: {
     flexDirection: 'row',
-    gap:           6,
+    gap:           8,
     marginTop:     40,
   },
   dot: {
-    width:           7,
-    height:          7,
-    borderRadius:    4,
-    backgroundColor: '#C8102E',
+    width:           9,
+    height:          9,
+    borderRadius:    5,
+    backgroundColor: '#FFFFFF',
   },
   footer: {
     fontSize:      11,
     letterSpacing: 0.4,
     textAlign:     'center',
+    color:         'rgba(255,255,255,0.6)',
     paddingBottom: 24,
   },
 });

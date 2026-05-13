@@ -89,7 +89,7 @@ export default function RoleSelectScreen({ navigation }) {
             ]}>
               <Ionicons
                 name={`${role.icon}-outline`}
-                size={20}
+                size={26}
                 color={theme.primary}
               />
             </View>
@@ -111,7 +111,7 @@ export default function RoleSelectScreen({ navigation }) {
             ]}>
               <Ionicons
                 name="arrow-forward"
-                size={12}
+                size={14}
                 color={theme.text}
               />
             </View>
@@ -134,13 +134,13 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
     gap:            10,
-    paddingTop:     14,
+    paddingTop:     20,
     paddingBottom:  8,
   },
   logoTile: {
-    width:           32,
-    height:          32,
-    borderRadius:    9,
+    width:           36,
+    height:          36,
+    borderRadius:    10,
     backgroundColor: '#C8102E',
     alignItems:      'center',
     justifyContent:  'center',
@@ -151,35 +151,36 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   logoText: {
-    fontSize:      20,
+    fontSize:      22,
     fontWeight:    '800',
     letterSpacing: -0.5,
   },
   greetingWrap: {
-    paddingHorizontal: 22,
-    paddingTop:        40,
+    paddingHorizontal: 24,
+    paddingTop:        44,
     marginBottom:      8,
   },
   greeting: {
-    fontSize:      22,
+    fontSize:      26,
     fontWeight:    '800',
     letterSpacing: -0.6,
   },
   loginAs: {
-    fontSize:   14,
-    marginTop:  6,
+    fontSize:  15,
+    marginTop: 6,
   },
   cards: {
-    padding: 18,
-    gap:     10,
+    padding: 20,
+    gap:     14,
   },
   card: {
     flexDirection:  'row',
     alignItems:     'center',
-    gap:            12,
-    padding:        14,
-    borderRadius:   16,
+    gap:            16,
+    padding:        22,
+    borderRadius:   20,
     borderWidth:    1.5,
+    minHeight:      88,
     shadowColor:    '#000',
     shadowOffset:   { width: 0, height: 4 },
     shadowOpacity:  0.04,
@@ -187,9 +188,9 @@ const styles = StyleSheet.create({
     elevation:      2,
   },
   iconPlate: {
-    width:          38,
-    height:         38,
-    borderRadius:   12,
+    width:          52,
+    height:         52,
+    borderRadius:   16,
     alignItems:     'center',
     justifyContent: 'center',
     flexShrink:     0,
@@ -198,19 +199,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    fontSize:      15,
+    fontSize:      17,
     fontWeight:    '800',
     letterSpacing: -0.3,
   },
   cardSub: {
-    fontSize:   11,
+    fontSize:   13,
     fontWeight: '500',
-    marginTop:  2,
+    marginTop:  4,
   },
   arrowCircle: {
-    width:          24,
-    height:         24,
-    borderRadius:   12,
+    width:          28,
+    height:         28,
+    borderRadius:   14,
     alignItems:     'center',
     justifyContent: 'center',
     flexShrink:     0,
