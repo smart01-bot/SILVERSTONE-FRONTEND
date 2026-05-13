@@ -1,222 +1,410 @@
+// src/screens/auth/RegisterScreen.jsx
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, StatusBar, SafeAreaView,
+  ActivityIndicator, KeyboardAvoidingView,
+  Platform, ScrollView, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth }  from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import Logo from '../../components/Logo';
-import { validatePhone, validateTIN, validateNIDA } from '../../utils/validation';
 
 const STEPS = 3;
 
+const STEP_LABELS = ['Personal', 'Business', 'Identity'];
+
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
-  const { theme }    = useTheme();
+  const { theme, isDark } = useTheme();
 
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [agreed,  setAgreed]  = useState(false);
 
   const [form, setForm] = useState({
-    name: '', phone: '', email: '', password: '', confirmPwd: '',
-    businessName: '', businessLocation: '', regNo: '',
-    tin: '', nida: '',
+    name:             '',
+    phone:            '',
+    password:         '',
+    confirmPassword:  '',
+    businessName:     '',
+    businessLocation: '',
+    businessRegNo:    '',
+    tin:              '',
+    nida:             '',
   });
 
-  const set = (k) => (v) => {
-    setForm(f => ({ ...f, [k]: v }));
-    if (fieldErrors[k]) setFieldErrors(e => { const n = { ...e }; delete n[k]; return n; });
-    setError('');
-  };
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [showCPwd, setShowCPwd] = useState(false);
+
+  const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   const validate = () => {
-    const errs = {};
     if (step === 1) {
-      if (!form.name.trim())        errs.name       = 'Full name is required.';
-      const ph = validatePhone(form.phone);
-      if (!ph.valid)                errs.phone      = ph.message;
-      if (!form.email.trim())       errs.email      = 'Email is required.';
-      if (!form.email.includes('@')) errs.email     = 'Enter a valid email address.';
-      if (form.password.length < 6) errs.password   = 'Password must be at least 6 characters.';
-      if (form.password !== form.confirmPwd) errs.confirmPwd = 'Passwords do not match.';
+      if (!form.name.trim())
+        return 'Full name is required.';
+      if (form.name.trim().split(' ').length < 2)
+        return 'Please enter your full name.';
+      if (!form.phone.trim())
+        return 'Phone number is required.';
+      if (!/^(07|06|\+2557|\+2556)\d{8}$/.test(form.phone.replace(/\s/g, '')))
+        return 'Enter a valid Tanzanian phone number.';
+      if (form.password.length < 6)
+        return 'Password must be at least 6 characters.';
+      if (form.password !== form.confirmPassword)
+        return 'Passwords do not match.';
     }
     if (step === 2) {
-      if (!form.businessName.trim())     errs.businessName     = 'Business name is required.';
-      if (!form.businessLocation.trim()) errs.businessLocation = 'Business location is required.';
-      if (!form.regNo.trim())            errs.regNo            = 'Registration number is required.';
+      if (!form.businessName.trim())
+        return 'Business name is required.';
+      if (!form.businessLocation.trim())
+        return 'Business location is required.';
+      if (!form.businessRegNo.trim())
+        return 'Registration number is required.';
     }
     if (step === 3) {
-      const tin  = validateTIN(form.tin);
-      const nida = validateNIDA(form.nida);
-      if (!tin.valid)  errs.tin  = tin.message;
-      if (!nida.valid) errs.nida = nida.message;
+      if (!form.tin.trim())
+        return 'TIN is required.';
+      if (!form.nida.trim())
+        return 'NIDA is required.';
+      if (!agreed)
+        return 'You must agree to the Terms of Service.';
     }
-    setFieldErrors(errs);
-    return Object.keys(errs).length === 0;
+    return null;
   };
 
-  const next = async () => {
+  const handleNext = async () => {
     setError('');
-    if (!validate()) return;
-    if (step < STEPS) { setStep(s => s + 1); return; }
+    const err = validate();
+    if (err) { setError(err); return; }
+
+    if (step < STEPS) {
+      setStep(s => s + 1);
+      return;
+    }
+
+    // Submit
     setLoading(true);
     try {
+      const email = `${form.phone.replace(/\s/g, '')}@silverstone.tz`;
       await register({
         name:             form.name.trim(),
         phone:            form.phone.trim(),
-        email:            form.email.trim(),
+        email,
         password:         form.password,
         businessName:     form.businessName.trim(),
         businessLocation: form.businessLocation.trim(),
-        regNo:            form.regNo.trim(),
+        regNo:            form.businessRegNo.trim(),
         tin:              form.tin.trim(),
         nida:             form.nida.trim(),
       });
-      // AppNavigator detects new user → pending status → routes to PendingScreen
+      // AppNavigator detects pending status and shows PendingScreen
     } catch (e) {
-      const msg = e.message?.replace('Firebase: ', '') ?? 'Registration failed.';
-      if (msg.includes('email-already-in-use')) {
-        setError('An account with this email already exists.');
-      } else {
-        setError(msg);
-      }
+      setError(
+        e.message
+          ?.replace('Firebase: ', '')
+          ?.replace('(auth/email-already-in-use).', 'Phone number already registered.')
+          ?? 'Registration failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const inp = (key) => [
-    styles.input,
-    { backgroundColor: theme.surfaceAlt, borderColor: fieldErrors[key] ? '#DC2626' : theme.border, color: theme.text },
-  ];
-  const fe = (k) => fieldErrors[k] ? <Text style={styles.fieldError}>{fieldErrors[k]}</Text> : null;
-  const lbl = (txt) => <Text style={[styles.label, { color: theme.textDim }]}>{txt}</Text>;
+  const inp = [styles.input, {
+    backgroundColor: theme.surfaceAlt,
+    borderColor:     theme.border,
+    color:           theme.text,
+  }];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 80 }]} keyboardShouldPersistTaps="handled">
-
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.brandGroup}>
-              <Logo size={48} />
-              <View style={{ marginLeft: 10 }}>
-                <Text style={[styles.brand, { color: theme.primary }]}>Silverstone</Text>
-                <Text style={[styles.tagline, { color: theme.textDim }]}>Tanzania's First Float Management System</Text>
-              </View>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.bg}
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Logo row */}
+          <View style={styles.logoRow}>
+            <View style={styles.logoTile}>
+              <Image
+                source={require('../../../assets/images/SilverS.png')}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
             </View>
+            <Text style={[styles.logoText, { color: theme.text }]}>
+              silverstone
+            </Text>
           </View>
 
-          {/* Progress bar */}
-          <View style={styles.progressRow}>
-            {[1, 2, 3].map(i => (
-              <View key={i} style={[styles.progressBar, { backgroundColor: i <= step ? theme.primary : theme.border }]} />
+          {/* Step bar */}
+          <View style={styles.stepBar}>
+            {STEP_LABELS.map((label, i) => (
+              <View key={label} style={styles.stepItem}>
+                <View style={[
+                  styles.stepLine,
+                  { backgroundColor: step >= i + 1 ? theme.primary : theme.border },
+                ]} />
+                <Text style={[
+                  styles.stepLabel,
+                  { color: step === i + 1 ? theme.primary : theme.textDim },
+                ]}>
+                  {label}
+                </Text>
+              </View>
             ))}
           </View>
-
-          <Text style={[styles.stepLabel, { color: theme.textDim }]}>
-            {['Personal Details', 'Business Info', 'Identity Verification'][step - 1]} — Step {step} of {STEPS}
-          </Text>
 
           {/* Step 1 — Personal */}
           {step === 1 && (
             <View style={styles.form}>
-              <Text style={[styles.stepTitle, { color: theme.text }]}>Create Account</Text>
-              {lbl('Full Name')}
-              <TextInput style={inp('name')} value={form.name} onChangeText={set('name')}
-                placeholder="e.g. Amina Juma" placeholderTextColor={theme.muted} />
-              {fe('name')}
-              {lbl('Phone Number')}
-              <TextInput style={inp('phone')} value={form.phone} onChangeText={set('phone')}
-                placeholder="e.g. 0754123456" placeholderTextColor={theme.muted} keyboardType="phone-pad" />
-              {fe('phone')}
-              {lbl('Email Address')}
-              <TextInput style={inp('email')} value={form.email} onChangeText={set('email')}
-                placeholder="you@example.com" placeholderTextColor={theme.muted}
-                keyboardType="email-address" autoCapitalize="none" />
-              {fe('email')}
-              {lbl('Password')}
-              <TextInput style={inp('password')} value={form.password} onChangeText={set('password')}
-                placeholder="At least 6 characters" placeholderTextColor={theme.muted} secureTextEntry />
-              {fe('password')}
-              {lbl('Confirm Password')}
-              <TextInput style={inp('confirmPwd')} value={form.confirmPwd} onChangeText={set('confirmPwd')}
-                placeholder="Re-enter password" placeholderTextColor={theme.muted} secureTextEntry />
-              {fe('confirmPwd')}
+              <Text style={[styles.stepTitle, { color: theme.text }]}>
+                Personal Details
+              </Text>
+
+              <Text style={[styles.label, { color: theme.textDim }]}>Full Name</Text>
+              <TextInput
+                style={inp}
+                value={form.name}
+                onChangeText={set('name')}
+                placeholder="e.g. Juma Hassan"
+                placeholderTextColor={theme.muted}
+              />
+
+              <Text style={[styles.label, { color: theme.textDim }]}>Phone Number</Text>
+              <TextInput
+                style={inp}
+                value={form.phone}
+                onChangeText={set('phone')}
+                placeholder="07XX XXX XXX"
+                placeholderTextColor={theme.muted}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={[styles.label, { color: theme.textDim }]}>Password</Text>
+              <View>
+                <TextInput
+                  style={[inp, { paddingRight: 48 }]}
+                  value={form.password}
+                  onChangeText={set('password')}
+                  placeholder="Min 6 characters"
+                  placeholderTextColor={theme.muted}
+                  secureTextEntry={!showPwd}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPwd(v => !v)}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showPwd ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={theme.textDim}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Password strength */}
+              {form.password.length > 0 && (
+                <View style={styles.strengthBar}>
+                  <View style={[
+                    styles.strengthFill,
+                    {
+                      width: form.password.length < 6
+                        ? '33%'
+                        : form.password.length < 8
+                          ? '66%'
+                          : '100%',
+                      backgroundColor: form.password.length < 6
+                        ? '#C8102E'
+                        : form.password.length < 8
+                          ? '#F59E0B'
+                          : '#16A34A',
+                    },
+                  ]} />
+                </View>
+              )}
+
+              <Text style={[styles.label, { color: theme.textDim }]}>
+                Confirm Password
+              </Text>
+              <View>
+                <TextInput
+                  style={[inp, { paddingRight: 48 }]}
+                  value={form.confirmPassword}
+                  onChangeText={set('confirmPassword')}
+                  placeholder="Repeat password"
+                  placeholderTextColor={theme.muted}
+                  secureTextEntry={!showCPwd}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowCPwd(v => !v)}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showCPwd ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={theme.textDim}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
           {/* Step 2 — Business */}
           {step === 2 && (
             <View style={styles.form}>
-              <Text style={[styles.stepTitle, { color: theme.text }]}>Business Information</Text>
-              {lbl('Business Name')}
-              <TextInput style={inp('businessName')} value={form.businessName} onChangeText={set('businessName')}
-                placeholder="e.g. Karibu Mobile Money" placeholderTextColor={theme.muted} />
-              {fe('businessName')}
-              {lbl('Business Location')}
-              <TextInput style={inp('businessLocation')} value={form.businessLocation} onChangeText={set('businessLocation')}
-                placeholder="e.g. Kariakoo, Dar es Salaam" placeholderTextColor={theme.muted} />
-              {fe('businessLocation')}
-              {lbl('Registration Number')}
-              <TextInput style={inp('regNo')} value={form.regNo} onChangeText={set('regNo')}
-                placeholder="e.g. 123456789" placeholderTextColor={theme.muted} keyboardType="numeric" />
-              {fe('regNo')}
+              <Text style={[styles.stepTitle, { color: theme.text }]}>
+                Business Details
+              </Text>
+
+              <Text style={[styles.label, { color: theme.textDim }]}>Business Name</Text>
+              <TextInput
+                style={inp}
+                value={form.businessName}
+                onChangeText={set('businessName')}
+                placeholder="e.g. Hassan Mobile Money"
+                placeholderTextColor={theme.muted}
+              />
+
+              <Text style={[styles.label, { color: theme.textDim }]}>Business Location</Text>
+              <TextInput
+                style={inp}
+                value={form.businessLocation}
+                onChangeText={set('businessLocation')}
+                placeholder="e.g. Kariakoo, Dar es Salaam"
+                placeholderTextColor={theme.muted}
+              />
+
+              <Text style={[styles.label, { color: theme.textDim }]}>
+                Registration Number
+              </Text>
+              <TextInput
+                style={inp}
+                value={form.businessRegNo}
+                onChangeText={set('businessRegNo')}
+                placeholder="e.g. BR-2024-XXXXX"
+                placeholderTextColor={theme.muted}
+              />
             </View>
           )}
 
           {/* Step 3 — Identity */}
           {step === 3 && (
             <View style={styles.form}>
-              <Text style={[styles.stepTitle, { color: theme.text }]}>Identity Verification</Text>
-              <View style={[styles.infoBox, { backgroundColor: theme.primaryLight, borderColor: theme.primary + '30' }]}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>
+                Identity Verification
+              </Text>
+
+              <View style={[styles.infoBox, {
+                backgroundColor: theme.primaryLight,
+                borderColor:     theme.primary + '30',
+              }]}>
                 <Text style={[styles.infoText, { color: theme.textDim }]}>
-                  Your information will be verified by a Silverstone admin before your account is activated. This typically takes 24–48 hours.
+                  Your information will be verified by the Silverstone admin before your account is activated. This typically takes 24–48 hours.
                 </Text>
               </View>
-              {lbl('TIN Number')}
-              <TextInput style={inp('tin')} value={form.tin} onChangeText={set('tin')}
-                placeholder="e.g. 100-123-456" placeholderTextColor={theme.muted} />
-              {fe('tin')}
-              {lbl('NIDA Number')}
-              <TextInput style={inp('nida')} value={form.nida} onChangeText={set('nida')}
-                placeholder="e.g. 19XXXXXXXXXXXXXXXXXX" placeholderTextColor={theme.muted}
-                keyboardType="numeric" />
-              {fe('nida')}
+
+              <Text style={[styles.label, { color: theme.textDim }]}>TIN Number</Text>
+              <TextInput
+                style={inp}
+                value={form.tin}
+                onChangeText={set('tin')}
+                placeholder="e.g. 100-XXX-XXX"
+                placeholderTextColor={theme.muted}
+              />
+
+              <Text style={[styles.label, { color: theme.textDim }]}>NIDA Number</Text>
+              <TextInput
+                style={inp}
+                value={form.nida}
+                onChangeText={set('nida')}
+                placeholder="20-digit ID number"
+                placeholderTextColor={theme.muted}
+                keyboardType="numeric"
+              />
+
+              {/* Terms checkbox */}
+              <TouchableOpacity
+                onPress={() => setAgreed(v => !v)}
+                style={styles.checkRow}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox,
+                  {
+                    backgroundColor: agreed ? theme.primary : 'transparent',
+                    borderColor:     agreed ? theme.primary : theme.border,
+                  },
+                ]}>
+                  {agreed && (
+                    <Ionicons name="checkmark" size={14} color="#fff" />
+                  )}
+                </View>
+                <Text style={[styles.checkLabel, { color: theme.textDim }]}>
+                  I agree to the{' '}
+                  <Text style={{ color: theme.primary, fontWeight: '600' }}>
+                    Terms of Service
+                  </Text>
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {/* Error */}
+          {error ? (
+            <Text style={styles.error}>{error}</Text>
+          ) : null}
 
-          {/* Action buttons */}
+          {/* Buttons */}
           <View style={styles.btnRow}>
             {step > 1 && (
               <TouchableOpacity
-                onPress={() => { setStep(s => s - 1); setError(''); setFieldErrors({}); }}
+                onPress={() => { setStep(s => s - 1); setError(''); }}
                 style={[styles.btnBack, { borderColor: theme.border }]}
+                activeOpacity={0.75}
               >
-                <Text style={{ color: theme.textDim, fontWeight: '600', fontSize: 15 }}>Back</Text>
+                <Text style={[styles.btnBackText, { color: theme.textDim }]}>
+                  Back
+                </Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              onPress={next}
+              onPress={handleNext}
               disabled={loading}
-              style={[styles.btnPrimary, { backgroundColor: theme.primary, flex: step > 1 ? 2 : 1, opacity: loading ? 0.7 : 1 }]}
+              style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
+              activeOpacity={0.85}
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.btnPrimaryText}>{step < STEPS ? 'Next' : 'Submit Application'}</Text>}
+                : <Text style={styles.btnPrimaryText}>
+                    {step < STEPS ? 'Next' : 'Submit Application'}
+                  </Text>
+              }
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.signInLink}>
-            <Text style={{ color: theme.textDim, fontSize: 14 }}>
-              Already have an account?{'  '}
-              <Text style={{ color: theme.primary, fontWeight: '600' }}>Sign In</Text>
+          {/* Sign in link */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}
+            style={styles.signinWrap}
+          >
+            <Text style={[styles.signinText, { color: theme.textDim }]}>
+              Already registered?{' '}
+              <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                Sign in
+              </Text>
             </Text>
           </TouchableOpacity>
 
@@ -227,26 +415,111 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:        { flex: 1 },
-  scroll:      { padding: 24 },
-  header:      { marginBottom: 24 },
-  brandGroup:  { flexDirection: 'row', alignItems: 'center' },
-  brand:       { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  tagline:     { fontSize: 11, marginTop: 2 },
-  progressRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
-  progressBar: { flex: 1, height: 4, borderRadius: 2 },
-  stepLabel:   { fontSize: 13, marginBottom: 20 },
-  stepTitle:   { fontSize: 22, fontWeight: '700', marginBottom: 20 },
-  form:        { gap: 4, marginBottom: 8 },
-  label:       { fontSize: 13, fontWeight: '500', marginTop: 10, marginBottom: 4 },
-  input:       { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
-  fieldError:  { color: '#DC2626', fontSize: 12, marginTop: 3 },
-  infoBox:     { borderRadius: 12, padding: 14, borderWidth: 1, marginBottom: 8 },
-  infoText:    { fontSize: 13, lineHeight: 20 },
-  error:       { color: '#DC2626', fontSize: 13, textAlign: 'center', marginVertical: 8 },
-  btnRow:      { flexDirection: 'row', gap: 10, marginTop: 20 },
-  btnBack:     { flex: 1, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  btnPrimary:  { borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  signInLink:  { marginTop: 20, alignItems: 'center' },
+  safe:   { flex: 1 },
+  scroll: { flexGrow: 1, padding: 24, paddingBottom: 48 },
+  logoRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            10,
+    marginBottom:   24,
+    marginTop:      8,
+  },
+  logoTile: {
+    width:           32,
+    height:          32,
+    borderRadius:    9,
+    backgroundColor: '#C8102E',
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         6,
+  },
+  logoImg:  { width: '100%', height: '100%' },
+  logoText: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  stepBar: {
+    flexDirection: 'row',
+    gap:           6,
+    marginBottom:  24,
+  },
+  stepItem: { flex: 1 },
+  stepLine: { height: 4, borderRadius: 2, marginBottom: 4 },
+  stepLabel:{ fontSize: 11, fontWeight: '600' },
+  stepTitle:{
+    fontSize:      18,
+    fontWeight:    '700',
+    marginBottom:  20,
+    letterSpacing: -0.3,
+  },
+  form:  { gap: 4 },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: 6, marginTop: 12 },
+  input: {
+    height:            52,
+    borderWidth:       1.5,
+    borderRadius:      12,
+    paddingHorizontal: 16,
+    fontSize:          15,
+  },
+  eyeBtn: { position: 'absolute', right: 14, top: 14 },
+  strengthBar: {
+    height:          4,
+    backgroundColor: '#ECECEE',
+    borderRadius:    2,
+    marginTop:       6,
+    overflow:        'hidden',
+  },
+  strengthFill: { height: '100%', borderRadius: 2 },
+  infoBox: {
+    borderRadius:  12,
+    padding:       14,
+    borderWidth:   1,
+    marginBottom:  8,
+    marginTop:     4,
+  },
+  infoText: { fontSize: 13, lineHeight: 20 },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+    marginTop:     16,
+  },
+  checkbox: {
+    width:          20,
+    height:         20,
+    borderRadius:   6,
+    borderWidth:    1.5,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  checkLabel: { fontSize: 13, flex: 1 },
+  error: {
+    color:        '#C8102E',
+    fontSize:     13,
+    textAlign:    'center',
+    marginTop:    12,
+    marginBottom: 4,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap:           10,
+    marginTop:     20,
+  },
+  btnBack: {
+    flex:           1,
+    height:         52,
+    borderWidth:    1.5,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  btnBackText:    { fontSize: 15, fontWeight: '600' },
+  btnPrimary: {
+    flex:           2,
+    height:         52,
+    borderRadius:   12,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  btnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  signinWrap:     { alignItems: 'center', marginTop: 20 },
+  signinText:     { fontSize: 14 },
 });
