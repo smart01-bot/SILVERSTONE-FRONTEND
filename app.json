@@ -33,16 +33,17 @@
       ]
     ],
     "extra": {
-      "eas": {
-        "projectId": "dfe8b6fe-376a-47e8-a1ec-68df9a0d09b6"
-      },
       "firebaseApiKey": "AIzaSyCvD5JbWjzEEF2CbG5r8_YkvoRaY3X9qpA",
       "firebaseAuthDomain": "silverstone-frontend.firebaseapp.com",
       "firebaseProjectId": "silverstone-frontend",
       "firebaseStorageBucket": "silverstone-frontend.firebasestorage.app",
       "firebaseMessagingSenderId": "197875724216",
-      "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d"
+      "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d",
+      "eas": {
+        "projectId": "4c702052-c49c-4ca0-9651-ff67f91db61f"
+      }
     },
-    "owner": "dev.05"
-  }
+    "owner": "silverstone03"
+  },
+  "owner": "dev.05"
 }
