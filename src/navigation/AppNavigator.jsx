@@ -1,37 +1,34 @@
 // src/navigation/AppNavigator.jsx
-import SplashScreen from '../screens/auth/SplashScreen';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-//import { useTheme } from '../context/ThemeContext';
-// Navigators
+
 import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
 import MainAgentNavigator from './MainAgentNavigator';
 
-// Screens rendered outside NavigationContainer
+import SplashScreen from '../screens/auth/SplashScreen';
 import PinEntryScreen from '../screens/auth/PinEntryScreen';
 import PinSetupScreen from '../screens/auth/PinSetupScreen';
 import ForgotPinScreen from '../screens/auth/ForgotPinScreen';
 
 export default function AppNavigator() {
   const { user, profile, authLoading, sessionLocked, checkPinExists } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
-  const [pinExists,    setPinExists]    = useState(false);
-  const [checking,     setChecking]     = useState(true);
-  const [pinVerified,  setPinVerified]  = useState(false);
-  const [showForgot,   setShowForgot]   = useState(false);
-  const [showSplash,   setShowSplash]   = useState(true);
-  
+  const [pinExists,   setPinExists]   = useState(false);
+  const [checking,    setChecking]    = useState(true);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [showForgot,  setShowForgot]  = useState(false);
+  const [showSplash,  setShowSplash]  = useState(true);
+
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1800);
     return () => clearTimeout(timer);
   }, []);
 
-  // Re-check PIN in SecureStore whenever user or pinSet changes
   useEffect(() => {
     if (!user || !profile) {
       setPinExists(false);
@@ -46,7 +43,6 @@ export default function AppNavigator() {
     });
   }, [user?.uid, profile?.pinSet, profile?.status]);
 
-  // Reset PIN verified when session locks
   useEffect(() => {
     if (sessionLocked) {
       setPinVerified(false);
@@ -54,10 +50,24 @@ export default function AppNavigator() {
     }
   }, [sessionLocked]);
 
-  // ── Loading spinner ───────────────────────────────────────
+  const navTheme = {
+    dark: isDark,
+    colors: {
+      primary:      theme.primary,
+      background:   theme.bg,
+      card:         theme.surface,
+      text:         theme.text,
+      border:       theme.border,
+      notification: theme.primary,
+    },
+  };
+
+  // Always show splash first
   if (showSplash) {
     return <SplashScreen onDone={() => setShowSplash(false)} />;
   }
+
+  // Loading
   if (authLoading || (user && profile && checking)) {
     return (
       <View style={[styles.center, { backgroundColor: theme.bg }]}>
@@ -66,27 +76,16 @@ export default function AppNavigator() {
     );
   }
 
-  // ── No user → show auth flow ──────────────────────────────
+  // No user
   if (!user) {
     return (
-      <NavigationContainer
-      theme={{
-        dark:   isDark,
-        colors: {
-          primary:    theme.primary,
-          background: theme.bg,
-          card:       theme.surface,
-          text:       theme.text,
-          border:     theme.border,
-          notification: theme.primary,
-        },
-      }}>
+      <NavigationContainer theme={navTheme}>
         <AuthNavigator />
       </NavigationContainer>
     );
   }
 
-  // ── User exists but profile not loaded yet ────────────────
+  // Profile loading
   if (!profile) {
     return (
       <View style={[styles.center, { backgroundColor: theme.bg }]}>
@@ -95,16 +94,16 @@ export default function AppNavigator() {
     );
   }
 
-  // ── Pending / Rejected → auth navigator handles these ─────
+  // Pending or rejected
   if (profile.status === 'pending' || profile.status === 'rejected') {
     return (
-      <NavigationContainer>
+      <NavigationContainer theme={navTheme}>
         <AuthNavigator initialRoute={profile.status} />
       </NavigationContainer>
     );
   }
 
-  // ── Approved but no PIN set yet ───────────────────────────
+  // No PIN yet
   if (profile.status === 'approved' && !pinExists) {
     return (
       <PinSetupScreen
@@ -118,7 +117,7 @@ export default function AppNavigator() {
     );
   }
 
-  // ── Approved + PIN exists but not verified yet ────────────
+  // PIN not verified yet
   if (profile.status === 'approved' && pinExists && !pinVerified) {
     if (showForgot) {
       return (
@@ -142,11 +141,11 @@ export default function AppNavigator() {
     );
   }
 
-  // ── Session locked overlay ────────────────────────────────
+  // Session locked
   if (sessionLocked) {
     return (
       <View style={styles.root}>
-        <NavigationContainer>
+        <NavigationContainer theme={navTheme}>
           {profile.role === 'main-agent'
             ? <MainAgentNavigator />
             : <SubAgentNavigator />}
@@ -171,10 +170,10 @@ export default function AppNavigator() {
     );
   }
 
-  // ── Fully authenticated → correct dashboard ───────────────
+  // Fully authenticated
   return (
     <View style={styles.root}>
-      <NavigationContainer>
+      <NavigationContainer theme={navTheme}>
         {profile.role === 'main-agent'
           ? <MainAgentNavigator />
           : <SubAgentNavigator />}
