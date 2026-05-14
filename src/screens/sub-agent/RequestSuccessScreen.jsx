@@ -6,7 +6,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import * as Clipboard from 'expo-clipboard';
+let Clipboard = null;
+try {
+  Clipboard = require('expo-clipboard');
+} catch (e) {
+  Clipboard = { setStringAsync: async () => {} };
+}
 
 export default function RequestSuccessScreen({ navigation, route }) {
   const { theme, isDark } = useTheme();
