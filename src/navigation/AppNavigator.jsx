@@ -15,7 +15,7 @@ import PinSetupScreen from '../screens/auth/PinSetupScreen';
 import ForgotPinScreen from '../screens/auth/ForgotPinScreen';
 
 export default function AppNavigator() {
-  const { user, profile, authLoading, sessionLocked, checkPinExists } = useAuth();
+  const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists } = useAuth();
   const { theme, isDark } = useTheme();
 
   const [pinExists,   setPinExists]   = useState(false);
@@ -107,12 +107,14 @@ export default function AppNavigator() {
   if (profile.status === 'approved' && !pinExists) {
     return (
       <PinSetupScreen
-        onComplete={() => {
-          checkPinExists().then(exists => {
-            setPinExists(exists);
-            setPinVerified(true);
-          });
-        }}
+      onComplete={() => {
+        setShowForgot(false);
+        unlockSession();
+        checkPinExists().then(exists => {
+          setPinExists(exists);
+          setPinVerified(true);
+        });
+      }}
       />
     );
   }
@@ -135,7 +137,7 @@ export default function AppNavigator() {
     }
     return (
       <PinEntryScreen
-        onSuccess={() => setPinVerified(true)}
+        onSuccess={() => { setPinVerified(true); unlockSession(); }}
         onForgotPin={() => setShowForgot(true)}
       />
     );
