@@ -23,13 +23,19 @@ const NETWORK_COLORS = {
 
 export default function MyRequestsScreen({ navigation }) {
   const { user } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [requests,   setRequests]   = useState([]);
-  const [filter,     setFilter]     = useState('All');
+  const [filter,     setFilter]     = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const FILTERS = ['All', 'Pending', 'Approved', 'Completed', 'Rejected'];
+  const FILTERS = [
+    { key: 'all',       label: 'All'                    },
+    { key: 'pending',   label: tr('statusPending')      },
+    { key: 'approved',  label: tr('statusApproved')     },
+    { key: 'completed', label: tr('statusCompleted')    },
+    { key: 'rejected',  label: tr('statusRejected')     },
+  ];
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -45,12 +51,8 @@ export default function MyRequestsScreen({ navigation }) {
   }, [user?.uid]);
 
   const filtered = requests.filter(r => {
-    if (filter === 'All')       return true;
-    if (filter === 'Pending')   return r.status === 'pending';
-    if (filter === 'Approved')  return r.status === 'approved';
-    if (filter === 'Completed') return r.status === 'completed';
-    if (filter === 'Rejected')  return r.status === 'rejected';
-    return true;
+    if (filter === 'all') return true;
+    return r.status === filter;
   }).sort((a, b) => {
     if (a.urgent && !b.urgent) return -1;
     if (!a.urgent && b.urgent) return 1;
@@ -59,20 +61,18 @@ export default function MyRequestsScreen({ navigation }) {
 
   const handleCancel = (req) => {
     Alert.alert(
-      'Cancel Request',
-      'Are you sure you want to cancel this request?',
+      tr('cancel'),
+      'Je, una uhakika unataka kufuta ombi hili?',
       [
-        { text: 'No', style: 'cancel' },
+        { text: tr('cancel'), style: 'cancel' },
         {
-          text: 'Yes, Cancel',
+          text: tr('confirm'),
           style: 'destructive',
           onPress: async () => {
             try {
-              await updateDoc(doc(db, 'requests', req.id), {
-                status: 'cancelled',
-              });
+              await updateDoc(doc(db, 'requests', req.id), { status: 'cancelled' });
             } catch (e) {
-              Alert.alert('Error', 'Failed to cancel request.');
+              Alert.alert(tr('error'), tr('error'));
             }
           },
         },
@@ -106,10 +106,10 @@ export default function MyRequestsScreen({ navigation }) {
   const timeAgo = (ts) => {
     if (!ts?.toDate) return '';
     const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
-    if (secs < 60)    return 'Just now';
-    if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-    if (secs < 172800)return 'Yesterday';
+    if (secs < 60)     return tr('justNow');
+    if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
+    if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
+    if (secs < 172800) return tr('yesterday');
     return `${Math.floor(secs / 86400)}d ago`;
   };
 
@@ -130,7 +130,7 @@ export default function MyRequestsScreen({ navigation }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Requests</Text>
+        <Text style={styles.headerTitle}>{tr('myRequests')}</Text>
         <Text style={styles.headerSub}>{requests.length} total</Text>
       </View>
 
@@ -140,22 +140,22 @@ export default function MyRequestsScreen({ navigation }) {
           <View style={styles.filterRow}>
             {FILTERS.map(f => (
               <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
+                key={f.key}
+                onPress={() => setFilter(f.key)}
                 style={[
                   styles.pill,
                   {
-                    backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
-                    borderColor:     filter === f ? theme.primary : theme.border,
+                    backgroundColor: filter === f.key ? theme.primary : theme.surfaceAlt,
+                    borderColor:     filter === f.key ? theme.primary : theme.border,
                   },
                 ]}
                 activeOpacity={0.75}
               >
                 <Text style={[
                   styles.pillText,
-                  { color: filter === f ? '#fff' : theme.textDim },
+                  { color: filter === f.key ? '#fff' : theme.textDim },
                 ]}>
-                  {f}
+                  {f.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -179,19 +179,17 @@ export default function MyRequestsScreen({ navigation }) {
           <View style={styles.empty}>
             <Ionicons name="document-outline" size={56} color={theme.muted} />
             <Text style={[styles.emptyTitle, { color: theme.text }]}>
-              No {filter === 'All' ? '' : filter.toLowerCase()} requests
+              {tr('noRequests')}
             </Text>
             <Text style={[styles.emptyText, { color: theme.textDim }]}>
-              {filter === 'All'
-                ? 'Submit your first float request'
-                : `No ${filter.toLowerCase()} requests found`}
+              {tr('noRequestsDesc')}
             </Text>
-            {filter === 'All' && (
+            {filter === 'all' && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('NewRequest')}
                 style={[styles.emptyBtn, { backgroundColor: theme.primary }]}
               >
-                <Text style={styles.emptyBtnText}>New Request</Text>
+                <Text style={styles.emptyBtnText}>{tr('newRequest')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -208,21 +206,11 @@ export default function MyRequestsScreen({ navigation }) {
               {/* Top row */}
               <View style={styles.cardTop}>
                 <View style={styles.routeRow}>
-                  <View style={[
-                    styles.netDot,
-                    { backgroundColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.muted },
-                  ]} />
-                  <Text style={[styles.network, { color: theme.text }]}>
-                    {req.sourceNetwork}
-                  </Text>
+                  <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.muted }]} />
+                  <Text style={[styles.network, { color: theme.text }]}>{req.sourceNetwork}</Text>
                   <Ionicons name="arrow-forward" size={12} color={theme.textDim} />
-                  <View style={[
-                    styles.netDot,
-                    { backgroundColor: NETWORK_COLORS[req.destNetwork] ?? theme.muted },
-                  ]} />
-                  <Text style={[styles.network, { color: theme.text }]}>
-                    {req.destNetwork}
-                  </Text>
+                  <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.destNetwork] ?? theme.muted }]} />
+                  <Text style={[styles.network, { color: theme.text }]}>{req.destNetwork}</Text>
                 </View>
                 {req.urgent && (
                   <View style={styles.urgentTag}>
@@ -236,18 +224,9 @@ export default function MyRequestsScreen({ navigation }) {
                 <Text style={[styles.amount, { color: theme.primary }]}>
                   {fmt(Number(req.amount) || 0)}
                 </Text>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: statusColor(req.status) + '20' },
-                ]}>
-                  <View style={[
-                    styles.statusDot,
-                    { backgroundColor: statusColor(req.status) },
-                  ]} />
-                  <Text style={[
-                    styles.statusText,
-                    { color: statusColor(req.status) },
-                  ]}>
+                <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '20' }]}>
+                  <View style={[styles.statusDot, { backgroundColor: statusColor(req.status) }]} />
+                  <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
                     {req.status}
                   </Text>
                 </View>
@@ -266,7 +245,7 @@ export default function MyRequestsScreen({ navigation }) {
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.actionText, { color: theme.textDim }]}>
-                    Cancel Request
+                    {tr('cancel')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -277,7 +256,7 @@ export default function MyRequestsScreen({ navigation }) {
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.actionText, { color: theme.primary }]}>
-                    Retry Request
+                    {tr('tryAgain')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -294,10 +273,10 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 100 },
 
   header: {
-    backgroundColor:       '#C8102E',
-    paddingHorizontal:     18,
-    paddingTop:            10,
-    paddingBottom:         14,
+    backgroundColor:         '#C8102E',
+    paddingHorizontal:       18,
+    paddingTop:              10,
+    paddingBottom:           14,
     borderBottomLeftRadius:  24,
     borderBottomRightRadius: 24,
   },
@@ -342,29 +321,16 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'space-between',
   },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
-  netDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-  },
-  network: { fontSize: 14, fontWeight: '600' },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  netDot:   { width: 8, height: 8, borderRadius: 4 },
+  network:  { fontSize: 14, fontWeight: '600' },
   urgentTag: {
     backgroundColor:   '#F59E0B20',
     paddingHorizontal: 8,
     paddingVertical:   3,
     borderRadius:      6,
   },
-  urgentText: {
-    color:         '#F59E0B',
-    fontSize:      10,
-    fontWeight:    '700',
-    letterSpacing: 0.6,
-  },
+  urgentText: { color: '#F59E0B', fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
   midRow: {
     flexDirection:  'row',
     alignItems:     'center',

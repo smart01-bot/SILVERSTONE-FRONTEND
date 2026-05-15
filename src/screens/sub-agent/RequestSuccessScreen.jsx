@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+
 let Clipboard = null;
 try {
   Clipboard = require('expo-clipboard');
@@ -14,7 +15,7 @@ try {
 }
 
 export default function RequestSuccessScreen({ navigation, route }) {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
   const { queuePosition, sourceNetwork, destNetwork, amount, requestId } = route?.params ?? {};
 
   const scale   = useRef(new Animated.Value(0)).current;
@@ -43,9 +44,7 @@ export default function RequestSuccessScreen({ navigation, route }) {
   const shortId = requestId?.slice(-8)?.toUpperCase() ?? '—';
 
   const copyId = async () => {
-    if (requestId) {
-      await Clipboard.setStringAsync(shortId);
-    }
+    if (requestId) await Clipboard.setStringAsync(shortId);
   };
 
   return (
@@ -58,20 +57,17 @@ export default function RequestSuccessScreen({ navigation, route }) {
       <Animated.View style={[styles.inner, { opacity }]}>
 
         {/* Success icon */}
-        <Animated.View style={[
-          styles.iconWrap,
-          { transform: [{ scale }] },
-        ]}>
+        <Animated.View style={[styles.iconWrap, { transform: [{ scale }] }]}>
           <View style={[styles.iconCircle, { backgroundColor: '#16A34A14' }]}>
             <Ionicons name="checkmark-circle" size={72} color="#16A34A" />
           </View>
         </Animated.View>
 
         <Text style={[styles.title, { color: theme.text }]}>
-          Request Submitted
+          {tr('requestSent')}
         </Text>
         <Text style={[styles.sub, { color: theme.textDim }]}>
-          Your float request has been sent to the main agent
+          {tr('requestSentDesc')}
         </Text>
 
         {/* Details card */}
@@ -80,21 +76,21 @@ export default function RequestSuccessScreen({ navigation, route }) {
           borderColor:     theme.border,
         }]}>
           <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>Route</Text>
+            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('route')}</Text>
             <Text style={[styles.cardValue, { color: theme.text }]}>
               {sourceNetwork} → {destNetwork}
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>Amount</Text>
+            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
             <Text style={[styles.cardValue, { color: theme.primary }]}>
               {fmt(amount)}
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>Queue Position</Text>
+            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('queuePos')}</Text>
             <Text style={[styles.cardValue, { color: theme.text }]}>
               #{queuePosition ?? '—'}
             </Text>
@@ -107,11 +103,9 @@ export default function RequestSuccessScreen({ navigation, route }) {
                 onPress={copyId}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.cardLabel, { color: theme.textDim }]}>Request ID</Text>
+                <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('requestId')}</Text>
                 <View style={styles.idRow}>
-                  <Text style={[styles.cardValue, { color: theme.text }]}>
-                    #{shortId}
-                  </Text>
+                  <Text style={[styles.cardValue, { color: theme.text }]}>#{shortId}</Text>
                   <Ionicons name="copy-outline" size={14} color={theme.textDim} />
                 </View>
               </TouchableOpacity>
@@ -120,7 +114,7 @@ export default function RequestSuccessScreen({ navigation, route }) {
         </View>
 
         <Text style={[styles.notify, { color: theme.textDim }]}>
-          Main agent has been notified
+          {tr('requestSentDesc')}
         </Text>
 
         {/* Buttons */}
@@ -131,7 +125,7 @@ export default function RequestSuccessScreen({ navigation, route }) {
             activeOpacity={0.75}
           >
             <Text style={[styles.btnOutlineText, { color: theme.text }]}>
-              New Request
+              {tr('newRequest')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -139,7 +133,7 @@ export default function RequestSuccessScreen({ navigation, route }) {
             style={[styles.btnFilled, { backgroundColor: theme.primary }]}
             activeOpacity={0.85}
           >
-            <Text style={styles.btnFilledText}>Go Home</Text>
+            <Text style={styles.btnFilledText}>{tr('backHome')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -172,8 +166,8 @@ const styles = StyleSheet.create({
     textAlign:     'center',
   },
   sub: {
-    fontSize:  14,
-    textAlign: 'center',
+    fontSize:   14,
+    textAlign:  'center',
     lineHeight: 22,
   },
   card: {
@@ -196,10 +190,7 @@ const styles = StyleSheet.create({
     alignItems:    'center',
     gap:           6,
   },
-  notify: {
-    fontSize:  13,
-    textAlign: 'center',
-  },
+  notify: { fontSize: 13, textAlign: 'center' },
   btnRow: {
     flexDirection: 'row',
     gap:           10,
