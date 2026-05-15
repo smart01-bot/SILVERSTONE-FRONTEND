@@ -163,7 +163,7 @@ export default function OverviewScreen({ navigation }) {
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE</Text>
           </View>
-          <TouchableOpacity style={styles.avatarBtn}>
+          <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.openDrawer()}>
             <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>

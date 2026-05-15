@@ -7,7 +7,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/DrawerContent';
-
+import ProfileScreen from '../screens/sub-agent/ProfileScreen';
 import HomeScreen            from '../screens/sub-agent/HomeScreen';
 import NewRequestScreen      from '../screens/sub-agent/NewRequestScreen';
 import RequestSuccessScreen  from '../screens/sub-agent/RequestSuccessScreen';
@@ -67,7 +67,7 @@ function HomeTabs() {
       <Tab.Screen name="Home"       component={HomeScreen}       options={{ tabBarLabel: 'Home',    tabBarIcon: ({ focused, color }) => <TabIcon name="home"       focused={focused} color={color} /> }} />
       <Tab.Screen name="NewRequest" component={NewRequestScreen} options={{ tabBarLabel: 'Request', tabBarIcon: ({ focused, color }) => <TabIcon name="add-circle" focused={focused} color={color} /> }} />
       <Tab.Screen name="MyRequests" component={MyRequestsScreen} options={{ tabBarLabel: 'History', tabBarIcon: ({ focused, color }) => <TabIcon name="time"       focused={focused} color={color} /> }} />
-      <Tab.Screen name="Profile"    component={ProfileScreen}    options={{ tabBarLabel: 'Me',      tabBarIcon: ({ focused, color }) => <TabIcon name="person"     focused={focused} color={color} /> }} />
+      
     </Tab.Navigator>
   );
 }

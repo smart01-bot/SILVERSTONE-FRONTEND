@@ -132,7 +132,7 @@ export default function HomeScreen({ navigation }) {
           Silverstone
         </Text>
 
-        <TouchableOpacity style={styles.avatarBtn}>
+        <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('Profile')}>
           <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
