@@ -6,7 +6,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   collection, query, where, orderBy,
@@ -92,9 +92,8 @@ export default function HomeScreen({ navigation }) {
     return { name, ...meta, volume, count: netRequests.length };
   }).filter(n => n.volume > 0);
 
-  const maxVolume = Math.max(...networkBreakdown.map(n => n.volume), 1);
+  const maxVolume      = Math.max(...networkBreakdown.map(n => n.volume), 1);
   const recentRequests = requests.slice(0, 4);
-
   const reqId = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
 
   const timeAgo = (ts) => {
@@ -135,14 +134,14 @@ export default function HomeScreen({ navigation }) {
           Silverstone
         </Text>
 
-        {/* Bell — right side */}
+        {/* Bell */}
         <TouchableOpacity
           style={[styles.notifBtn, {
             backgroundColor: theme.surfaceAlt,
             borderColor:     theme.border,
           }]}
         >
-          <Ionicons name="notifications-outline" size={20} color={theme.text} />
+          <Ionicons name="notifications-outline" size={22} color={theme.text} />
           {pendingCount > 0 && <View style={styles.notifDot} />}
         </TouchableOpacity>
       </View>
@@ -159,21 +158,18 @@ export default function HomeScreen({ navigation }) {
           />
         }
       >
-        {/* Agent greeting */}
+        {/* Greeting */}
         <View style={styles.greetRow}>
           <View>
-            <Text style={[styles.greetSub, { color: theme.textDim }]}>
-              Karibu
-            </Text>
-            <Text style={[styles.greetName, { color: theme.text }]}>
-              {firstName}
-            </Text>
+            <Text style={[styles.greetSub, { color: theme.textDim }]}>Karibu</Text>
+            <Text style={[styles.greetName, { color: theme.text }]}>{firstName}</Text>
           </View>
         </View>
 
         {/* Balance card */}
         <View style={styles.balanceCard}>
           <View style={styles.decorCircle} />
+          <View style={styles.decorCircle2} />
           <Text style={styles.balanceLabel}>
             {tr('totalVolume').toUpperCase()}
           </Text>
@@ -181,13 +177,10 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.balanceAmount}>
               {showAmount ? fmt(totalVolume) : 'TZS ••••••'}
             </Text>
-            <TouchableOpacity
-              onPress={() => setShowAmount(v => !v)}
-              style={styles.eyeBtn}
-            >
+            <TouchableOpacity onPress={() => setShowAmount(v => !v)} style={styles.eyeBtn}>
               <Ionicons
                 name={showAmount ? 'eye-outline' : 'eye-off-outline'}
-                size={18}
+                size={22}
                 color="rgba(255,255,255,0.8)"
               />
             </TouchableOpacity>
@@ -216,10 +209,10 @@ export default function HomeScreen({ navigation }) {
         {/* Quick actions */}
         <View style={styles.quickGrid}>
           {[
-            { label: tr('myRequests'), icon: 'list-outline',   screen: 'MyRequests', onPress: () => navigation.navigate('MyRequests') },
-            { label: tr('history'),    icon: 'time-outline',   screen: 'MyRequests', onPress: () => navigation.navigate('MyRequests') },
-            { label: 'Networks',       icon: 'wifi-outline',   screen: 'Networks',   onPress: () => navigation.navigate('Networks')   },
-            { label: tr('profile'),    icon: 'person-outline', screen: 'Profile',    onPress: () => navigation.navigate('Profile')    },
+            { label: tr('myRequests'), icon: 'list-outline',   onPress: () => navigation.navigate('MyRequests') },
+            { label: tr('history'),    icon: 'time-outline',   onPress: () => navigation.navigate('MyRequests') },
+            { label: 'Networks',       icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
+            { label: tr('profile'),    icon: 'person-outline', onPress: () => navigation.navigate('Profile')    },
           ].map(action => (
             <TouchableOpacity
               key={action.label}
@@ -231,7 +224,7 @@ export default function HomeScreen({ navigation }) {
               activeOpacity={0.75}
             >
               <View style={[styles.quickIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name={action.icon} size={20} color={theme.primary} />
+                <Ionicons name={action.icon} size={24} color={theme.primary} />
               </View>
               <Text style={[styles.quickLabel, { color: theme.text }]}>
                 {action.label}
@@ -244,16 +237,11 @@ export default function HomeScreen({ navigation }) {
         {networkBreakdown.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Networks
-              </Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Networks</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Networks')}>
-                <Text style={[styles.sectionAction, { color: theme.primary }]}>
-                  Manage
-                </Text>
+                <Text style={[styles.sectionAction, { color: theme.primary }]}>Manage</Text>
               </TouchableOpacity>
             </View>
-
             <View style={[styles.networkCard, {
               backgroundColor: theme.surfaceAlt,
               borderColor:     theme.border,
@@ -261,26 +249,18 @@ export default function HomeScreen({ navigation }) {
               {networkBreakdown.map((net, i) => (
                 <View key={net.name} style={[
                   styles.netRow,
-                  i < networkBreakdown.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.border,
-                  },
+                  i < networkBreakdown.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
                 ]}>
                   <View style={styles.netLeft}>
                     <View style={[styles.netDot, { backgroundColor: net.color }]} />
-                    <Text style={[styles.netName, { color: theme.text }]}>
-                      {net.name}
-                    </Text>
+                    <Text style={[styles.netName, { color: theme.text }]}>{net.name}</Text>
                   </View>
                   <View style={styles.netBarWrap}>
                     <View style={[styles.netBarBg, { backgroundColor: theme.border }]}>
-                      <View style={[
-                        styles.netBarFill,
-                        {
-                          backgroundColor: net.color,
-                          width: `${(net.volume / maxVolume) * 100}%`,
-                        },
-                      ]} />
+                      <View style={[styles.netBarFill, {
+                        backgroundColor: net.color,
+                        width: `${(net.volume / maxVolume) * 100}%`,
+                      }]} />
                     </View>
                   </View>
                   <Text style={[styles.netAmount, { color: theme.text }]}>
@@ -310,7 +290,7 @@ export default function HomeScreen({ navigation }) {
               backgroundColor: theme.surfaceAlt,
               borderColor:     theme.border,
             }]}>
-              <Ionicons name="document-outline" size={32} color={theme.muted} />
+              <Ionicons name="document-outline" size={40} color={theme.muted} />
               <Text style={[styles.emptyText, { color: theme.textDim }]}>
                 {tr('noRequests')}
               </Text>
@@ -323,10 +303,7 @@ export default function HomeScreen({ navigation }) {
               {recentRequests.map((req, i) => (
                 <View key={req.id}>
                   <View style={styles.reqRow}>
-                    <View style={[
-                      styles.reqNetDot,
-                      { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted },
-                    ]} />
+                    <View style={[styles.reqNetDot, { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted }]} />
                     <View style={styles.reqInfo}>
                       <Text style={[styles.reqRoute, { color: theme.text }]}>
                         {req.sourceNetwork} → {req.destNetwork}
@@ -339,14 +316,8 @@ export default function HomeScreen({ navigation }) {
                       <Text style={[styles.reqAmount, { color: theme.primary }]}>
                         {fmt(Number(req.amount) || 0)}
                       </Text>
-                      <View style={[
-                        styles.statusPill,
-                        { backgroundColor: statusColor(req.status) + '20' },
-                      ]}>
-                        <Text style={[
-                          styles.statusText,
-                          { color: statusColor(req.status) },
-                        ]}>
+                      <View style={[styles.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
                           {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
                         </Text>
                       </View>
@@ -368,269 +339,131 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { paddingBottom: 100 },
+  scroll: { paddingBottom: 120 },
 
   topBar: {
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
     paddingHorizontal: 18,
-    paddingVertical:   12,
+    paddingVertical:   13,
     borderBottomWidth: 1,
   },
-  brandName: {
-    fontSize:      20,
-    fontWeight:    '800',
-    letterSpacing: -0.4,
-  },
+  brandName: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },   // was 20
   avatarBtn:    { position: 'relative' },
   avatarCircle: {
-    width:          38,
-    height:         38,
-    borderRadius:   19,
-    alignItems:     'center',
-    justifyContent: 'center',
+    width:          44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: {
-    color:      '#fff',
-    fontWeight: '700',
-    fontSize:   14,
-  },
+  avatarText:      { color: '#fff', fontWeight: '700', fontSize: 17 },   // was 14
   avatarBadge: {
-    position:          'absolute',
-    top:               -2,
-    right:             -2,
-    backgroundColor:   '#C8102E',
-    borderRadius:      9999,
-    minWidth:          16,
-    height:            16,
-    alignItems:        'center',
-    justifyContent:    'center',
-    paddingHorizontal: 3,
-    borderWidth:       2,
+    position: 'absolute', top: -2, right: -2,
+    backgroundColor: '#C8102E', borderRadius: 9999,
+    minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, borderWidth: 2,
   },
-  avatarBadgeText: {
-    color:      '#fff',
-    fontSize:   9,
-    fontWeight: '800',
-  },
+  avatarBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },   // was 9
   notifBtn: {
-    width:          38,
-    height:         38,
-    borderRadius:   12,
-    borderWidth:    1,
-    alignItems:     'center',
-    justifyContent: 'center',
-    position:       'relative',
+    width: 44, height: 44, borderRadius: 13, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
   notifDot: {
-    position:        'absolute',
-    top:             8,
-    right:           8,
-    width:           7,
-    height:          7,
-    borderRadius:    4,
-    backgroundColor: '#C8102E',
+    position: 'absolute', top: 9, right: 9,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8102E',
   },
 
-  greetRow: {
-    paddingHorizontal: 16,
-    paddingTop:        16,
-    paddingBottom:     8,
-  },
-  greetSub:  { fontSize: 13, marginBottom: 2 },
-  greetName: { fontSize: 18, fontWeight: '700' },
+  greetRow: { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 8 },
+  greetSub:  { fontSize: 17, marginBottom: 2 },    // was 13
+  greetName: { fontSize: 28, fontWeight: '800' },  // was 18
 
   balanceCard: {
     backgroundColor:  '#C8102E',
     marginHorizontal: 16,
     marginTop:        8,
-    borderRadius:     20,
-    padding:          20,
+    borderRadius:     22,
+    padding:          22,
     overflow:         'hidden',
   },
   decorCircle: {
-    position:        'absolute',
-    width:           160,
-    height:          160,
-    borderRadius:    80,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    top:             -40,
-    right:           -40,
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -50,
+  },
+  decorCircle2: {
+    position: 'absolute', width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: 20,
   },
   balanceLabel: {
-    fontSize:      11,
-    fontWeight:    '600',
-    letterSpacing: 1.2,
-    color:         'rgba(255,255,255,0.85)',
-    textTransform: 'uppercase',
+    fontSize: 14, fontWeight: '600', letterSpacing: 1.4,   // was 11
+    color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase',
   },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-    marginTop:     6,
-  },
-  balanceAmount: {
-    fontSize:      28,
-    fontWeight:    '800',
-    letterSpacing: -0.6,
-    color:         '#fff',
-    flex:          1,
-  },
-  eyeBtn:     { padding: 4 },
-  balanceSub: {
-    fontSize:  13,
-    color:     'rgba(255,255,255,0.75)',
-    marginTop: 4,
-  },
-  pillRow: {
-    flexDirection: 'row',
-    gap:           10,
-    marginTop:     16,
-  },
+  balanceRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  balanceAmount: { fontSize: 36, fontWeight: '800', letterSpacing: -0.8, color: '#fff', flex: 1 }, // was 28
+  eyeBtn:        { padding: 4 },
+  balanceSub:    { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 6 },  // was 13
+  pillRow:       { flexDirection: 'row', gap: 10, marginTop: 18 },
   pillWhite: {
-    flex:            1,
-    height:          36,
-    borderRadius:    10,
-    backgroundColor: '#fff',
-    alignItems:      'center',
-    justifyContent:  'center',
+    flex: 1, height: 44, borderRadius: 12,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
   },
-  pillWhiteText: {
-    color:      '#C8102E',
-    fontWeight: '700',
-    fontSize:   13,
-  },
+  pillWhiteText:  { color: '#C8102E', fontWeight: '700', fontSize: 16 },   // was 13
   pillOutline: {
-    flex:            1,
-    height:          36,
-    borderRadius:    10,
-    borderWidth:     1,
-    borderColor:     'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems:      'center',
-    justifyContent:  'center',
+    flex: 1, height: 44, borderRadius: 12, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  pillOutlineText: {
-    color:      '#fff',
-    fontWeight: '700',
-    fontSize:   13,
-  },
+  pillOutlineText: { color: '#fff', fontWeight: '700', fontSize: 16 },    // was 13
 
   quickGrid: {
-    flexDirection:     'row',
-    gap:               10,
-    paddingHorizontal: 16,
-    marginTop:         16,
+    flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 18,
   },
   quickItem: {
-    flex:           1,
-    borderRadius:   14,
-    borderWidth:    1,
-    padding:        12,
-    alignItems:     'center',
-    gap:            6,
+    flex: 1, borderRadius: 16, borderWidth: 1, padding: 14,
+    alignItems: 'center', gap: 8,
   },
   quickIcon: {
-    width:          34,
-    height:         34,
-    borderRadius:   10,
-    alignItems:     'center',
-    justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
-  quickLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  quickLabel: { fontSize: 13, fontWeight: '700', textAlign: 'center' },   // was 11
 
-  section: {
-    paddingHorizontal: 16,
-    marginTop:         20,
-  },
+  section:       { paddingHorizontal: 16, marginTop: 22 },
   sectionHeader: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   12,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 12,
   },
-  sectionTitle:  { fontSize: 15, fontWeight: '700' },
-  sectionAction: { fontSize: 13, fontWeight: '600' },
+  sectionTitle:  { fontSize: 19, fontWeight: '800' },   // was 15
+  sectionAction: { fontSize: 16, fontWeight: '600' },   // was 13
 
-  networkCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    overflow:     'hidden',
-  },
+  networkCard:   { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   netRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-    padding:       12,
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14,
   },
-  netLeft: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           8,
-    width:         70,
-  },
-  netDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-  },
-  netName:    { fontSize: 13, fontWeight: '600' },
+  netLeft:    { flexDirection: 'row', alignItems: 'center', gap: 8, width: 80 },
+  netDot:     { width: 10, height: 10, borderRadius: 5 },   // was 8
+  netName:    { fontSize: 16, fontWeight: '600' },           // was 13
   netBarWrap: { flex: 1 },
-  netBarBg: {
-    height:       6,
-    borderRadius: 3,
-    overflow:     'hidden',
-  },
-  netBarFill: {
-    height:       6,
-    borderRadius: 3,
-  },
-  netAmount: {
-    fontSize:   13,
-    fontWeight: '700',
-    width:      60,
-    textAlign:  'right',
-  },
+  netBarBg:   { height: 7, borderRadius: 4, overflow: 'hidden' },
+  netBarFill: { height: 7, borderRadius: 4 },
+  netAmount:  { fontSize: 16, fontWeight: '700', width: 68, textAlign: 'right' }, // was 13
 
-  requestsCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    overflow:     'hidden',
-  },
+  requestsCard:  { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   reqRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-    padding:       14,
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16,
   },
-  reqNetDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-    flexShrink:   0,
-    marginTop:    2,
-  },
+  reqNetDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 2 },
   reqInfo:   { flex: 1 },
-  reqRoute:  { fontSize: 14, fontWeight: '600' },
-  reqMeta:   { fontSize: 12, marginTop: 2, fontFamily: 'monospace' },
-  reqRight:  { alignItems: 'flex-end', gap: 4 },
-  reqAmount: { fontSize: 14, fontWeight: '700' },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical:   3,
-    borderRadius:      6,
-  },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  divider:    { height: 1, marginHorizontal: 14 },
+  reqRoute:  { fontSize: 18, fontWeight: '700' },   // was 14
+  reqMeta:   { fontSize: 14, marginTop: 3, fontFamily: 'monospace' },  // was 12
+  reqRight:  { alignItems: 'flex-end', gap: 5 },
+  reqAmount: { fontSize: 17, fontWeight: '800' },   // was 14
+  statusPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
+  statusText: { fontSize: 13, fontWeight: '700' },  // was 11
+  divider:    { height: 1, marginHorizontal: 16 },
 
   emptyCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    padding:      32,
-    alignItems:   'center',
-    gap:          8,
+    borderRadius: 18, borderWidth: 1, padding: 36,
+    alignItems: 'center', gap: 10,
   },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: 18 },   // was 14
 });

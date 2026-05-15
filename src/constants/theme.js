@@ -1,67 +1,99 @@
 // src/constants/theme.js
 import { Platform } from 'react-native';
 
+// ─── LIGHT ────────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:           '#FFFFFF',
-  surface:      '#FFFFFF',
-  surfaceAlt:   '#F6F6F7',
-  border:       '#ECECEE',
-  text:         '#0F0F10',
-  textMid:      '#1A1A1A',
-  textDim:      '#6B6B70',
-  muted:        '#C4C4C4',
-  primary:      '#C8102E',
-  primaryLight: '#C8102E14',
-  primaryDark:  '#A00D24',
-  success:      '#16A34A',
-  successSoft:  '#16A34A14',
-  warning:      '#F59E0B',
-  warningSoft:  '#F59E0B14',
-  danger:       '#C8102E',
-  dangerSoft:   '#C8102E14',
-  info:         '#0891B2',
-  infoSoft:     '#0891B214',
+  bg:            '#F7F7FA',          // warm off-white — not blinding white
+  surface:       '#FFFFFF',
+  surfaceAlt:    '#EEEEF5',          // clearly distinct layer
+  surfaceElev:   '#FFFFFF',          // elevated cards (shadow adds depth)
+  border:        '#DCDCE8',
+  borderStrong:  '#B8B8CC',
+
+  text:          '#0A0A12',
+  textMid:       '#1A1A2A',
+  textDim:       '#60606E',
+  muted:         '#B0B0C0',
+
+  primary:       '#C8102E',
+  primaryLight:  '#C8102E1A',
+  primaryDark:   '#960B22',
+  primaryBright: '#E01535',
+
+  // Gradient anchors
+  gradPrimA:     '#E01535',
+  gradPrimB:     '#960B22',
+  gradSurfA:     '#F2F2FA',
+  gradSurfB:     '#E8E8F2',
+
+  success:       '#15803D',
+  successSoft:   '#15803D1A',
+  warning:       '#D97706',
+  warningSoft:   '#D977061A',
+  danger:        '#C8102E',
+  dangerSoft:    '#C8102E1A',
+  info:          '#0369A1',
+  infoSoft:      '#0369A11A',
+
+  shadow:        'rgba(10,10,30,0.07)',
+  shadowMd:      'rgba(10,10,30,0.13)',
 };
 
+// ─── DARK ─────────────────────────────────────────────────────────────────────
 export const DARK = {
-  bg:           '#0B0B0C',
-  surface:      '#161618',
-  surfaceAlt:   '#1E1E22',
-  border:       '#26262B',
-  text:         '#F4F4F5',
-  textMid:      '#D4D4D4',
-  textDim:      '#A1A1A6',
-  muted:        '#3A3A3A',
-  primary:      '#C8102E',
-  primaryLight: '#C8102E24',
-  primaryDark:  '#A00D24',
-  success:      '#16A34A',
-  successSoft:  '#16A34A20',
-  warning:      '#F59E0B',
-  warningSoft:  '#F59E0B20',
-  danger:       '#C8102E',
-  dangerSoft:   '#C8102E24',
-  info:         '#0891B2',
-  infoSoft:     '#0891B224',
+  bg:            '#07070E',          // deep blue-black
+  surface:       '#0E0E1C',
+  surfaceAlt:    '#16162A',
+  surfaceElev:   '#1E1E35',
+  border:        '#24243C',
+  borderStrong:  '#38385A',
+
+  text:          '#EEEEF8',
+  textMid:       '#C4C4DC',
+  textDim:       '#7474A0',
+  muted:         '#32324A',
+
+  primary:       '#E01535',          // brighter for dark contrast
+  primaryLight:  '#C8102E28',
+  primaryDark:   '#960B22',
+  primaryBright: '#FF1A3D',
+
+  gradPrimA:     '#E01535',
+  gradPrimB:     '#960B22',
+  gradSurfA:     '#16162A',
+  gradSurfB:     '#0E0E1C',
+
+  success:       '#22C55E',
+  successSoft:   '#22C55E22',
+  warning:       '#FBBF24',
+  warningSoft:   '#FBBF2422',
+  danger:        '#E01535',
+  dangerSoft:    '#E0153526',
+  info:          '#22D3EE',
+  infoSoft:      '#22D3EE22',
+
+  shadow:        'rgba(0,0,0,0.35)',
+  shadowMd:      'rgba(0,0,0,0.55)',
 };
 
+// ─── TYPOGRAPHY — ~90% bump across the board ──────────────────────────────────
 export const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export const typography = {
-  display:  { fontSize: 30, fontWeight: '800', letterSpacing: -0.8 },
-  h1:       { fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
-  h2:       { fontSize: 20, fontWeight: '700', letterSpacing: -0.4 },
-  h3:       { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
-  h4:       { fontSize: 15, fontWeight: '700' },
-  body:     { fontSize: 15, fontWeight: '400', lineHeight: 22 },
-  bodyMed:  { fontSize: 15, fontWeight: '500', lineHeight: 22 },
-  caption:  { fontSize: 13, fontWeight: '400', lineHeight: 18 },
-  capMed:   { fontSize: 13, fontWeight: '500', lineHeight: 18 },
-  label:    { fontSize: 12, fontWeight: '500', letterSpacing: 0.3 },
-  labelCaps:{ fontSize: 11, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
-  mono:     { fontSize: 15, fontFamily: mono },
-  monoLg:   { fontSize: 24, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 },
-  monoXl:   { fontSize: 32, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },
+  display:   { fontSize: 48, fontWeight: '800', letterSpacing: -1.2 },  // was 30
+  h1:        { fontSize: 38, fontWeight: '800', letterSpacing: -0.9 },  // was 24
+  h2:        { fontSize: 32, fontWeight: '700', letterSpacing: -0.6 },  // was 20
+  h3:        { fontSize: 27, fontWeight: '700', letterSpacing: -0.3 },  // was 17
+  h4:        { fontSize: 22, fontWeight: '700' },                        // was 15
+  body:      { fontSize: 20, fontWeight: '400', lineHeight: 30 },       // was 15
+  bodyMed:   { fontSize: 20, fontWeight: '500', lineHeight: 30 },       // was 15
+  caption:   { fontSize: 17, fontWeight: '400', lineHeight: 26 },       // was 13
+  capMed:    { fontSize: 17, fontWeight: '500', lineHeight: 26 },       // was 13
+  label:     { fontSize: 16, fontWeight: '500', letterSpacing: 0.3 },   // was 12
+  labelCaps: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' }, // was 11
+  mono:      { fontSize: 20, fontFamily: mono },                         // was 15
+  monoLg:    { fontSize: 38, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 }, // was 24
+  monoXl:    { fontSize: 52, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },   // was 32
 };
 
 export const spacing = {

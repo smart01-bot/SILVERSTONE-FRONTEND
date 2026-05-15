@@ -6,7 +6,7 @@ import {
   RefreshControl, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   collection, query, where, orderBy,
@@ -30,11 +30,11 @@ export default function MyRequestsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const FILTERS = [
-    { key: 'all',       label: 'All'                    },
-    { key: 'pending',   label: tr('statusPending')      },
-    { key: 'approved',  label: tr('statusApproved')     },
-    { key: 'completed', label: tr('statusCompleted')    },
-    { key: 'rejected',  label: tr('statusRejected')     },
+    { key: 'all',       label: 'All'                 },
+    { key: 'pending',   label: tr('statusPending')   },
+    { key: 'approved',  label: tr('statusApproved')  },
+    { key: 'completed', label: tr('statusCompleted') },
+    { key: 'rejected',  label: tr('statusRejected')  },
   ];
 
   useEffect(() => {
@@ -50,34 +50,25 @@ export default function MyRequestsScreen({ navigation }) {
     return unsub;
   }, [user?.uid]);
 
-  const filtered = requests.filter(r => {
-    if (filter === 'all') return true;
-    return r.status === filter;
-  }).sort((a, b) => {
-    if (a.urgent && !b.urgent) return -1;
-    if (!a.urgent && b.urgent) return 1;
-    return 0;
-  });
+  const filtered = requests
+    .filter(r => filter === 'all' || r.status === filter)
+    .sort((a, b) => {
+      if (a.urgent && !b.urgent) return -1;
+      if (!a.urgent && b.urgent) return 1;
+      return 0;
+    });
 
   const handleCancel = (req) => {
-    Alert.alert(
-      tr('cancel'),
-      'Je, una uhakika unataka kufuta ombi hili?',
-      [
-        { text: tr('cancel'), style: 'cancel' },
-        {
-          text: tr('confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await updateDoc(doc(db, 'requests', req.id), { status: 'cancelled' });
-            } catch (e) {
-              Alert.alert(tr('error'), tr('error'));
-            }
-          },
+    Alert.alert(tr('cancel'), 'Je, una uhakika unataka kufuta ombi hili?', [
+      { text: tr('cancel'), style: 'cancel' },
+      {
+        text: tr('confirm'), style: 'destructive',
+        onPress: async () => {
+          try { await updateDoc(doc(db, 'requests', req.id), { status: 'cancelled' }); }
+          catch (e) { Alert.alert(tr('error'), tr('error')); }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleRetry = (req) => {
@@ -128,7 +119,6 @@ export default function MyRequestsScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{tr('myRequests')}</Text>
         <Text style={styles.headerSub}>{requests.length} total</Text>
@@ -151,10 +141,7 @@ export default function MyRequestsScreen({ navigation }) {
                 ]}
                 activeOpacity={0.75}
               >
-                <Text style={[
-                  styles.pillText,
-                  { color: filter === f.key ? '#fff' : theme.textDim },
-                ]}>
+                <Text style={[styles.pillText, { color: filter === f.key ? '#fff' : theme.textDim }]}>
                   {f.label}
                 </Text>
               </TouchableOpacity>
@@ -167,23 +154,14 @@ export default function MyRequestsScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#C8102E']}
-            tintColor="#C8102E"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="document-outline" size={56} color={theme.muted} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>
-              {tr('noRequests')}
-            </Text>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>
-              {tr('noRequestsDesc')}
-            </Text>
+            <Ionicons name="document-outline" size={64} color={theme.muted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('noRequests')}</Text>
+            <Text style={[styles.emptyText,  { color: theme.textDim }]}>{tr('noRequestsDesc')}</Text>
             {filter === 'all' && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('NewRequest')}
@@ -208,7 +186,7 @@ export default function MyRequestsScreen({ navigation }) {
                 <View style={styles.routeRow}>
                   <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.muted }]} />
                   <Text style={[styles.network, { color: theme.text }]}>{req.sourceNetwork}</Text>
-                  <Ionicons name="arrow-forward" size={12} color={theme.textDim} />
+                  <Ionicons name="arrow-forward" size={14} color={theme.textDim} />
                   <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.destNetwork] ?? theme.muted }]} />
                   <Text style={[styles.network, { color: theme.text }]}>{req.destNetwork}</Text>
                 </View>
@@ -232,10 +210,7 @@ export default function MyRequestsScreen({ navigation }) {
                 </View>
               </View>
 
-              {/* Time */}
-              <Text style={[styles.time, { color: theme.textDim }]}>
-                {timeAgo(req.createdAt)}
-              </Text>
+              <Text style={[styles.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
 
               {/* Actions */}
               {req.status === 'pending' && (
@@ -244,9 +219,7 @@ export default function MyRequestsScreen({ navigation }) {
                   style={[styles.actionBtn, { borderColor: theme.border }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.actionText, { color: theme.textDim }]}>
-                    {tr('cancel')}
-                  </Text>
+                  <Text style={[styles.actionText, { color: theme.textDim }]}>{tr('cancel')}</Text>
                 </TouchableOpacity>
               )}
               {req.status === 'rejected' && (
@@ -255,9 +228,7 @@ export default function MyRequestsScreen({ navigation }) {
                   style={[styles.actionBtn, { borderColor: theme.primary }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.actionText, { color: theme.primary }]}>
-                    {tr('tryAgain')}
-                  </Text>
+                  <Text style={[styles.actionText, { color: theme.primary }]}>{tr('tryAgain')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -270,91 +241,62 @@ export default function MyRequestsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 100 },
+  scroll: { padding: 16, paddingBottom: 110 },
 
   header: {
     backgroundColor:         '#C8102E',
     paddingHorizontal:       18,
-    paddingTop:              10,
-    paddingBottom:           14,
-    borderBottomLeftRadius:  24,
-    borderBottomRightRadius: 24,
+    paddingTop:              12,
+    paddingBottom:           18,
+    borderBottomLeftRadius:  26,
+    borderBottomRightRadius: 26,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },        // was 20
+  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 }, // was 12
 
-  filters:   { paddingVertical: 10, paddingHorizontal: 16 },
+  filters:   { paddingVertical: 12, paddingHorizontal: 16 },
   filterRow: { flexDirection: 'row', gap: 8 },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical:   7,
-    borderRadius:      9999,
-    borderWidth:       1,
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 9999, borderWidth: 1,
   },
-  pillText: { fontSize: 13, fontWeight: '600' },
+  pillText: { fontSize: 16, fontWeight: '600' },   // was 13
 
-  empty: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap:        12,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700' },
-  emptyText:  { fontSize: 14 },
+  empty: { alignItems: 'center', paddingTop: 70, gap: 14 },
+  emptyTitle: { fontSize: 24, fontWeight: '700' },   // was 18
+  emptyText:  { fontSize: 18 },                       // was 14
   emptyBtn: {
-    paddingHorizontal: 24,
-    paddingVertical:   12,
-    borderRadius:      12,
-    marginTop:         4,
+    paddingHorizontal: 28, paddingVertical: 14,
+    borderRadius: 14, marginTop: 4,
   },
-  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 18 },  // was 14
 
   card: {
-    borderRadius:    16,
-    borderWidth:     1,
-    borderLeftWidth: 4,
-    padding:         14,
-    marginBottom:    10,
-    gap:             8,
+    borderRadius: 18, borderWidth: 1,
+    borderLeftWidth: 4, padding: 16,
+    marginBottom: 12, gap: 10,
   },
-  cardTop: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-  },
-  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  netDot:   { width: 8, height: 8, borderRadius: 4 },
-  network:  { fontSize: 14, fontWeight: '600' },
+  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  netDot:   { width: 10, height: 10, borderRadius: 5 },
+  network:  { fontSize: 18, fontWeight: '700' },    // was 14
   urgentTag: {
-    backgroundColor:   '#F59E0B20',
-    paddingHorizontal: 8,
-    paddingVertical:   3,
-    borderRadius:      6,
+    backgroundColor: '#F59E0B20', paddingHorizontal: 9,
+    paddingVertical: 4, borderRadius: 7,
   },
-  urgentText: { color: '#F59E0B', fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
-  midRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-  },
-  amount: { fontSize: 18, fontWeight: '800' },
+  urgentText: { color: '#F59E0B', fontSize: 13, fontWeight: '700', letterSpacing: 0.6 }, // was 10
+  midRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  amount: { fontSize: 24, fontWeight: '800' },   // was 18
   statusBadge: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               4,
-    paddingHorizontal: 8,
-    paddingVertical:   4,
-    borderRadius:      6,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7,
   },
-  statusDot:  { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 12, fontWeight: '600' },
-  time:       { fontSize: 12 },
+  statusDot:  { width: 7, height: 7, borderRadius: 4 },
+  statusText: { fontSize: 15, fontWeight: '700' },   // was 12
+  time:       { fontSize: 15 },                       // was 12
   actionBtn: {
-    height:         36,
-    borderRadius:   10,
-    borderWidth:    1.5,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginTop:      4,
+    height: 42, borderRadius: 12, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center', marginTop: 4,
   },
-  actionText: { fontSize: 13, fontWeight: '600' },
+  actionText: { fontSize: 16, fontWeight: '700' },   // was 13
 });

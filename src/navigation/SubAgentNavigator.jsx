@@ -1,101 +1,184 @@
 // src/navigation/SubAgentNavigator.jsx
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useRef, useEffect } from 'react';
+import { createBottomTabNavigator }   from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { View, Text, StyleSheet } from 'react-native';
+import { createDrawerNavigator }      from '@react-navigation/drawer';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import DrawerContent from '../components/DrawerContent';
-import HomeScreen            from '../screens/sub-agent/HomeScreen';
-import NewRequestScreen      from '../screens/sub-agent/NewRequestScreen';
-import RequestSuccessScreen  from '../screens/sub-agent/RequestSuccessScreen';
-import MyRequestsScreen      from '../screens/sub-agent/MyRequestsScreen';
-import ProfileScreen         from '../screens/sub-agent/ProfileScreen';
-import NetworksScreen        from '../screens/sub-agent/NetworksScreen';
+
+import { useTheme }        from '../context/ThemeContext';
+import DrawerContent       from '../components/DrawerContent';
+import HomeScreen          from '../screens/sub-agent/HomeScreen';
+import NewRequestScreen    from '../screens/sub-agent/NewRequestScreen';
+import RequestSuccessScreen from '../screens/sub-agent/RequestSuccessScreen';
+import MyRequestsScreen    from '../screens/sub-agent/MyRequestsScreen';
+import ProfileScreen       from '../screens/sub-agent/ProfileScreen';
+import NetworksScreen      from '../screens/sub-agent/NetworksScreen';
 
 const Tab    = createBottomTabNavigator();
 const Stack  = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-const DRAWER_ITEMS = [
-  { label: 'Home',        icon: 'home-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Home' } }) },
-  { label: 'New Request', icon: 'add-circle-outline',  onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'NewRequest' } }) },
-  { label: 'History',     icon: 'time-outline',        onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'MyRequests' } }) },
-  { label: 'Networks',    icon: 'wifi-outline',        onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
-  { label: 'Profile',     icon: 'person-outline',      onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Profile' } }) },
-];
-
+// ─── Animated tab icon — spring scale + colour glow on focus ─────────────────
 function TabIcon({ name, focused, color, badge }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const glow  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue:         focused ? 1.25 : 1,
+        useNativeDriver: true,
+        tension:         200,
+        friction:        7,
+      }),
+      Animated.timing(glow, {
+        toValue:         focused ? 1 : 0,
+        duration:        180,
+        useNativeDriver: false,  // backgroundColor can't use native driver
+      }),
+    ]).start();
+  }, [focused]);
+
+  const bgColor = glow.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['rgba(0,0,0,0)', color + '25'],
+  });
+
   return (
-    <View>
-      <Ionicons name={focused ? name : `${name}-outline`} size={24} color={color} />
+    <Animated.View style={[styles.tabIconWrap, { transform: [{ scale }], backgroundColor: bgColor }]}>
+      <Ionicons
+        name={focused ? name : `${name}-outline`}
+        size={26}
+        color={color}
+        style={focused && Platform.OS === 'ios' ? {
+          shadowColor:   color,
+          shadowOffset:  { width: 0, height: 3 },
+          shadowOpacity: 0.6,
+          shadowRadius:  6,
+        } : undefined}
+      />
       {badge > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
+// ─── Bottom tabs ─────────────────────────────────────────────────────────────
+// HomeTabs is a React component, so useTheme() / tr() is fully available here.
 function HomeTabs() {
-  const { theme } = useTheme();
+  const { theme, tr } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown:       false,
-        animation:         'slide_from_right',
-        animationDuration: 250,
-        gestureEnabled:    true,
+        headerShown: false,
+        lazy:        true,
         tabBarStyle: {
-          backgroundColor:      theme.surface,
-          borderTopColor:       theme.border,
-          borderTopWidth:       1,
-          paddingBottom:        8,
-          paddingTop:           8,
-          height:               64,
-          lazy:                 true,
-          tabBarHideOnKeyboard: true,
+          backgroundColor: theme.surface,
+          borderTopColor:  theme.border,
+          borderTopWidth:  1,
+          paddingBottom:   Platform.OS === 'ios' ? 22 : 10,
+          paddingTop:      8,
+          height:          Platform.OS === 'ios' ? 86 : 68,
+          ...Platform.select({
+            ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.10, shadowRadius: 14 },
+            android: { elevation: 16 },
+          }),
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+        tabBarLabelStyle:        { fontSize: 13, fontWeight: '700', marginTop: 2, letterSpacing: 0.1 },
       }}
     >
-      <Tab.Screen name="Home"       component={HomeScreen}       options={{ tabBarLabel: 'Home',    tabBarIcon: ({ focused, color }) => <TabIcon name="home"       focused={focused} color={color} /> }} />
-      <Tab.Screen name="NewRequest" component={NewRequestScreen} options={{ tabBarLabel: 'Request', tabBarIcon: ({ focused, color }) => <TabIcon name="add-circle" focused={focused} color={color} /> }} />
-      <Tab.Screen name="MyRequests" component={MyRequestsScreen} options={{ tabBarLabel: 'History', tabBarIcon: ({ focused, color }) => <TabIcon name="time"       focused={focused} color={color} /> }} />
-      
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: tr('home'),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="home"        focused={focused} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="NewRequest"
+        component={NewRequestScreen}
+        options={{
+          tabBarLabel: tr('request'),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="add-circle"  focused={focused} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="MyRequests"
+        component={MyRequestsScreen}
+        options={{
+          tabBarLabel: tr('history'),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="time"        focused={focused} color={color} />,
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
+// ─── Stack — slide_from_right with depth, fade for modal-style screens ────────
 function MainStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown:       false,
+        animation:         'slide_from_right',
+        animationDuration: 300,
+        gestureEnabled:    true,
+      }}
+    >
       <Stack.Screen name="Tabs"           component={HomeTabs} />
-      <Stack.Screen name="RequestSuccess" component={RequestSuccessScreen} />
-      <Stack.Screen name="Networks"       component={NetworksScreen} />
+      <Stack.Screen
+        name="RequestSuccess"
+        component={RequestSuccessScreen}
+        options={{ animation: 'slide_from_bottom', animationDuration: 350 }}
+      />
+      <Stack.Screen
+        name="Networks"
+        component={NetworksScreen}
+        options={{ animation: 'slide_from_right', animationDuration: 280 }}
+      />
     </Stack.Navigator>
   );
 }
 
+// ─── Root — Drawer wraps everything; items translated with tr() ───────────────
 export default function SubAgentNavigator() {
-  const { theme } = useTheme();
+  const { theme, tr } = useTheme();
+
+  // Built here so tr() is live — re-renders when lang changes
+  const drawerItems = [
+    { label: tr('home'),       icon: 'home-outline',        onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Home'       } }) },
+    { label: tr('newRequest'), icon: 'add-circle-outline',   onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'NewRequest' } }) },
+    { label: tr('history'),    icon: 'time-outline',         onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'MyRequests' } }) },
+    { label: 'Networks',       icon: 'wifi-outline',         onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
+    { label: tr('profile'),    icon: 'person-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Profile'    } }) },
+  ];
+
   return (
     <Drawer.Navigator
       screenOptions={{
-        headerShown:      false,
-        drawerType:       'front',
-        overlayColor:     'rgba(0,0,0,0.5)',
+        headerShown:    false,
+        drawerType:     'front',
+        overlayColor:   'rgba(0,0,0,0.55)',
+        swipeEdgeWidth: 60,
         drawerStyle: {
-          width:           280,
+          width:           290,
           backgroundColor: theme.surface,
+          ...Platform.select({
+            ios:     { shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.22, shadowRadius: 18 },
+            android: { elevation: 22 },
+          }),
         },
       }}
       drawerContent={(props) => (
-        <DrawerContent {...props} items={DRAWER_ITEMS} />
+        <DrawerContent {...props} items={drawerItems} />
       )}
     >
       <Drawer.Screen name="MainStack" component={MainStack} />
@@ -104,17 +187,24 @@ export default function SubAgentNavigator() {
 }
 
 const styles = StyleSheet.create({
+  tabIconWrap: {
+    width:          46,
+    height:         38,
+    borderRadius:   13,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
   badge: {
     position:          'absolute',
     top:               -4,
     right:             -8,
     backgroundColor:   '#C8102E',
     borderRadius:      9999,
-    minWidth:          16,
-    height:            16,
+    minWidth:          18,
+    height:            18,
     alignItems:        'center',
     justifyContent:    'center',
     paddingHorizontal: 4,
   },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
 });
