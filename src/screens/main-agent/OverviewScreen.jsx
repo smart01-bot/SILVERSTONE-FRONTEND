@@ -16,7 +16,7 @@ import { db } from '../../config/firebase';
 
 export default function OverviewScreen({ navigation }) {
   const { profile } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [refreshing,      setRefreshing]      = useState(false);
   const [totalRequests,   setTotalRequests]   = useState(0);
@@ -41,10 +41,10 @@ export default function OverviewScreen({ navigation }) {
   const timeAgo = (ts) => {
     if (!ts?.toDate) return '';
     const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
-    if (secs < 60)    return 'Just now';
-    if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-    if (secs < 172800)return 'Yesterday';
+    if (secs < 60)     return tr('justNow');
+    if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
+    if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
+    if (secs < 172800) return tr('yesterday');
     return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
@@ -101,28 +101,28 @@ export default function OverviewScreen({ navigation }) {
 
   const STATS = [
     {
-      label:    'Total Requests',
+      label:    tr('totalRequests'),
       value:    totalRequests,
-      sub:      `${pendingRequests} pending`,
+      sub:      `${pendingRequests} ${tr('pending')}`,
       subColor: pendingRequests > 0 ? '#C8102E' : '#16A34A',
       icon:     'document-text-outline',
     },
     {
-      label:    'Transactions',
+      label:    tr('totalTx'),
       value:    completedToday,
-      sub:      'completed',
+      sub:      tr('completed'),
       subColor: '#16A34A',
       icon:     'swap-horizontal-outline',
     },
     {
-      label:    'Active Agents',
+      label:    tr('activeAgents'),
       value:    activeAgents,
       sub:      'registered',
       subColor: theme.textDim,
       icon:     'people-outline',
     },
     {
-      label:    'Total Volume',
+      label:    tr('totalVolume'),
       value:    fmt(totalVolume),
       sub:      'moved',
       subColor: '#16A34A',
@@ -138,7 +138,7 @@ export default function OverviewScreen({ navigation }) {
         backgroundColor={theme.bg}
       />
 
-      {/* Top header bar — matches agent design */}
+      {/* Top header bar */}
       <View style={[styles.topBar, {
         backgroundColor:   theme.bg,
         borderBottomColor: theme.border,
@@ -150,12 +150,8 @@ export default function OverviewScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.brandWrap}>
-          <Text style={[styles.brandName, { color: theme.primary }]}>
-            Silverstone
-          </Text>
-          <Text style={[styles.brandTag, { color: theme.textDim }]}>
-            · admin
-          </Text>
+          <Text style={[styles.brandName, { color: theme.primary }]}>Silverstone</Text>
+          <Text style={[styles.brandTag, { color: theme.textDim }]}>· admin</Text>
         </View>
 
         <View style={styles.topRight}>
@@ -191,14 +187,12 @@ export default function OverviewScreen({ navigation }) {
         {/* Hero volume card */}
         <View style={styles.heroCard}>
           <View style={styles.decorCircle} />
-          <Text style={styles.heroLabel}>TOTAL VOLUME MOVED · 30D</Text>
+          <Text style={styles.heroLabel}>
+            {tr('totalVolume').toUpperCase()} · 30D
+          </Text>
           <Text style={styles.heroAmount}>{fmt(totalVolume)}</Text>
           <View style={styles.heroSubRow}>
-            <Ionicons
-              name="trending-up-outline"
-              size={14}
-              color="rgba(255,255,255,0.8)"
-            />
+            <Ionicons name="trending-up-outline" size={14} color="rgba(255,255,255,0.8)" />
             <Text style={styles.heroSub}>
               +{fmt(totalVolume * 0.124)} vs last month
             </Text>
@@ -260,12 +254,12 @@ export default function OverviewScreen({ navigation }) {
               {[0.4, 0.7, 0.5, 0.9, 0.6, 0.8, 1.0].map((h, i) => (
                 <View key={i} style={styles.barGroup}>
                   <View style={[styles.bar, {
-                    height:          h * 60,
+                    height:          h * 140,
                     backgroundColor: '#C8102E',
                     opacity:         0.85,
                   }]} />
                   <View style={[styles.bar, {
-                    height:          h * 0.7 * 60,
+                    height:          h * 0.7 * 140,
                     backgroundColor: '#0891B2',
                     opacity:         0.85,
                   }]} />
@@ -279,11 +273,11 @@ export default function OverviewScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Recent Requests
+              {tr('recentRequests')}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Queue')}>
               <Text style={[styles.sectionAction, { color: theme.primary }]}>
-                View queue →
+                {tr('queue')} →
               </Text>
             </TouchableOpacity>
           </View>
@@ -295,7 +289,7 @@ export default function OverviewScreen({ navigation }) {
             }]}>
               <Ionicons name="checkmark-circle-outline" size={32} color={theme.muted} />
               <Text style={[styles.emptyText, { color: theme.textDim }]}>
-                Queue is clear
+                {tr('queueEmpty')}
               </Text>
             </View>
           ) : (
@@ -306,10 +300,7 @@ export default function OverviewScreen({ navigation }) {
               {recentRequests.map((req, i) => (
                 <View key={req.id}>
                   <View style={styles.reqRow}>
-                    <View style={[
-                      styles.reqDot,
-                      { backgroundColor: statusColor(req.status) },
-                    ]} />
+                    <View style={[styles.reqDot, { backgroundColor: statusColor(req.status) }]} />
                     <View style={styles.reqInfo}>
                       <Text style={[styles.reqAgent, { color: theme.text }]}>
                         {req.agentName ?? 'Agent'}
@@ -332,10 +323,7 @@ export default function OverviewScreen({ navigation }) {
                         styles.statusPill,
                         { backgroundColor: statusColor(req.status) + '20' },
                       ]}>
-                        <Text style={[
-                          styles.statusText,
-                          { color: statusColor(req.status) },
-                        ]}>
+                        <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
                           {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
                         </Text>
                       </View>
@@ -359,7 +347,6 @@ const styles = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingBottom: 100 },
 
-  // Top bar
   topBar: {
     flexDirection:     'row',
     alignItems:        'center',
@@ -368,31 +355,12 @@ const styles = StyleSheet.create({
     paddingVertical:   12,
     borderBottomWidth: 1,
   },
-  menuBtn: { gap: 5, padding: 4 },
-  menuLine: {
-    width:        24,
-    height:       2,
-    borderRadius: 2,
-  },
-  brandWrap: {
-    flexDirection: 'row',
-    alignItems:    'center',
-  },
-  brandName: {
-    fontSize:      20,
-    fontWeight:    '800',
-    letterSpacing: -0.4,
-  },
-  brandTag: {
-    fontSize:   15,
-    fontWeight: '400',
-    marginLeft: 2,
-  },
-  topRight: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-  },
+  menuBtn:  { gap: 5, padding: 4 },
+  menuLine: { width: 24, height: 2, borderRadius: 2 },
+  brandWrap: { flexDirection: 'row', alignItems: 'center' },
+  brandName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  brandTag:  { fontSize: 15, fontWeight: '400', marginLeft: 2 },
+  topRight:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   livePill: {
     flexDirection:     'row',
     alignItems:        'center',
@@ -401,18 +369,8 @@ const styles = StyleSheet.create({
     paddingVertical:   4,
     borderRadius:      6,
   },
-  liveDot: {
-    width:           6,
-    height:          6,
-    borderRadius:    3,
-    backgroundColor: '#16A34A',
-  },
-  liveText: {
-    fontSize:      10,
-    fontWeight:    '700',
-    color:         '#16A34A',
-    letterSpacing: 0.6,
-  },
+  liveDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#16A34A' },
+  liveText: { fontSize: 10, fontWeight: '700', color: '#16A34A', letterSpacing: 0.6 },
   avatarBtn:    { position: 'relative' },
   avatarCircle: {
     width:          38,
@@ -437,7 +395,6 @@ const styles = StyleSheet.create({
   },
   avatarBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
 
-  // Hero card
   heroCard: {
     backgroundColor:  '#C8102E',
     marginHorizontal: 16,
@@ -469,15 +426,9 @@ const styles = StyleSheet.create({
     color:         '#fff',
     marginTop:     6,
   },
-  heroSubRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           4,
-    marginTop:     4,
-  },
-  heroSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  heroSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  heroSub:    { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
 
-  // Stats grid
   statsGrid: {
     flexDirection:     'row',
     flexWrap:          'wrap',
@@ -504,11 +455,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, fontWeight: '600' },
   statSub:   { fontSize: 12 },
 
-  // Section
-  section: {
-    paddingHorizontal: 16,
-    marginTop:         20,
-  },
+  section: { paddingHorizontal: 16, marginTop: 20 },
   sectionHeader: {
     flexDirection:  'row',
     justifyContent: 'space-between',
@@ -518,18 +465,13 @@ const styles = StyleSheet.create({
   sectionTitle:  { fontSize: 15, fontWeight: '700' },
   sectionAction: { fontSize: 13, fontWeight: '600' },
 
-  // Chart
-  chartCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    padding:      16,
-  },
+  chartCard: { borderRadius: 16, borderWidth: 1, padding: 16 },
   chartLabel: { fontSize: 12, marginBottom: 12 },
   chartBars: {
     flexDirection: 'row',
     alignItems:    'flex-end',
     gap:           8,
-    height:        60,
+    height:        140,
   },
   barGroup: {
     flex:          1,
@@ -537,52 +479,36 @@ const styles = StyleSheet.create({
     alignItems:    'flex-end',
     gap:           2,
   },
-  bar:          { flex: 1, borderRadius: 3 },
-  legendRow:    { flexDirection: 'row', gap: 12 },
-  legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot:    { width: 8, height: 8, borderRadius: 4 },
-  legendText:   { fontSize: 12 },
+  bar:        { flex: 1, borderRadius: 3 },
+  legendRow:  { flexDirection: 'row', gap: 12 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot:  { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 12 },
 
-  // Requests
-  requestsCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    overflow:     'hidden',
-  },
+  requestsCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   reqRow: {
     flexDirection: 'row',
     alignItems:    'flex-start',
     gap:           10,
     padding:       14,
   },
-  reqDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-    flexShrink:   0,
-    marginTop:    4,
-  },
+  reqDot:    { width: 8, height: 8, borderRadius: 4, flexShrink: 0, marginTop: 4 },
   reqInfo:   { flex: 1, gap: 2 },
   reqAgent:  { fontSize: 14, fontWeight: '600' },
   reqMeta:   { fontSize: 12, fontFamily: 'monospace' },
   reqTime:   { fontSize: 11 },
   reqRight:  { alignItems: 'flex-end', gap: 4 },
   reqAmount: { fontSize: 14, fontWeight: '700' },
-  statusPill:{
-    paddingHorizontal: 8,
-    paddingVertical:   3,
-    borderRadius:      6,
-  },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11, fontWeight: '700' },
   divider:    { height: 1, marginHorizontal: 14 },
 
-  // Empty
   emptyCard: {
-    borderRadius:   16,
-    borderWidth:    1,
-    padding:        32,
-    alignItems:     'center',
-    gap:            8,
+    borderRadius: 16,
+    borderWidth:  1,
+    padding:      32,
+    alignItems:   'center',
+    gap:          8,
   },
   emptyText: { fontSize: 14 },
 });
