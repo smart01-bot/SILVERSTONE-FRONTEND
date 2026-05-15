@@ -12,7 +12,7 @@ export function ThemeProvider({ children }) {
   const deviceScheme = useColorScheme();
   // null = follow device; 'light' | 'dark' = user override
   const [userPreference, setUserPreference] = useState(null);
-  const [lang, setLangState] = useState('en');
+  const [lang, setLangState] = useState('sw');
 
   useEffect(() => {
     (async () => {

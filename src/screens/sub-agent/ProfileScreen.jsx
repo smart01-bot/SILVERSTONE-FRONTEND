@@ -21,7 +21,7 @@ const NETWORK_COLORS = {
 
 export default function ProfileScreen({ navigation }) {
   const { user, profile, logout } = useAuth();
-  const { theme, isDark, setTheme } = useTheme();
+  const { theme, isDark, setTheme, lang, setLang } = useTheme();
 
   const [editing,     setEditing]     = useState(null);
   const [editValue,   setEditValue]   = useState('');
@@ -206,9 +206,11 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => {}}
           />
           <MenuItem
-            icon="finger-print-outline"
-            label="Biometric Login"
-            onPress={() => {}}
+            icon="language-outline"
+            label={lang === 'sw' ? 'Badilisha: English' : 'Switch to: Kiswahili'}
+            isSwitch
+            value={lang === 'en'}
+            onPress={(val) => setLang(val ? 'en' : 'sw')}
           />
         </View>
 

@@ -23,7 +23,7 @@ const NETWORKS = {
 
 export default function HomeScreen({ navigation }) {
   const { profile, user } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [requests,     setRequests]     = useState([]);
   const [refreshing,   setRefreshing]   = useState(false);
@@ -35,9 +35,6 @@ export default function HomeScreen({ navigation }) {
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
   const initials  = profile?.name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
-
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? 'Karibu' : hour < 17 ? 'Karibu' : 'Karibu';
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -103,10 +100,10 @@ export default function HomeScreen({ navigation }) {
   const timeAgo = (ts) => {
     if (!ts?.toDate) return '';
     const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
-    if (secs < 60)    return 'Just now';
-    if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-    if (secs < 172800)return 'Yesterday';
+    if (secs < 60)     return tr('justNow');
+    if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
+    if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
+    if (secs < 172800) return tr('yesterday');
     return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
@@ -119,20 +116,11 @@ export default function HomeScreen({ navigation }) {
 
       {/* Top header bar */}
       <View style={[styles.topBar, {
-        backgroundColor: theme.bg,
+        backgroundColor:   theme.bg,
         borderBottomColor: theme.border,
       }]}>
-        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
-          <View style={[styles.menuLine, { backgroundColor: theme.text }]} />
-          <View style={[styles.menuLine, { width: 20, backgroundColor: theme.text }]} />
-          <View style={[styles.menuLine, { width: 16, backgroundColor: theme.text }]} />
-        </TouchableOpacity>
-
-        <Text style={[styles.brandName, { color: theme.primary }]}>
-          Silverstone
-        </Text>
-
-        <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('Profile')}>
+        {/* Avatar — opens drawer */}
+        <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.openDrawer()}>
           <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
@@ -141,6 +129,21 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.avatarBadgeText}>{pendingCount}</Text>
             </View>
           )}
+        </TouchableOpacity>
+
+        <Text style={[styles.brandName, { color: theme.primary }]}>
+          Silverstone
+        </Text>
+
+        {/* Bell — right side */}
+        <TouchableOpacity
+          style={[styles.notifBtn, {
+            backgroundColor: theme.surfaceAlt,
+            borderColor:     theme.border,
+          }]}
+        >
+          <Ionicons name="notifications-outline" size={20} color={theme.text} />
+          {pendingCount > 0 && <View style={styles.notifDot} />}
         </TouchableOpacity>
       </View>
 
@@ -160,27 +163,20 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.greetRow}>
           <View>
             <Text style={[styles.greetSub, { color: theme.textDim }]}>
-              {greeting}
+              Karibu
             </Text>
             <Text style={[styles.greetName, { color: theme.text }]}>
               {firstName}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.notifBtn, {
-              backgroundColor: theme.surfaceAlt,
-              borderColor: theme.border,
-            }]}
-          >
-            <Ionicons name="notifications-outline" size={20} color={theme.text} />
-            {pendingCount > 0 && <View style={styles.notifDot} />}
-          </TouchableOpacity>
         </View>
 
         {/* Balance card */}
         <View style={styles.balanceCard}>
           <View style={styles.decorCircle} />
-          <Text style={styles.balanceLabel}>TOTAL VOLUME MOVED</Text>
+          <Text style={styles.balanceLabel}>
+            {tr('totalVolume').toUpperCase()}
+          </Text>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceAmount}>
               {showAmount ? fmt(totalVolume) : 'TZS ••••••'}
@@ -197,7 +193,7 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <Text style={styles.balanceSub}>
-            +{fmt(todayVolume)} today · {profile?.networks?.length || 4} networks
+            +{fmt(todayVolume)} {tr('today')} · {profile?.networks?.length || 4} networks
           </Text>
           <View style={styles.pillRow}>
             <TouchableOpacity
@@ -205,14 +201,14 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate('NewRequest')}
               activeOpacity={0.85}
             >
-              <Text style={styles.pillWhiteText}>New Request</Text>
+              <Text style={styles.pillWhiteText}>{tr('newRequest')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.pillOutline}
               onPress={() => navigation.navigate('MyRequests')}
               activeOpacity={0.85}
             >
-              <Text style={styles.pillOutlineText}>My Requests</Text>
+              <Text style={styles.pillOutlineText}>{tr('myRequests')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -220,14 +216,14 @@ export default function HomeScreen({ navigation }) {
         {/* Quick actions */}
         <View style={styles.quickGrid}>
           {[
-            { label: 'My Requests', icon: 'list-outline',    screen: 'MyRequests' },
-            { label: 'History',     icon: 'time-outline',    screen: 'MyRequests' },
-            { label: 'Networks',    icon: 'wifi-outline',    screen: 'Profile'    },
-            { label: 'Profile',     icon: 'person-outline',  screen: 'Profile'    },
+            { label: tr('myRequests'), icon: 'list-outline',   screen: 'MyRequests', onPress: () => navigation.navigate('MyRequests') },
+            { label: tr('history'),    icon: 'time-outline',   screen: 'MyRequests', onPress: () => navigation.navigate('MyRequests') },
+            { label: 'Networks',       icon: 'wifi-outline',   screen: 'Networks',   onPress: () => navigation.navigate('Networks')   },
+            { label: tr('profile'),    icon: 'person-outline', screen: 'Profile',    onPress: () => navigation.navigate('Profile')    },
           ].map(action => (
             <TouchableOpacity
               key={action.label}
-              onPress={() => navigation.navigate(action.screen)}
+              onPress={action.onPress}
               style={[styles.quickItem, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
@@ -244,14 +240,14 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Network breakdown with bars */}
+        {/* Network breakdown */}
         {networkBreakdown.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Networks
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Networks')}>
                 <Text style={[styles.sectionAction, { color: theme.primary }]}>
                   Manage
                 </Text>
@@ -300,11 +296,11 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Recent Requests
+              {tr('recentRequests')}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('MyRequests')}>
               <Text style={[styles.sectionAction, { color: theme.primary }]}>
-                See all →
+                {tr('seeAll')} →
               </Text>
             </TouchableOpacity>
           </View>
@@ -316,7 +312,7 @@ export default function HomeScreen({ navigation }) {
             }]}>
               <Ionicons name="document-outline" size={32} color={theme.muted} />
               <Text style={[styles.emptyText, { color: theme.textDim }]}>
-                No requests yet
+                {tr('noRequests')}
               </Text>
             </View>
           ) : (
@@ -374,7 +370,6 @@ const styles = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingBottom: 100 },
 
-  // Top bar
   topBar: {
     flexDirection:     'row',
     alignItems:        'center',
@@ -382,15 +377,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical:   12,
     borderBottomWidth: 1,
-  },
-  menuBtn: {
-    gap:     5,
-    padding: 4,
-  },
-  menuLine: {
-    width:        24,
-    height:       2,
-    borderRadius: 2,
   },
   brandName: {
     fontSize:      20,
@@ -428,21 +414,9 @@ const styles = StyleSheet.create({
     fontSize:   9,
     fontWeight: '800',
   },
-
-  // Greeting
-  greetRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    paddingHorizontal: 16,
-    paddingTop:        16,
-    paddingBottom:     8,
-  },
-  greetSub:  { fontSize: 13, marginBottom: 2 },
-  greetName: { fontSize: 18, fontWeight: '700' },
   notifBtn: {
-    width:          40,
-    height:         40,
+    width:          38,
+    height:         38,
     borderRadius:   12,
     borderWidth:    1,
     alignItems:     'center',
@@ -459,7 +433,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#C8102E',
   },
 
-  // Balance card
+  greetRow: {
+    paddingHorizontal: 16,
+    paddingTop:        16,
+    paddingBottom:     8,
+  },
+  greetSub:  { fontSize: 13, marginBottom: 2 },
+  greetName: { fontSize: 18, fontWeight: '700' },
+
   balanceCard: {
     backgroundColor:  '#C8102E',
     marginHorizontal: 16,
@@ -509,12 +490,12 @@ const styles = StyleSheet.create({
     marginTop:     16,
   },
   pillWhite: {
-    flex:           1,
-    height:         36,
-    borderRadius:   10,
-    backgroundColor:'#fff',
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex:            1,
+    height:          36,
+    borderRadius:    10,
+    backgroundColor: '#fff',
+    alignItems:      'center',
+    justifyContent:  'center',
   },
   pillWhiteText: {
     color:      '#C8102E',
@@ -537,7 +518,6 @@ const styles = StyleSheet.create({
     fontSize:   13,
   },
 
-  // Quick actions
   quickGrid: {
     flexDirection:     'row',
     gap:               10,
@@ -561,7 +541,6 @@ const styles = StyleSheet.create({
   },
   quickLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 
-  // Section
   section: {
     paddingHorizontal: 16,
     marginTop:         20,
@@ -575,7 +554,6 @@ const styles = StyleSheet.create({
   sectionTitle:  { fontSize: 15, fontWeight: '700' },
   sectionAction: { fontSize: 13, fontWeight: '600' },
 
-  // Networks
   networkCard: {
     borderRadius: 16,
     borderWidth:  1,
@@ -598,8 +576,8 @@ const styles = StyleSheet.create({
     height:       8,
     borderRadius: 4,
   },
-  netName:   { fontSize: 13, fontWeight: '600' },
-  netBarWrap:{ flex: 1 },
+  netName:    { fontSize: 13, fontWeight: '600' },
+  netBarWrap: { flex: 1 },
   netBarBg: {
     height:       6,
     borderRadius: 3,
@@ -616,7 +594,6 @@ const styles = StyleSheet.create({
     textAlign:  'right',
   },
 
-  // Recent requests
   requestsCard: {
     borderRadius: 16,
     borderWidth:  1,
@@ -640,7 +617,7 @@ const styles = StyleSheet.create({
   reqMeta:   { fontSize: 12, marginTop: 2, fontFamily: 'monospace' },
   reqRight:  { alignItems: 'flex-end', gap: 4 },
   reqAmount: { fontSize: 14, fontWeight: '700' },
-  statusPill:{
+  statusPill: {
     paddingHorizontal: 8,
     paddingVertical:   3,
     borderRadius:      6,
@@ -648,13 +625,12 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: '700' },
   divider:    { height: 1, marginHorizontal: 14 },
 
-  // Empty
   emptyCard: {
-    borderRadius:   16,
-    borderWidth:    1,
-    padding:        32,
-    alignItems:     'center',
-    gap:            8,
+    borderRadius: 16,
+    borderWidth:  1,
+    padding:      32,
+    alignItems:   'center',
+    gap:          8,
   },
   emptyText: { fontSize: 14 },
 });
