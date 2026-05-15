@@ -6,7 +6,7 @@ import {
   ScrollView, Switch, Alert, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -36,9 +36,7 @@ export default function NetworksScreen({ navigation }) {
 
   const toggleNetwork = (name) => {
     setActive(prev =>
-      prev.includes(name)
-        ? prev.filter(n => n !== name)
-        : [...prev, name]
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
     );
   };
 
@@ -73,22 +71,15 @@ export default function NetworksScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{tr('volumeByNetwork')}</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <Text style={[styles.desc, { color: theme.textDim }]}>
           {tr('sourceNetwork')} — {tr('destNetwork')}
         </Text>
@@ -98,20 +89,15 @@ export default function NetworksScreen({ navigation }) {
             key={net.name}
             style={[styles.card, {
               backgroundColor: theme.surfaceAlt,
-              borderColor:     active.includes(net.name)
-                ? net.color + '60'
-                : theme.border,
+              borderColor:     active.includes(net.name) ? net.color + '60' : theme.border,
             }]}
           >
-            {/* Network header */}
             <View style={styles.cardHeader}>
               <View style={[styles.netAvatar, { backgroundColor: net.color + '20' }]}>
-                <Text style={[styles.netShort, { color: net.color }]}>
-                  {net.short}
-                </Text>
+                <Text style={[styles.netShort, { color: net.color }]}>{net.short}</Text>
               </View>
               <View style={styles.netInfo}>
-                <Text style={[styles.netName, { color: theme.text }]}>{net.name}</Text>
+                <Text style={[styles.netName,   { color: theme.text }]}>{net.name}</Text>
                 <Text style={[styles.netWallet, { color: theme.textDim }]}>{net.wallet}</Text>
               </View>
               <Switch
@@ -122,17 +108,12 @@ export default function NetworksScreen({ navigation }) {
               />
             </View>
 
-            {/* Phone input */}
             <View style={[styles.phoneWrap, { borderTopColor: theme.border }]}>
-              <Text style={[styles.phoneLabel, { color: theme.textDim }]}>
-                {tr('phone')}
-              </Text>
+              <Text style={[styles.phoneLabel, { color: theme.textDim }]}>{tr('phone')}</Text>
               <TextInput
                 style={[styles.phoneInput, {
                   backgroundColor: theme.bg,
-                  borderColor:     phones[net.name] && !validatePhone(phones[net.name])
-                    ? '#C8102E'
-                    : theme.border,
+                  borderColor: phones[net.name] && !validatePhone(phones[net.name]) ? '#C8102E' : theme.border,
                   color: theme.text,
                 }]}
                 value={phones[net.name] ?? ''}
@@ -148,23 +129,19 @@ export default function NetworksScreen({ navigation }) {
           </View>
         ))}
 
-        {/* Save button */}
         <TouchableOpacity
           onPress={handleSave}
           disabled={saving}
-          style={[styles.saveBtn, {
-            backgroundColor: saved ? '#16A34A' : theme.primary,
-          }]}
+          style={[styles.saveBtn, { backgroundColor: saved ? '#16A34A' : theme.primary }]}
           activeOpacity={0.85}
         >
           {saving
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.saveBtnText}>
-                {saved ? tr('save') + '!' : tr('save')}
+                {saved ? tr('save') + ' ✓' : tr('save')}
               </Text>
           }
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -172,66 +149,45 @@ export default function NetworksScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 100 },
+  scroll: { padding: 16, paddingBottom: 110 },
 
   header: {
     backgroundColor:         '#C8102E',
     paddingHorizontal:       18,
-    paddingTop:              10,
-    paddingBottom:           14,
+    paddingTop:              12,
+    paddingBottom:           18,
     flexDirection:           'row',
     alignItems:              'center',
     justifyContent:          'space-between',
-    borderBottomLeftRadius:  24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius:  26,
+    borderBottomRightRadius: 26,
   },
-  backBtn:     { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  backBtn:     { width: 44, height: 44, justifyContent: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },   // was 18
 
-  desc: { fontSize: 14, lineHeight: 22, marginBottom: 16 },
+  desc: { fontSize: 17, lineHeight: 26, marginBottom: 18 },   // was 14
 
-  card: {
-    borderRadius: 16,
-    borderWidth:  1.5,
-    marginBottom: 12,
-    overflow:     'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           12,
-    padding:       14,
-  },
+  card: { borderRadius: 18, borderWidth: 1.5, marginBottom: 14, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   netAvatar: {
-    width:          44,
-    height:         44,
-    borderRadius:   12,
-    alignItems:     'center',
-    justifyContent: 'center',
-    flexShrink:     0,
+    width: 52, height: 52, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  netShort:  { fontSize: 13, fontWeight: '800' },
+  netShort:  { fontSize: 16, fontWeight: '800' },  // was 13
   netInfo:   { flex: 1 },
-  netName:   { fontSize: 15, fontWeight: '700' },
-  netWallet: { fontSize: 12, marginTop: 2 },
+  netName:   { fontSize: 19, fontWeight: '700' },  // was 15
+  netWallet: { fontSize: 15, marginTop: 2 },        // was 12
 
-  phoneWrap:  { borderTopWidth: 1, padding: 14 },
-  phoneLabel: { fontSize: 12, fontWeight: '500', marginBottom: 8 },
+  phoneWrap:  { borderTopWidth: 1, padding: 16 },
+  phoneLabel: { fontSize: 15, fontWeight: '600', marginBottom: 10 },  // was 12
   phoneInput: {
-    height:            48,
-    borderWidth:       1.5,
-    borderRadius:      10,
-    paddingHorizontal: 14,
-    fontSize:          15,
+    height: 54, borderWidth: 1.5, borderRadius: 12,
+    paddingHorizontal: 16, fontSize: 19,             // was 15
   },
-  phoneError: { color: '#C8102E', fontSize: 12, marginTop: 4 },
+  phoneError: { color: '#C8102E', fontSize: 15, marginTop: 5 },  // was 12
 
   saveBtn: {
-    height:         52,
-    borderRadius:   14,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginTop:      8,
+    height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 8,
   },
-  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 19, fontWeight: '700' },  // was 15
 });
