@@ -22,7 +22,7 @@ const NETWORK_COLORS = {
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
-  const { theme, isDark }  = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const prefill = route?.params?.prefill;
 
@@ -36,7 +36,6 @@ export default function NewRequestScreen({ navigation, route }) {
   const [error,         setError]         = useState('');
   const [queuePos,      setQueuePos]      = useState(null);
 
-  // Pre-fill source phone from saved network phones
   useEffect(() => {
     if (sourceNetwork && profile?.agentPhoneNumbers?.[sourceNetwork]) {
       setSourcePhone(profile.agentPhoneNumbers[sourceNetwork]);
@@ -58,13 +57,13 @@ export default function NewRequestScreen({ navigation, route }) {
   };
 
   const validate = () => {
-    if (!sourceNetwork)  return 'Select source network.';
-    if (!destNetwork)    return 'Select destination network.';
-    if (!sourcePhone)    return 'Enter source phone number.';
-    if (!destPhone)      return 'Enter destination phone number.';
-    if (!amount)         return 'Enter an amount.';
+    if (!sourceNetwork) return tr('sourceNetwork') + ' ' + tr('error');
+    if (!destNetwork)   return tr('destNetwork')   + ' ' + tr('error');
+    if (!sourcePhone)   return tr('sourcePhone')   + ' ' + tr('error');
+    if (!destPhone)     return tr('destPhone')     + ' ' + tr('error');
+    if (!amount)        return tr('amount')        + ' ' + tr('error');
     const num = Number(amount.replace(/,/g, ''));
-    if (num <= 0)        return 'Enter a valid amount.';
+    if (num <= 0)       return tr('error');
     return null;
   };
 
@@ -75,7 +74,6 @@ export default function NewRequestScreen({ navigation, route }) {
     setLoading(true);
 
     try {
-      // Get queue position
       const q = query(
         collection(db, 'requests'),
         where('status', '==', 'pending')
@@ -105,7 +103,7 @@ export default function NewRequestScreen({ navigation, route }) {
         amount: Number(amount.replace(/,/g, '')),
       });
     } catch (e) {
-      setError('Failed to submit request. Please try again.');
+      setError(tr('error'));
     } finally {
       setLoading(false);
     }
@@ -132,16 +130,11 @@ export default function NewRequestScreen({ navigation, route }) {
             ]}
             activeOpacity={0.75}
           >
-            <View style={[
-              styles.netColorDot,
-              { backgroundColor: NETWORK_COLORS[net] },
-            ]} />
+            <View style={[styles.netColorDot, { backgroundColor: NETWORK_COLORS[net] }]} />
             <Text style={[
               styles.netBtnText,
               {
-                color: selected === net
-                  ? NETWORK_COLORS[net]
-                  : theme.text,
+                color:      selected === net ? NETWORK_COLORS[net] : theme.text,
                 fontWeight: selected === net ? '700' : '500',
               },
             ]}>
@@ -159,8 +152,8 @@ export default function NewRequestScreen({ navigation, route }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>New Request</Text>
-        <Text style={styles.headerSub}>Submit a float transfer request</Text>
+        <Text style={styles.headerTitle}>{tr('floatRequest')}</Text>
+        <Text style={styles.headerSub}>{tr('submitRequest')}</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -172,22 +165,21 @@ export default function NewRequestScreen({ navigation, route }) {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Network pickers */}
           <NetworkPicker
-            label="From Network"
+            label={tr('sourceNetwork')}
             selected={sourceNetwork}
             onSelect={setSourceNetwork}
           />
 
           <NetworkPicker
-            label="To Network"
+            label={tr('destNetwork')}
             selected={destNetwork}
             onSelect={setDestNetwork}
           />
 
-          {/* Phones */}
+          {/* Source phone */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>Source Phone</Text>
+            <Text style={[styles.label, { color: theme.textDim }]}>{tr('sourcePhone')}</Text>
             <TextInput
               style={[styles.input, {
                 backgroundColor: theme.surfaceAlt,
@@ -202,8 +194,9 @@ export default function NewRequestScreen({ navigation, route }) {
             />
           </View>
 
+          {/* Dest phone */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>Destination Phone</Text>
+            <Text style={[styles.label, { color: theme.textDim }]}>{tr('destPhone')}</Text>
             <TextInput
               style={[styles.input, {
                 backgroundColor: theme.surfaceAlt,
@@ -220,7 +213,7 @@ export default function NewRequestScreen({ navigation, route }) {
 
           {/* Amount */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>Amount (TZS)</Text>
+            <Text style={[styles.label, { color: theme.textDim }]}>{tr('amount')}</Text>
             <View style={[styles.amountInput, {
               backgroundColor: theme.surfaceAlt,
               borderColor:     theme.border,
@@ -235,8 +228,6 @@ export default function NewRequestScreen({ navigation, route }) {
                 keyboardType="numeric"
               />
             </View>
-
-            {/* Quick add buttons */}
             <View style={styles.quickRow}>
               {[10000, 50000, 100000, 500000].map(n => (
                 <TouchableOpacity
@@ -267,10 +258,10 @@ export default function NewRequestScreen({ navigation, route }) {
           >
             <View>
               <Text style={[styles.urgentLabel, { color: theme.text }]}>
-                Mark as Urgent
+                {tr('markUrgent')}
               </Text>
               <Text style={[styles.urgentSub, { color: theme.textDim }]}>
-                Urgent requests are prioritized in the queue
+                {tr('urgentDesc')}
               </Text>
             </View>
             <View style={[
@@ -285,27 +276,25 @@ export default function NewRequestScreen({ navigation, route }) {
           </TouchableOpacity>
 
           {/* Error */}
-          {error ? (
-            <Text style={styles.error}>{error}</Text>
-          ) : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          {/* Summary card */}
+          {/* Summary */}
           {sourceNetwork && destNetwork && amount ? (
             <View style={[styles.summary, {
               backgroundColor: theme.surfaceAlt,
               borderColor:     theme.border,
             }]}>
               <Text style={[styles.summaryTitle, { color: theme.text }]}>
-                Summary
+                {tr('summary')}
               </Text>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Route</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>{tr('route')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
                   {sourceNetwork} → {destNetwork}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Amount</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.primary }]}>
                   TZS {amount}
                 </Text>
@@ -319,7 +308,7 @@ export default function NewRequestScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* Submit button */}
+          {/* Submit */}
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
@@ -328,7 +317,7 @@ export default function NewRequestScreen({ navigation, route }) {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>Submit Request</Text>
+              : <Text style={styles.submitText}>{tr('submitRequest')}</Text>
             }
           </TouchableOpacity>
 
@@ -343,23 +332,19 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 100 },
 
   header: {
-    backgroundColor:       '#C8102E',
-    paddingHorizontal:     18,
-    paddingTop:            10,
-    paddingBottom:         14,
+    backgroundColor:         '#C8102E',
+    paddingHorizontal:       18,
+    paddingTop:              10,
+    paddingBottom:           14,
     borderBottomLeftRadius:  24,
     borderBottomRightRadius: 24,
   },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
   headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  pickerWrap: { marginTop: 16 },
-  label: { fontSize: 13, fontWeight: '500', marginBottom: 8 },
-  networkGrid: {
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    gap:           8,
-  },
+  pickerWrap:  { marginTop: 16 },
+  label:       { fontSize: 13, fontWeight: '500', marginBottom: 8 },
+  networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   netBtn: {
     flexDirection:     'row',
     alignItems:        'center',
@@ -369,11 +354,7 @@ const styles = StyleSheet.create({
     borderRadius:      12,
     borderWidth:       1.5,
   },
-  netColorDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-  },
+  netColorDot:      { width: 8, height: 8, borderRadius: 4 },
   netBtnText:       { fontSize: 14 },
   sameNetworkError: { color: '#C8102E', fontSize: 13, marginTop: 4 },
 
@@ -393,13 +374,9 @@ const styles = StyleSheet.create({
     borderRadius:      12,
     paddingHorizontal: 16,
   },
-  currency:    { fontSize: 15, marginRight: 8 },
-  amountText:  { flex: 1, fontSize: 22, fontWeight: '700' },
-  quickRow: {
-    flexDirection: 'row',
-    gap:           8,
-    marginTop:     8,
-  },
+  currency:   { fontSize: 15, marginRight: 8 },
+  amountText: { flex: 1, fontSize: 22, fontWeight: '700' },
+  quickRow:   { flexDirection: 'row', gap: 8, marginTop: 8 },
   quickBtn: {
     flex:           1,
     height:         34,
@@ -422,10 +399,10 @@ const styles = StyleSheet.create({
   urgentLabel: { fontSize: 14, fontWeight: '600' },
   urgentSub:   { fontSize: 12, marginTop: 2 },
   toggle: {
-    width:        40,
-    height:       24,
-    borderRadius: 12,
-    justifyContent:'center',
+    width:          40,
+    height:         24,
+    borderRadius:   12,
+    justifyContent: 'center',
   },
   toggleKnob: {
     width:           20,
@@ -434,12 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 
-  error: {
-    color:     '#C8102E',
-    fontSize:  13,
-    textAlign: 'center',
-    marginTop: 12,
-  },
+  error: { color: '#C8102E', fontSize: 13, textAlign: 'center', marginTop: 12 },
 
   summary: {
     borderRadius: 14,
@@ -449,10 +421,7 @@ const styles = StyleSheet.create({
     gap:          8,
   },
   summaryTitle: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
-  summaryRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-  },
+  summaryRow:   { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { fontSize: 13 },
   summaryValue: { fontSize: 13, fontWeight: '600' },
 
