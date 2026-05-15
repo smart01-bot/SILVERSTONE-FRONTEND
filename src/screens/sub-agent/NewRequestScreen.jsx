@@ -60,8 +60,6 @@ export default function NewRequestScreen({ navigation, route }) {
   const validate = () => {
     if (!sourceNetwork)  return 'Select source network.';
     if (!destNetwork)    return 'Select destination network.';
-    if (sourceNetwork === destNetwork)
-      return 'Source and destination must be different.';
     if (!sourcePhone)    return 'Enter source phone number.';
     if (!destPhone)      return 'Enter destination phone number.';
     if (!amount)         return 'Enter an amount.';
@@ -181,12 +179,6 @@ export default function NewRequestScreen({ navigation, route }) {
             onSelect={setSourceNetwork}
           />
 
-          {sourceNetwork === destNetwork && destNetwork !== '' && (
-            <Text style={styles.sameNetworkError}>
-              Source and destination must be different
-            </Text>
-          )}
-
           <NetworkPicker
             label="To Network"
             selected={destNetwork}
@@ -298,7 +290,7 @@ export default function NewRequestScreen({ navigation, route }) {
           ) : null}
 
           {/* Summary card */}
-          {sourceNetwork && destNetwork && sourceNetwork !== destNetwork && amount ? (
+          {sourceNetwork && destNetwork && amount ? (
             <View style={[styles.summary, {
               backgroundColor: theme.surfaceAlt,
               borderColor:     theme.border,
