@@ -19,45 +19,48 @@ const Tab    = createBottomTabNavigator();
 const Stack  = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// ─── Animated tab icon — spring scale + colour glow on focus ─────────────────
+// ─── Animated tab icon — scale (native driver) + glow bg (non-native) ────────
+// IMPORTANT: never mix useNativeDriver:true and false inside Animated.parallel.
+// Run them as independent animations instead.
 function TabIcon({ name, focused, color, badge }) {
   const scale = useRef(new Animated.Value(1)).current;
   const glow  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue:         focused ? 1.25 : 1,
-        useNativeDriver: true,
-        tension:         200,
-        friction:        7,
-      }),
-      Animated.timing(glow, {
-        toValue:         focused ? 1 : 0,
-        duration:        180,
-        useNativeDriver: false,  // backgroundColor can't use native driver
-      }),
-    ]).start();
+    // Scale — native driver ✓
+    Animated.spring(scale, {
+      toValue:         focused ? 1.22 : 1,
+      useNativeDriver: true,
+      tension:         200,
+      friction:        7,
+    }).start();
+  }, [focused]);
+
+  useEffect(() => {
+    // Glow bg — non-native driver (backgroundColor can't use native)
+    Animated.timing(glow, {
+      toValue:         focused ? 1 : 0,
+      duration:        200,
+      useNativeDriver: false,
+    }).start();
   }, [focused]);
 
   const bgColor = glow.interpolate({
     inputRange:  [0, 1],
-    outputRange: ['rgba(0,0,0,0)', color + '25'],
+    outputRange: ['rgba(0,0,0,0)', color + '22'],
   });
 
   return (
-    <Animated.View style={[styles.tabIconWrap, { transform: [{ scale }], backgroundColor: bgColor }]}>
-      <Ionicons
-        name={focused ? name : `${name}-outline`}
-        size={26}
-        color={color}
-        style={focused && Platform.OS === 'ios' ? {
-          shadowColor:   color,
-          shadowOffset:  { width: 0, height: 3 },
-          shadowOpacity: 0.6,
-          shadowRadius:  6,
-        } : undefined}
-      />
+    // Outer view handles the non-native bg animation
+    <Animated.View style={[styles.tabIconWrap, { backgroundColor: bgColor }]}>
+      {/* Inner view handles the native scale animation */}
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons
+          name={focused ? name : `${name}-outline`}
+          size={26}
+          color={color}
+        />
+      </Animated.View>
       {badge > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
