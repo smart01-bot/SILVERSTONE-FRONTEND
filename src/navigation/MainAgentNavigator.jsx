@@ -1,9 +1,11 @@
 // src/navigation/MainAgentNavigator.jsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import DrawerContent from '../components/DrawerContent';
 
 import OverviewScreen   from '../screens/main-agent/OverviewScreen';
 import QueueScreen      from '../screens/main-agent/QueueScreen';
@@ -11,43 +13,45 @@ import TransfersScreen  from '../screens/main-agent/TransfersScreen';
 import AgentsScreen     from '../screens/main-agent/AgentsScreen';
 import ApprovalsScreen  from '../screens/main-agent/ApprovalsScreen';
 
-const Tab = createBottomTabNavigator();
+const Tab    = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
+
+const DRAWER_ITEMS = [
+  { label: 'Overview',  icon: 'bar-chart-outline',        onPress: nav => nav.navigate('MainTabs', { screen: 'Overview'  }) },
+  { label: 'Queue',     icon: 'list-outline',             onPress: nav => nav.navigate('MainTabs', { screen: 'Queue'     }) },
+  { label: 'Transfers', icon: 'swap-horizontal-outline',  onPress: nav => nav.navigate('MainTabs', { screen: 'Transfers' }) },
+  { label: 'Agents',    icon: 'people-outline',           onPress: nav => nav.navigate('MainTabs', { screen: 'Agents'    }) },
+  { label: 'Approvals', icon: 'checkmark-circle-outline', onPress: nav => nav.navigate('MainTabs', { screen: 'Approvals' }) },
+];
 
 function TabIcon({ name, focused, color, badge }) {
   return (
     <View>
-      <Ionicons
-        name={focused ? name : `${name}-outline`}
-        size={24}
-        color={color}
-      />
+      <Ionicons name={focused ? name : `${name}-outline`} size={24} color={color} />
       {badge > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {badge > 99 ? '99+' : badge}
-          </Text>
+          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       )}
     </View>
   );
 }
 
-export default function MainAgentNavigator() {
+function MainTabs() {
   const { theme } = useTheme();
-
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.surface,
-          borderTopColor:  theme.border,
-          borderTopWidth:  1,
-          paddingBottom:   8,
-          paddingTop:      8,
-          height:          64,
+          backgroundColor:       theme.surface,
+          borderTopColor:        theme.border,
+          borderTopWidth:        1,
+          paddingBottom:         8,
+          paddingTop:            8,
+          height:                64,
           sceneAnimationEnabled: true,
-          sceneAnimationType: 'shifting',
+          sceneAnimationType:    'shifting',
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
@@ -109,6 +113,28 @@ export default function MainAgentNavigator() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function MainAgentNavigator() {
+  const { theme } = useTheme();
+  return (
+    <Drawer.Navigator
+      screenOptions={{
+        headerShown:  false,
+        drawerType:   'front',
+        overlayColor: 'rgba(0,0,0,0.5)',
+        drawerStyle: {
+          width:           280,
+          backgroundColor: theme.surface,
+        },
+      }}
+      drawerContent={(props) => (
+        <DrawerContent {...props} items={DRAWER_ITEMS} />
+      )}
+    >
+      <Drawer.Screen name="MainTabs" component={MainTabs} />
+    </Drawer.Navigator>
   );
 }
 

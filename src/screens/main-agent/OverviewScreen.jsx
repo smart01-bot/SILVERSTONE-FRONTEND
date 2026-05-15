@@ -143,7 +143,7 @@ export default function OverviewScreen({ navigation }) {
         backgroundColor:   theme.bg,
         borderBottomColor: theme.border,
       }]}>
-        <TouchableOpacity style={styles.menuBtn}>
+        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
           <View style={[styles.menuLine, { backgroundColor: theme.text }]} />
           <View style={[styles.menuLine, { width: 20, backgroundColor: theme.text }]} />
           <View style={[styles.menuLine, { width: 16, backgroundColor: theme.text }]} />
