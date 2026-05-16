@@ -2,15 +2,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, SafeAreaView, Image, Animated,
-  Alert,
+  StatusBar, SafeAreaView, Image, Animated, Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { checkLockout, recordFailedAttempt, clearLockout } from '../../utils/pinLockout';
+
+// ── Animated PIN dot ──────────────────────────────────────────────────────────
+function PinDot({ filled }) {
+  const scale   = useRef(new Animated.Value(filled ? 1 : 0)).current;
+  const opacity = useRef(new Animated.Value(filled ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale,  { toValue: filled ? 1 : 0, tension: 260, friction: 10, useNativeDriver: true }),
+      Animated.timing(opacity,{ toValue: filled ? 1 : 0, duration: 120, useNativeDriver: true }),
+    ]).start();
+  }, [filled]);
+
+  return (
+    <View style={s.dotOuter}>
+      <Animated.View style={[s.dotFill, { transform: [{ scale }], opacity }]} />
+    </View>
+  );
+}
 
 export default function PinEntryScreen({
   onSuccess,
@@ -114,8 +133,8 @@ export default function PinEntryScreen({
 
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    const sv = secs % 60;
+    return `${m}:${sv.toString().padStart(2, '0')}`;
   };
 
   const KEYS = [
@@ -129,6 +148,7 @@ export default function PinEntryScreen({
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
+      {/* Logo */}
       <View style={s.logoRow}>
         <View style={s.logoTile}>
           <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
@@ -136,10 +156,14 @@ export default function PinEntryScreen({
         <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
       </View>
 
+      {/* Icon */}
       <View style={s.iconWrap}>
-        <View style={[s.iconTile, { backgroundColor: theme.primaryLight, borderColor: theme.primary + '33' }]}>
-          <Ionicons name="phone-portrait-outline" size={44} color={theme.primary} />
-        </View>
+        <LinearGradient
+          colors={[theme.gradPrimA, theme.gradPrimB]}
+          style={s.iconGradient}
+        >
+          <Ionicons name="phone-portrait-outline" size={40} color="#fff" />
+        </LinearGradient>
       </View>
 
       <Text style={[s.heading, { color: theme.primary }]}>Enter your PIN</Text>
@@ -148,24 +172,12 @@ export default function PinEntryScreen({
         <Text style={{ color: theme.text, fontFamily: fonts.bodyBold }}>{firstName}</Text>
       </Text>
 
+      {/* Animated PIN dots */}
       <Animated.View style={[s.dotsRow, { transform: [{ translateX: shakeAnim }] }]}>
-        {[0,1,2,3].map(i => {
-          const filled = i < pin.length;
-          return (
-            <View key={i} style={[
-              s.dot,
-              {
-                backgroundColor: filled ? '#16A34A14' : theme.surfaceAlt,
-                borderWidth:     filled ? 1.5 : 0,
-                borderColor:     filled ? '#16A34A' : 'transparent',
-              },
-            ]}>
-              {filled && <View style={s.dotInner} />}
-            </View>
-          );
-        })}
+        {[0,1,2,3].map(i => <PinDot key={i} filled={i < pin.length} />)}
       </Animated.View>
 
+      {/* Helper row */}
       <View style={s.helperRow}>
         <TouchableOpacity onPress={onForgotPin} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={[s.helper, { color: theme.textDim }]}>Forgot PIN?</Text>
@@ -198,7 +210,12 @@ export default function PinEntryScreen({
 
       <View style={{ flex: 1 }} />
 
-      <View style={[s.keypad, { backgroundColor: theme.surfaceAlt, borderTopWidth: isDark ? 1 : 0, borderTopColor: theme.border }]}>
+      {/* Keypad */}
+      <View style={[s.keypad, {
+        backgroundColor: theme.surfaceAlt,
+        borderTopWidth: isDark ? 1 : 0,
+        borderTopColor: theme.border,
+      }]}>
         {KEYS.map((row, ri) => (
           <View key={ri} style={s.keyRow}>
             {row.map((key, ki) => {
@@ -233,11 +250,8 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
 
   logoRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            spacing.sm + 2,
-    paddingTop:     spacing.md - 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm + 2, paddingTop: spacing.md - 2,
   },
   logoTile: {
     width: 36, height: 36, borderRadius: radius.sm + 1,
@@ -246,9 +260,9 @@ const s = StyleSheet.create({
   logoImg:  { width: '100%', height: '100%' },
   logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
 
-  iconWrap: { alignItems: 'center', marginTop: spacing.lg },
-  iconTile: {
-    width: 88, height: 88, borderRadius: radius.lg + 2, borderWidth: 1,
+  iconWrap:    { alignItems: 'center', marginTop: spacing.lg },
+  iconGradient: {
+    width: 88, height: 88, borderRadius: radius.lg + 2,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -256,39 +270,33 @@ const s = StyleSheet.create({
   sub:     { fontSize: 17, fontFamily: fonts.body,    textAlign: 'center', marginTop: spacing.sm - 2 },
 
   dotsRow: {
-    flexDirection:  'row',
-    justifyContent: 'center',
-    gap:            spacing.md - 2,
-    marginTop:      spacing.lg,
+    flexDirection: 'row', justifyContent: 'center',
+    gap: spacing.md, marginTop: spacing.lg,
   },
-  dot: {
-    width:          52,
-    height:         52,
-    borderRadius:   radius.md,
-    alignItems:     'center',
-    justifyContent: 'center',
+  dotOuter: {
+    width: 52, height: 52, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5, borderColor: '#16A34A40',
   },
-  dotInner: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#16A34A' },
+  dotFill: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#16A34A',
+  },
 
   helperRow: {
-    flexDirection:     'row',
-    justifyContent:    'space-between',
-    paddingHorizontal: spacing.lg + spacing.xs,
-    marginTop:         spacing.md - 2,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg + spacing.xs, marginTop: spacing.md - 2,
   },
   helper: { fontSize: 16, fontFamily: fonts.bodyMed },
 
   error: {
-    color:     '#C8102E',
-    fontSize:  16,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    height:    22,
+    color: '#C8102E', fontSize: 16, fontFamily: fonts.body,
+    textAlign: 'center', marginTop: spacing.sm, height: 22,
   },
 
   bioWrap:  { alignItems: 'center', marginTop: spacing.md },
-  bioTile: {
+  bioTile:  {
     width: 72, height: 72, borderRadius: radius.lg,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -301,16 +309,10 @@ const s = StyleSheet.create({
   },
   keyRow:  { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   key: {
-    flex:           1,
-    height:         58,
-    borderRadius:   radius.md,
-    alignItems:     'center',
-    justifyContent: 'center',
-    shadowColor:    '#000',
-    shadowOffset:   { width: 0, height: 1 },
-    shadowOpacity:  0.04,
-    shadowRadius:   2,
-    elevation:      1,
+    flex: 1, height: 58, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
   },
   keyGhost: { flex: 1, height: 58, alignItems: 'center', justifyContent: 'center' },
   keyEmpty: { flex: 1, height: 58 },
