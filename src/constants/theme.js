@@ -1,17 +1,6 @@
 // src/constants/theme.js
 import { Platform } from 'react-native';
 
-// ─── FONT FAMILIES (requires @expo-google-fonts/inter + manrope installed) ────
-export const fonts = {
-  display:   'Manrope_800ExtraBold',
-  heading:   'Manrope_700Bold',
-  body:      'Inter_400Regular',
-  bodyMed:   'Inter_500Medium',
-  bodySemi:  'Inter_600SemiBold',
-  bodyBold:  'Inter_700Bold',
-  bodyXBold: 'Inter_800ExtraBold',
-};
-
 // ─── LIGHT ────────────────────────────────────────────────────────────────────
 export const LIGHT = {
   bg:            '#F7F7FA',
@@ -49,64 +38,63 @@ export const LIGHT = {
   shadowMd:      'rgba(10,10,30,0.13)',
 };
 
-// ─── DARK ─────────────────────────────────────────────────────────────────────
+// ─── DARK — pure black ────────────────────────────────────────────────────────
 export const DARK = {
-  bg:           '#000000',   // was #07070E
-  surface:      '#0D0D0D',   // was #0E0E1C
-  surfaceAlt:   '#141414',   // was #16162A
-  surfaceElev:  '#1C1C1C',   // was #1E1E35
-  border:       '#2A2A2A',   // was #24243C
-  borderStrong: '#3A3A3A',   // was #38385A
+  bg:            '#000000',
+  surface:       '#0D0D0D',
+  surfaceAlt:    '#141414',
+  surfaceElev:   '#1C1C1C',
+  border:        '#2A2A2A',
+  borderStrong:  '#3A3A3A',
 
-  text:         '#F0F0F0',   // was #EEEEF8
-  textMid:      '#C0C0C0',   // was #C4C4DC
-  textDim:      '#707070',   // was #7474A0
-  muted:        '#303030',   // was #32324A
+  text:          '#F0F0F0',
+  textMid:       '#C0C0C0',
+  textDim:       '#707070',
+  muted:         '#303030',
 
   primary:       '#E01535',
   primaryLight:  '#C8102E28',
   primaryDark:   '#960B22',
   primaryBright: '#FF1A3D',
 
-  gradPrimA:    '#E01535',
-  gradPrimB:    '#960B22',
-  gradSurfA:    '#141414',   // was #16162A
-  gradSurfB:    '#0D0D0D',   // was #0E0E1C
+  gradPrimA:     '#E01535',
+  gradPrimB:     '#960B22',
+  gradSurfA:     '#141414',
+  gradSurfB:     '#0D0D0D',
 
-  success:      '#22C55E',
-  successSoft:  '#22C55E22',
-  warning:      '#FBBF24',
-  warningSoft:  '#FBBF2422',
-  danger:       '#E01535',
-  dangerSoft:   '#E0153526',
-  info:         '#22D3EE',
-  infoSoft:     '#22D3EE22',
+  success:       '#22C55E',
+  successSoft:   '#22C55E22',
+  warning:       '#FBBF24',
+  warningSoft:   '#FBBF2422',
+  danger:        '#E01535',
+  dangerSoft:    '#E0153526',
+  info:          '#22D3EE',
+  infoSoft:      '#22D3EE22',
 
-  shadow:       'rgba(0,0,0,0.5)',
-  shadowMd:     'rgba(0,0,0,0.75)',
+  shadow:        'rgba(0,0,0,0.5)',
+  shadowMd:      'rgba(0,0,0,0.75)',
 };
 
 // ─── TYPOGRAPHY ───────────────────────────────────────────────────────────────
 export const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export const typography = {
-  display:   { fontSize: 48, fontFamily: fonts.display,   letterSpacing: -1.2 },
-  h1:        { fontSize: 38, fontFamily: fonts.display,   letterSpacing: -0.9 },
-  h2:        { fontSize: 32, fontFamily: fonts.heading,   letterSpacing: -0.6 },
-  h3:        { fontSize: 27, fontFamily: fonts.heading,   letterSpacing: -0.3 },
-  h4:        { fontSize: 22, fontFamily: fonts.heading },
-  body:      { fontSize: 20, fontFamily: fonts.body,      lineHeight: 30 },
-  bodyMed:   { fontSize: 20, fontFamily: fonts.bodyMed,   lineHeight: 30 },
-  caption:   { fontSize: 17, fontFamily: fonts.body,      lineHeight: 26 },
-  capMed:    { fontSize: 17, fontFamily: fonts.bodyMed,   lineHeight: 26 },
-  label:     { fontSize: 16, fontFamily: fonts.bodySemi,  letterSpacing: 0.3 },
-  labelCaps: { fontSize: 14, fontFamily: fonts.bodyBold,  letterSpacing: 0.8, textTransform: 'uppercase' },
+  display:   { fontSize: 48, fontWeight: '800', letterSpacing: -1.2 },
+  h1:        { fontSize: 38, fontWeight: '800', letterSpacing: -0.9 },
+  h2:        { fontSize: 32, fontWeight: '700', letterSpacing: -0.6 },
+  h3:        { fontSize: 27, fontWeight: '700', letterSpacing: -0.3 },
+  h4:        { fontSize: 22, fontWeight: '700' },
+  body:      { fontSize: 20, fontWeight: '400', lineHeight: 30 },
+  bodyMed:   { fontSize: 20, fontWeight: '500', lineHeight: 30 },
+  caption:   { fontSize: 17, fontWeight: '400', lineHeight: 26 },
+  capMed:    { fontSize: 17, fontWeight: '500', lineHeight: 26 },
+  label:     { fontSize: 16, fontWeight: '500', letterSpacing: 0.3 },
+  labelCaps: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   mono:      { fontSize: 20, fontFamily: mono },
-  monoLg:    { fontSize: 38, fontFamily: mono, letterSpacing: -0.5 },
-  monoXl:    { fontSize: 52, fontFamily: mono, letterSpacing: -1 },
+  monoLg:    { fontSize: 38, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 },
+  monoXl:    { fontSize: 52, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },
 };
 
-// ─── SPACING (base-8) ─────────────────────────────────────────────────────────
 export const spacing = {
   xs:  4,
   sm:  8,
@@ -116,7 +104,6 @@ export const spacing = {
   xxl: 48,
 };
 
-// ─── RADIUS ───────────────────────────────────────────────────────────────────
 export const radius = {
   sm:   8,
   md:   12,
@@ -126,15 +113,13 @@ export const radius = {
   full: 9999,
 };
 
-// ─── SHADOW HELPER ────────────────────────────────────────────────────────────
-// Usage: ...shadow(theme.shadow, 12)
-export const shadow = (color = 'rgba(0,0,0,0.12)', size = 8) =>
-  Platform.select({
-    ios: {
-      shadowColor:   color,
-      shadowOffset:  { width: 0, height: size * 0.4 },
-      shadowOpacity: 1,
-      shadowRadius:  size,
-    },
-    android: { elevation: Math.round(size * 0.8) },
-  });
+// ─── FONT FAMILIES ────────────────────────────────────────────────────────────
+export const fonts = {
+  display:   'Manrope_800ExtraBold',
+  heading:   'Manrope_700Bold',
+  body:      'Inter_400Regular',
+  bodyMed:   'Inter_500Medium',
+  bodySemi:  'Inter_600SemiBold',
+  bodyBold:  'Inter_700Bold',
+  bodyXBold: 'Inter_800ExtraBold',
+};

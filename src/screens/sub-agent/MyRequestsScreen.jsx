@@ -5,10 +5,11 @@ import {
   StyleSheet, StatusBar, SafeAreaView,
   RefreshControl, Alert,
 } from 'react-native';
-import { Ionicons }    from '@expo/vector-icons';
+import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth }     from '../../context/AuthContext';
-import { useTheme }    from '../../context/ThemeContext';
+import { useAuth }        from '../../context/AuthContext';
+import { useTheme }       from '../../context/ThemeContext';
+import { fonts, spacing, radius } from '../../constants/theme';
 import { SkeletonCard } from '../../components/SkeletonLoader';
 import EmptyState       from '../../components/EmptyState';
 import PressableScale   from '../../components/PressableScale';
@@ -96,7 +97,7 @@ export default function MyRequestsScreen({ navigation }) {
       case 'completed': return '#16A34A';
       case 'pending':   return '#F59E0B';
       case 'approved':  return '#0891B2';
-      case 'rejected':  return '#C8102E';
+      case 'rejected':  return theme.danger;
       case 'cancelled': return theme.textDim;
       default:          return theme.textDim;
     }
@@ -118,19 +119,11 @@ export default function MyRequestsScreen({ navigation }) {
     return `TZS ${n}`;
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
-  // Empty state config per filter
   const emptyConfig = () => {
     if (filter !== 'all') {
-      return {
-        icon:     'funnel-outline',
-        title:    `No ${filter} requests`,
-        subtitle: 'Try a different filter above.',
-      };
+      return { icon: 'funnel-outline', title: `No ${filter} requests`, subtitle: 'Try a different filter above.' };
     }
     return {
       icon:        'receipt-outline',
@@ -142,37 +135,34 @@ export default function MyRequestsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={s.header}
       >
-        <Text style={styles.headerTitle}>{tr('myRequests')}</Text>
-        <Text style={styles.headerSub}>{loading ? '…' : `${requests.length} total`}</Text>
+        <View style={s.headerDecor} />
+        <Text style={s.headerTitle}>{tr('myRequests')}</Text>
+        <Text style={s.headerSub}>{loading ? '…' : `${requests.length} total`}</Text>
       </LinearGradient>
 
-      {/* Filter pills */}
-      <View style={[styles.filters, { backgroundColor: theme.bg }]}>
+      <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.filterRow}>
+          <View style={s.filterRow}>
             {FILTERS.map(f => (
               <PressableScale
                 key={f.key}
                 onPress={() => setFilter(f.key)}
-                style={[
-                  styles.pill,
-                  {
-                    backgroundColor: filter === f.key ? theme.primary : theme.surfaceAlt,
-                    borderColor:     filter === f.key ? theme.primary : theme.border,
-                  },
-                ]}
+                style={[s.pill, {
+                  backgroundColor: filter === f.key ? theme.primary : theme.surfaceAlt,
+                  borderColor:     filter === f.key ? theme.primary : theme.border,
+                }]}
                 scaleDown={0.94}
               >
-                <Text style={[styles.pillText, { color: filter === f.key ? '#fff' : theme.textDim }]}>
+                <Text style={[s.pillText, { color: filter === f.key ? '#fff' : theme.textDim }]}>
                   {f.label}
                 </Text>
               </PressableScale>
@@ -183,12 +173,11 @@ export default function MyRequestsScreen({ navigation }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
         }
       >
-        {/* Loading skeletons */}
         {loading ? (
           <>
             <SkeletonCard />
@@ -201,61 +190,58 @@ export default function MyRequestsScreen({ navigation }) {
           filtered.map(req => (
             <PressableScale
               key={req.id}
-              style={[styles.card, {
+              style={[s.card, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
                 borderLeftColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.border,
               }]}
               scaleDown={0.98}
             >
-              {/* Top row */}
-              <View style={styles.cardTop}>
-                <View style={styles.routeRow}>
-                  <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.muted }]} />
-                  <Text style={[styles.network, { color: theme.text }]}>{req.sourceNetwork}</Text>
+              <View style={s.cardTop}>
+                <View style={s.routeRow}>
+                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.muted }]} />
+                  <Text style={[s.network, { color: theme.text }]}>{req.sourceNetwork}</Text>
                   <Ionicons name="arrow-forward" size={14} color={theme.textDim} />
-                  <View style={[styles.netDot, { backgroundColor: NETWORK_COLORS[req.destNetwork] ?? theme.muted }]} />
-                  <Text style={[styles.network, { color: theme.text }]}>{req.destNetwork}</Text>
+                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[req.destNetwork] ?? theme.muted }]} />
+                  <Text style={[s.network, { color: theme.text }]}>{req.destNetwork}</Text>
                 </View>
                 {req.urgent && (
-                  <View style={styles.urgentTag}>
-                    <Text style={styles.urgentText}>URGENT</Text>
+                  <View style={s.urgentTag}>
+                    <Text style={s.urgentText}>URGENT</Text>
                   </View>
                 )}
               </View>
 
-              {/* Amount + status */}
-              <View style={styles.midRow}>
-                <Text style={[styles.amount, { color: theme.primary }]}>
+              <View style={s.midRow}>
+                <Text style={[s.amount, { color: theme.primary }]}>
                   {fmt(Number(req.amount) || 0)}
                 </Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '20' }]}>
-                  <View style={[styles.statusDot, { backgroundColor: statusColor(req.status) }]} />
-                  <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
+                <View style={[s.statusBadge, { backgroundColor: statusColor(req.status) + '20' }]}>
+                  <View style={[s.statusDot, { backgroundColor: statusColor(req.status) }]} />
+                  <Text style={[s.statusText, { color: statusColor(req.status) }]}>
                     {req.status}
                   </Text>
                 </View>
               </View>
 
-              <Text style={[styles.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
+              <Text style={[s.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
 
-              {/* Actions */}
               {req.status === 'pending' && (
                 <TouchableOpacity
                   onPress={() => handleCancel(req)}
-                  style={[styles.actionBtn, { borderColor: theme.border }]}
+                  style={[s.actionBtn, { borderColor: theme.border }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.actionText, { color: theme.textDim }]}>{tr('cancel')}</Text>
+                  <Text style={[s.actionText, { color: theme.textDim }]}>{tr('cancel')}</Text>
                 </TouchableOpacity>
               )}
               {req.status === 'rejected' && (
                 <TouchableOpacity
                   onPress={() => handleRetry(req)}
-                  style={[styles.actionBtn, { borderColor: theme.primary }]}
+                  style={[s.actionBtn, { borderColor: theme.primary }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.actionText, { color: theme.primary }]}>{tr('tryAgain')}</Text>
+                  <Text style={[s.actionText, { color: theme.primary }]}>{tr('tryAgain')}</Text>
                 </TouchableOpacity>
               )}
             </PressableScale>
@@ -266,46 +252,54 @@ export default function MyRequestsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 110 },
+  scroll: { padding: spacing.md, paddingBottom: 110 },
 
   header: {
-    paddingHorizontal:       18,
-    paddingTop:              12,
-    paddingBottom:           22,
-    borderBottomLeftRadius:  26,
-    borderBottomRightRadius: 26,
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  filters:   { paddingVertical: 12, paddingHorizontal: 16 },
-  filterRow: { flexDirection: 'row', gap: 8 },
+  filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
+  filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: 9999, borderWidth: 1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 16, fontWeight: '600' },
+  pillText: { fontSize: 16, fontFamily: fonts.bodySemi },
 
   card: {
-    borderRadius: 18, borderWidth: 1,
-    borderLeftWidth: 4, padding: 16,
-    marginBottom: 12, gap: 10,
+    borderRadius:    radius.lg,
+    borderWidth:     1,
+    borderLeftWidth: 4,
+    padding:         spacing.md,
+    marginBottom:    spacing.md - 4,
+    gap:             spacing.sm + 2,
   },
   cardTop:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  routeRow:   { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  routeRow:   { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 1 },
   netDot:     { width: 10, height: 10, borderRadius: 5 },
-  network:    { fontSize: 18, fontWeight: '700' },
-  urgentTag:  { backgroundColor: '#F59E0B20', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
-  urgentText: { color: '#F59E0B', fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
+  network:    { fontSize: 18, fontFamily: fonts.bodyBold },
+  urgentTag:  { backgroundColor: '#F59E0B20', paddingHorizontal: spacing.sm + 1, paddingVertical: spacing.xs, borderRadius: radius.sm - 2 },
+  urgentText: { color: '#F59E0B', fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.6 },
 
   midRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  amount:      { fontSize: 24, fontWeight: '800' },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7 },
+  amount:      { fontSize: 24, fontFamily: fonts.display },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 1, paddingHorizontal: spacing.sm + 2, paddingVertical: spacing.xs + 1, borderRadius: radius.sm - 2 },
   statusDot:   { width: 7, height: 7, borderRadius: 4 },
-  statusText:  { fontSize: 15, fontWeight: '700' },
-  time:        { fontSize: 15 },
-  actionBtn:   { height: 42, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  actionText:  { fontSize: 16, fontWeight: '700' },
+  statusText:  { fontSize: 15, fontFamily: fonts.bodyBold },
+  time:        { fontSize: 15, fontFamily: fonts.body },
+  actionBtn:   { height: 44, borderRadius: radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
+  actionText:  { fontSize: 16, fontFamily: fonts.bodyBold },
 });
