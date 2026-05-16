@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 // ─── LIGHT ────────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:            '#F7F7FA',
+  bg:            '#FFFFFF',
   surface:       '#FFFFFF',
   surfaceAlt:    '#EEEEF5',
   surfaceElev:   '#FFFFFF',
