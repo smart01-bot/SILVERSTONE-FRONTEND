@@ -1,14 +1,17 @@
 // src/screens/sub-agent/NewRequestScreen.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
   ScrollView, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth }  from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { Ionicons }       from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth }        from '../../context/AuthContext';
+import { useTheme }       from '../../context/ThemeContext';
+import AnimatedInput      from '../../components/AnimatedInput';
+import PressableScale     from '../../components/PressableScale';
 import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -22,7 +25,7 @@ const NETWORK_COLORS = {
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
-  const { theme, isDark, tr } = useTheme();
+  const { theme, tr }     = useTheme();
 
   const prefill = route?.params?.prefill;
 
@@ -59,8 +62,7 @@ export default function NewRequestScreen({ navigation, route }) {
     if (!sourcePhone)   return tr('sourcePhone')   + ' ' + tr('error');
     if (!destPhone)     return tr('destPhone')     + ' ' + tr('error');
     if (!amount)        return tr('amount')        + ' ' + tr('error');
-    const num = Number(amount.replace(/,/g, ''));
-    if (num <= 0)       return tr('error');
+    if (Number(amount.replace(/,/g, '')) <= 0) return tr('error');
     return null;
   };
 
@@ -70,7 +72,7 @@ export default function NewRequestScreen({ navigation, route }) {
     setError('');
     setLoading(true);
     try {
-      const q = query(collection(db, 'requests'), where('status', '==', 'pending'));
+      const q   = query(collection(db, 'requests'), where('status', '==', 'pending'));
       const snap = await getDocs(q);
       const pos  = snap.size + 1;
       await addDoc(collection(db, 'requests'), {
@@ -100,7 +102,7 @@ export default function NewRequestScreen({ navigation, route }) {
       <Text style={[styles.label, { color: theme.textDim }]}>{label}</Text>
       <View style={styles.networkGrid}>
         {NETWORKS.map(net => (
-          <TouchableOpacity
+          <PressableScale
             key={net}
             onPress={() => onSelect(net)}
             style={[
@@ -110,7 +112,7 @@ export default function NewRequestScreen({ navigation, route }) {
                 borderColor:     selected === net ? NETWORK_COLORS[net]         : theme.border,
               },
             ]}
-            activeOpacity={0.75}
+            scaleDown={0.94}
           >
             <View style={[styles.netColorDot, { backgroundColor: NETWORK_COLORS[net] }]} />
             <Text style={[
@@ -122,7 +124,7 @@ export default function NewRequestScreen({ navigation, route }) {
             ]}>
               {net}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
     </View>
@@ -132,10 +134,15 @@ export default function NewRequestScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <Text style={styles.headerTitle}>{tr('floatRequest')}</Text>
         <Text style={styles.headerSub}>{tr('submitRequest')}</Text>
-      </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
@@ -147,59 +154,47 @@ export default function NewRequestScreen({ navigation, route }) {
           <NetworkPicker label={tr('destNetwork')}   selected={destNetwork}   onSelect={setDestNetwork}   />
 
           {/* Source phone */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>{tr('sourcePhone')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }]}
-              value={sourcePhone}
-              onChangeText={setSourcePhone}
-              placeholder="07XX XXX XXX"
-              placeholderTextColor={theme.muted}
-              keyboardType="phone-pad"
-            />
-          </View>
+          <AnimatedInput
+            label={tr('sourcePhone')}
+            value={sourcePhone}
+            onChangeText={setSourcePhone}
+            placeholder="07XX XXX XXX"
+            keyboardType="phone-pad"
+          />
 
-          {/* Dest phone */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>{tr('destPhone')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }]}
-              value={destPhone}
-              onChangeText={setDestPhone}
-              placeholder="07XX XXX XXX"
-              placeholderTextColor={theme.muted}
-              keyboardType="phone-pad"
-            />
-          </View>
+          {/* Destination phone */}
+          <AnimatedInput
+            label={tr('destPhone')}
+            value={destPhone}
+            onChangeText={setDestPhone}
+            placeholder="07XX XXX XXX"
+            keyboardType="phone-pad"
+          />
 
           {/* Amount */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: theme.textDim }]}>{tr('amount')}</Text>
-            <View style={[styles.amountInput, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text style={[styles.currency, { color: theme.textDim }]}>TZS</Text>
-              <TextInput
-                style={[styles.amountText, { color: theme.text }]}
-                value={amount}
-                onChangeText={handleAmountChange}
-                placeholder="0"
-                placeholderTextColor={theme.muted}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.quickRow}>
-              {[10000, 50000, 100000, 500000].map(n => (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => addQuick(n)}
-                  style={[styles.quickBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.quickBtnText, { color: theme.primary }]}>
-                    +{n >= 1000 ? `${n / 1000}k` : n}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          <AnimatedInput
+            label={tr('amount')}
+            value={amount}
+            onChangeText={handleAmountChange}
+            placeholder="0"
+            keyboardType="numeric"
+            prefix="TZS"
+            height={60}
+            inputStyle={{ fontSize: 28, fontWeight: '700' }}
+          />
+          <View style={styles.quickRow}>
+            {[10000, 50000, 100000, 500000].map(n => (
+              <TouchableOpacity
+                key={n}
+                onPress={() => addQuick(n)}
+                style={[styles.quickBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.quickBtnText, { color: theme.primary }]}>
+                  +{n >= 1000 ? `${n / 1000}k` : n}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* Urgent toggle */}
@@ -209,7 +204,7 @@ export default function NewRequestScreen({ navigation, route }) {
               backgroundColor: urgent ? '#F59E0B14' : theme.surfaceAlt,
               borderColor:     urgent ? '#F59E0B'   : theme.border,
             }]}
-            activeOpacity={0.75}
+            activeOpacity={0.8}
           >
             <View>
               <Text style={[styles.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
@@ -244,17 +239,17 @@ export default function NewRequestScreen({ navigation, route }) {
           ) : null}
 
           {/* Submit */}
-          <TouchableOpacity
+          <PressableScale
             onPress={handleSubmit}
             disabled={loading}
-            style={[styles.submitBtn, { backgroundColor: theme.primary }]}
-            activeOpacity={0.85}
+            style={[styles.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
+            scaleDown={0.97}
           >
             {loading
               ? <ActivityIndicator color="#fff" />
               : <Text style={styles.submitText}>{tr('submitRequest')}</Text>
             }
-          </TouchableOpacity>
+          </PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -266,18 +261,17 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 110 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       18,
     paddingTop:              12,
-    paddingBottom:           18,
+    paddingBottom:           22,
     borderBottomLeftRadius:  26,
     borderBottomRightRadius: 26,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },        // was 20
-  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 }, // was 12
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
 
   pickerWrap:  { marginTop: 18 },
-  label:       { fontSize: 17, fontWeight: '600', marginBottom: 10 },     // was 13
+  label:       { fontSize: 15, fontWeight: '600', marginBottom: 10, letterSpacing: 0.1 },
   networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   netBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
@@ -285,50 +279,35 @@ const styles = StyleSheet.create({
     borderRadius: 13, borderWidth: 1.5,
   },
   netColorDot: { width: 10, height: 10, borderRadius: 5 },
-  netBtnText:  { fontSize: 17 },    // was 14
+  netBtnText:  { fontSize: 17 },
 
-  fieldWrap: { marginTop: 18 },
-  input: {
-    height: 56, borderWidth: 1.5, borderRadius: 14,
-    paddingHorizontal: 18, fontSize: 19,              // was 15
-  },
-  amountInput: {
-    flexDirection: 'row', alignItems: 'center',
-    height: 60, borderWidth: 1.5, borderRadius: 14,
-    paddingHorizontal: 18,
-  },
-  currency:   { fontSize: 19, marginRight: 10 },      // was 15
-  amountText: { flex: 1, fontSize: 28, fontWeight: '700' },  // was 22
-  quickRow:   { flexDirection: 'row', gap: 8, marginTop: 10 },
+  quickRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   quickBtn: {
     flex: 1, height: 40, borderRadius: 10, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  quickBtnText: { fontSize: 15, fontWeight: '700' },   // was 12
+  quickBtnText: { fontSize: 15, fontWeight: '700' },
 
   urgentRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: 16, borderRadius: 14, borderWidth: 1.5, marginTop: 18,
   },
-  urgentLabel: { fontSize: 18, fontWeight: '600' },    // was 14
-  urgentSub:   { fontSize: 15, marginTop: 3 },         // was 12
-  toggle: { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
-  toggleKnob: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff',
-  },
+  urgentLabel: { fontSize: 18, fontWeight: '600' },
+  urgentSub:   { fontSize: 15, marginTop: 3 },
+  toggle:      { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
+  toggleKnob:  { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
 
-  error: { color: '#C8102E', fontSize: 16, textAlign: 'center', marginTop: 14 }, // was 13
+  error: { color: '#C8102E', fontSize: 16, textAlign: 'center', marginTop: 14 },
 
-  summary: {
-    borderRadius: 16, borderWidth: 1, padding: 16, marginTop: 18, gap: 10,
-  },
-  summaryTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },   // was 14
+  summary: { borderRadius: 16, borderWidth: 1, padding: 16, marginTop: 18, gap: 10 },
+  summaryTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   summaryRow:   { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryLabel: { fontSize: 16 },    // was 13
-  summaryValue: { fontSize: 16, fontWeight: '600' },  // was 13
+  summaryLabel: { fontSize: 16 },
+  summaryValue: { fontSize: 16, fontWeight: '600' },
 
   submitBtn: {
-    height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 22,
+    height: 58, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginTop: 22,
   },
-  submitText: { color: '#fff', fontSize: 19, fontWeight: '700' },  // was 15
+  submitText: { color: '#fff', fontSize: 19, fontWeight: '700' },
 });

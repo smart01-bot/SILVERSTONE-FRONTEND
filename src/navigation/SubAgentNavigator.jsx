@@ -6,72 +6,79 @@ import { createDrawerNavigator }      from '@react-navigation/drawer';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme }        from '../context/ThemeContext';
-import DrawerContent       from '../components/DrawerContent';
-import HomeScreen          from '../screens/sub-agent/HomeScreen';
-import NewRequestScreen    from '../screens/sub-agent/NewRequestScreen';
+import { useTheme }         from '../context/ThemeContext';
+import DrawerContent        from '../components/DrawerContent';
+import HomeScreen           from '../screens/sub-agent/HomeScreen';
+import NewRequestScreen     from '../screens/sub-agent/NewRequestScreen';
 import RequestSuccessScreen from '../screens/sub-agent/RequestSuccessScreen';
-import MyRequestsScreen    from '../screens/sub-agent/MyRequestsScreen';
-import ProfileScreen       from '../screens/sub-agent/ProfileScreen';
-import NetworksScreen      from '../screens/sub-agent/NetworksScreen';
+import MyRequestsScreen     from '../screens/sub-agent/MyRequestsScreen';
+import ProfileScreen        from '../screens/sub-agent/ProfileScreen';
+import NetworksScreen       from '../screens/sub-agent/NetworksScreen';
 
 const Tab    = createBottomTabNavigator();
 const Stack  = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// ─── Animated tab icon — scale (native driver) + glow bg (non-native) ────────
-// IMPORTANT: never mix useNativeDriver:true and false inside Animated.parallel.
-// Run them as independent animations instead.
+// ─── Animated tab icon ────────────────────────────────────────────────────────
+// CRASH FIX: native driver (scale) and non-native driver (backgroundColor glow)
+// MUST live in separate useEffect calls and separate Animated.View wrappers.
+// Mixing them in Animated.parallel causes a RN crash on Android.
 function TabIcon({ name, focused, color, badge }) {
   const scale = useRef(new Animated.Value(1)).current;
   const glow  = useRef(new Animated.Value(0)).current;
 
+  // Native driver — scale only
   useEffect(() => {
-    // Scale — native driver ✓
     Animated.spring(scale, {
-      toValue:         focused ? 1.22 : 1,
+      toValue:         focused ? 1.25 : 1,
       useNativeDriver: true,
       tension:         200,
       friction:        7,
     }).start();
   }, [focused]);
 
+  // Non-native driver — backgroundColor only (cannot use native driver)
   useEffect(() => {
-    // Glow bg — non-native driver (backgroundColor can't use native)
     Animated.timing(glow, {
       toValue:         focused ? 1 : 0,
-      duration:        200,
+      duration:        180,
       useNativeDriver: false,
     }).start();
   }, [focused]);
 
   const bgColor = glow.interpolate({
     inputRange:  [0, 1],
-    outputRange: ['rgba(0,0,0,0)', color + '22'],
+    outputRange: ['rgba(0,0,0,0)', color + '25'],
   });
 
+  // Outer Animated.View → glow background (non-native)
+  // Inner Animated.View → scale transform (native)
   return (
-    // Outer view handles the non-native bg animation
     <Animated.View style={[styles.tabIconWrap, { backgroundColor: bgColor }]}>
-      {/* Inner view handles the native scale animation */}
-      <Animated.View style={{ transform: [{ scale }] }}>
+      <Animated.View style={{ transform: [{ scale }], alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons
           name={focused ? name : `${name}-outline`}
           size={26}
           color={color}
+          style={focused && Platform.OS === 'ios' ? {
+            shadowColor:   color,
+            shadowOffset:  { width: 0, height: 3 },
+            shadowOpacity: 0.6,
+            shadowRadius:  6,
+          } : undefined}
         />
+        {badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
       </Animated.View>
-      {badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
-        </View>
-      )}
     </Animated.View>
   );
 }
 
-// ─── Bottom tabs ─────────────────────────────────────────────────────────────
-// HomeTabs is a React component, so useTheme() / tr() is fully available here.
+// ─── Bottom tabs ──────────────────────────────────────────────────────────────
+// HomeTabs must be a proper component so tr() and useTheme() are available.
 function HomeTabs() {
   const { theme, tr } = useTheme();
 
@@ -102,7 +109,7 @@ function HomeTabs() {
         component={HomeScreen}
         options={{
           tabBarLabel: tr('home'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="home"        focused={focused} color={color} />,
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="home"       focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -110,7 +117,7 @@ function HomeTabs() {
         component={NewRequestScreen}
         options={{
           tabBarLabel: tr('request'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="add-circle"  focused={focused} color={color} />,
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="add-circle" focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -118,14 +125,14 @@ function HomeTabs() {
         component={MyRequestsScreen}
         options={{
           tabBarLabel: tr('history'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="time"        focused={focused} color={color} />,
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="time"       focused={focused} color={color} />,
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// ─── Stack — slide_from_right with depth, fade for modal-style screens ────────
+// ─── Stack ────────────────────────────────────────────────────────────────────
 function MainStack() {
   return (
     <Stack.Navigator
@@ -151,17 +158,16 @@ function MainStack() {
   );
 }
 
-// ─── Root — Drawer wraps everything; items translated with tr() ───────────────
+// ─── Root Drawer ──────────────────────────────────────────────────────────────
 export default function SubAgentNavigator() {
   const { theme, tr } = useTheme();
 
-  // Built here so tr() is live — re-renders when lang changes
   const drawerItems = [
-    { label: tr('home'),       icon: 'home-outline',        onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Home'       } }) },
-    { label: tr('newRequest'), icon: 'add-circle-outline',   onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'NewRequest' } }) },
-    { label: tr('history'),    icon: 'time-outline',         onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'MyRequests' } }) },
-    { label: 'Networks',       icon: 'wifi-outline',         onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
-    { label: tr('profile'),    icon: 'person-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Profile'    } }) },
+    { label: tr('home'),       icon: 'home-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Home'       } }) },
+    { label: tr('newRequest'), icon: 'add-circle-outline', onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'NewRequest' } }) },
+    { label: tr('history'),    icon: 'time-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'MyRequests' } }) },
+    { label: 'Networks',       icon: 'wifi-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
+    { label: tr('profile'),    icon: 'person-outline',     onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Profile'    } }) },
   ];
 
   return (

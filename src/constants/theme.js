@@ -1,12 +1,25 @@
 // src/constants/theme.js
 import { Platform } from 'react-native';
 
+// ─── FONT FAMILIES ────────────────────────────────────────────────────────────
+// Manrope → display / headings (geometric, distinctive, premium)
+// Inter   → body / labels / inputs (optimised for screens, legible at any size)
+export const fonts = {
+  display:   'Manrope_800ExtraBold',
+  heading:   'Manrope_700Bold',
+  body:      'Inter_400Regular',
+  bodyMed:   'Inter_500Medium',
+  bodySemi:  'Inter_600SemiBold',
+  bodyBold:  'Inter_700Bold',
+  bodyXBold: 'Inter_800ExtraBold',
+};
+
 // ─── LIGHT ────────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:            '#F7F7FA',          // warm off-white — not blinding white
+  bg:            '#F7F7FA',
   surface:       '#FFFFFF',
-  surfaceAlt:    '#EEEEF5',          // clearly distinct layer
-  surfaceElev:   '#FFFFFF',          // elevated cards (shadow adds depth)
+  surfaceAlt:    '#EEEEF5',
+  surfaceElev:   '#FFFFFF',
   border:        '#DCDCE8',
   borderStrong:  '#B8B8CC',
 
@@ -20,7 +33,6 @@ export const LIGHT = {
   primaryDark:   '#960B22',
   primaryBright: '#E01535',
 
-  // Gradient anchors
   gradPrimA:     '#E01535',
   gradPrimB:     '#960B22',
   gradSurfA:     '#F2F2FA',
@@ -41,7 +53,7 @@ export const LIGHT = {
 
 // ─── DARK ─────────────────────────────────────────────────────────────────────
 export const DARK = {
-  bg:            '#07070E',          // deep blue-black
+  bg:            '#07070E',
   surface:       '#0E0E1C',
   surfaceAlt:    '#16162A',
   surfaceElev:   '#1E1E35',
@@ -53,7 +65,7 @@ export const DARK = {
   textDim:       '#7474A0',
   muted:         '#32324A',
 
-  primary:       '#E01535',          // brighter for dark contrast
+  primary:       '#E01535',
   primaryLight:  '#C8102E28',
   primaryDark:   '#960B22',
   primaryBright: '#FF1A3D',
@@ -76,26 +88,27 @@ export const DARK = {
   shadowMd:      'rgba(0,0,0,0.55)',
 };
 
-// ─── TYPOGRAPHY — ~90% bump across the board ──────────────────────────────────
+// ─── TYPOGRAPHY ───────────────────────────────────────────────────────────────
 export const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export const typography = {
-  display:   { fontSize: 48, fontWeight: '800', letterSpacing: -1.2 },  // was 30
-  h1:        { fontSize: 38, fontWeight: '800', letterSpacing: -0.9 },  // was 24
-  h2:        { fontSize: 32, fontWeight: '700', letterSpacing: -0.6 },  // was 20
-  h3:        { fontSize: 27, fontWeight: '700', letterSpacing: -0.3 },  // was 17
-  h4:        { fontSize: 22, fontWeight: '700' },                        // was 15
-  body:      { fontSize: 20, fontWeight: '400', lineHeight: 30 },       // was 15
-  bodyMed:   { fontSize: 20, fontWeight: '500', lineHeight: 30 },       // was 15
-  caption:   { fontSize: 17, fontWeight: '400', lineHeight: 26 },       // was 13
-  capMed:    { fontSize: 17, fontWeight: '500', lineHeight: 26 },       // was 13
-  label:     { fontSize: 16, fontWeight: '500', letterSpacing: 0.3 },   // was 12
-  labelCaps: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' }, // was 11
-  mono:      { fontSize: 20, fontFamily: mono },                         // was 15
-  monoLg:    { fontSize: 38, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 }, // was 24
-  monoXl:    { fontSize: 52, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },   // was 32
+  display:   { fontSize: 48, fontFamily: fonts.display,   letterSpacing: -1.2 },
+  h1:        { fontSize: 38, fontFamily: fonts.display,   letterSpacing: -0.9 },
+  h2:        { fontSize: 32, fontFamily: fonts.heading,   letterSpacing: -0.6 },
+  h3:        { fontSize: 27, fontFamily: fonts.heading,   letterSpacing: -0.3 },
+  h4:        { fontSize: 22, fontFamily: fonts.heading },
+  body:      { fontSize: 20, fontFamily: fonts.body,      lineHeight: 30 },
+  bodyMed:   { fontSize: 20, fontFamily: fonts.bodyMed,   lineHeight: 30 },
+  caption:   { fontSize: 17, fontFamily: fonts.body,      lineHeight: 26 },
+  capMed:    { fontSize: 17, fontFamily: fonts.bodyMed,   lineHeight: 26 },
+  label:     { fontSize: 16, fontFamily: fonts.bodySemi,  letterSpacing: 0.3 },
+  labelCaps: { fontSize: 14, fontFamily: fonts.bodyBold,  letterSpacing: 0.8, textTransform: 'uppercase' },
+  mono:      { fontSize: 20, fontFamily: mono },
+  monoLg:    { fontSize: 38, fontFamily: mono, letterSpacing: -0.5 },
+  monoXl:    { fontSize: 52, fontFamily: mono, letterSpacing: -1 },
 };
 
+// ─── SPACING (base-8) ─────────────────────────────────────────────────────────
 export const spacing = {
   xs:  4,
   sm:  8,
@@ -105,6 +118,7 @@ export const spacing = {
   xxl: 48,
 };
 
+// ─── RADIUS ───────────────────────────────────────────────────────────────────
 export const radius = {
   sm:   8,
   md:   12,
@@ -113,3 +127,16 @@ export const radius = {
   xxl:  28,
   full: 9999,
 };
+
+// ─── SHADOW HELPER ────────────────────────────────────────────────────────────
+// Usage: ...shadow(theme.shadow, 12)
+export const shadow = (color = 'rgba(0,0,0,0.12)', size = 8) =>
+  Platform.select({
+    ios: {
+      shadowColor:   color,
+      shadowOffset:  { width: 0, height: size * 0.4 },
+      shadowOpacity: 1,
+      shadowRadius:  size,
+    },
+    android: { elevation: Math.round(size * 0.8) },
+  });
