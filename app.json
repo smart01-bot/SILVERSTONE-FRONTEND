@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Silverstone",
-    "slug": "67",
+    "slug": "silverstone",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -40,10 +40,10 @@
       "firebaseMessagingSenderId": "197875724216",
       "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d",
       "eas": {
-        "projectId": "4c702052-c49c-4ca0-9651-ff67f91db61f"
+        "projectId": "7d3b5419-a868-4e12-8b61-06a83f3bfca5"
       }
     },
-    "owner": "silverstone03"
+    "owner": "silverstone04s-organization"
   },
   "owner": "dev.05"
 }
