@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 
 let Clipboard = null;
 try {
@@ -25,9 +26,9 @@ export default function RequestSuccessScreen({ navigation, route }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 450, useNativeDriver: true }),
-      Animated.spring(slideY, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
+      Animated.spring(scale,   { toValue: 1, tension: 60, friction: 8,  useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 450,             useNativeDriver: true }),
+      Animated.spring(slideY,  { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -42,77 +43,69 @@ export default function RequestSuccessScreen({ navigation, route }) {
   const copyId  = async () => { if (requestId) await Clipboard.setStringAsync(shortId); };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.bg}
-      />
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      <Animated.View style={[styles.inner, { opacity }]}>
+      <Animated.View style={[s.inner, { opacity }]}>
 
-        {/* Success icon */}
-        <Animated.View style={[styles.iconWrap, { transform: [{ scale }] }]}>
-          <View style={[styles.iconCircle, { backgroundColor: '#16A34A1A' }]}>
-            <Ionicons name="checkmark-circle" size={88} color="#16A34A" />
+        <Animated.View style={[s.iconWrap, { transform: [{ scale }] }]}>
+          <View style={[s.iconCircle, { backgroundColor: '#16A34A1A' }]}>
+            <Ionicons name="checkmark-circle" size={96} color="#16A34A" />
           </View>
         </Animated.View>
 
-        <Animated.View style={{ transform: [{ translateY: slideY }], alignItems: 'center', gap: 10 }}>
-          <Text style={[styles.title, { color: theme.text }]}>{tr('requestSent')}</Text>
-          <Text style={[styles.sub,   { color: theme.textDim }]}>{tr('requestSentDesc')}</Text>
+        <Animated.View style={{ transform: [{ translateY: slideY }], alignItems: 'center', gap: spacing.sm + 2 }}>
+          <Text style={[s.title, { color: theme.text }]}>{tr('requestSent')}</Text>
+          <Text style={[s.sub,   { color: theme.textDim }]}>{tr('requestSentDesc')}</Text>
         </Animated.View>
 
-        {/* Details card */}
-        <Animated.View style={[styles.card, {
+        <Animated.View style={[s.card, {
           backgroundColor: theme.surfaceAlt,
           borderColor:     theme.border,
           transform:       [{ translateY: slideY }],
         }]}>
-          <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('route')}</Text>
-            <Text style={[styles.cardValue, { color: theme.text }]}>
-              {sourceNetwork} → {destNetwork}
-            </Text>
+          <View style={s.cardRow}>
+            <Text style={[s.cardLabel, { color: theme.textDim }]}>{tr('route')}</Text>
+            <Text style={[s.cardValue, { color: theme.text }]}>{sourceNetwork} → {destNetwork}</Text>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
-            <Text style={[styles.cardValue, { color: theme.primary }]}>{fmt(amount)}</Text>
+          <View style={[s.divider, { backgroundColor: theme.border }]} />
+          <View style={s.cardRow}>
+            <Text style={[s.cardLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
+            <Text style={[s.cardValue, { color: theme.primary }]}>{fmt(amount)}</Text>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <View style={styles.cardRow}>
-            <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('queuePos')}</Text>
-            <Text style={[styles.cardValue, { color: theme.text }]}>#{queuePosition ?? '—'}</Text>
+          <View style={[s.divider, { backgroundColor: theme.border }]} />
+          <View style={s.cardRow}>
+            <Text style={[s.cardLabel, { color: theme.textDim }]}>{tr('queuePos')}</Text>
+            <Text style={[s.cardValue, { color: theme.text }]}>#{queuePosition ?? '—'}</Text>
           </View>
           {requestId && (
             <>
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-              <TouchableOpacity style={styles.cardRow} onPress={copyId} activeOpacity={0.7}>
-                <Text style={[styles.cardLabel, { color: theme.textDim }]}>{tr('requestId')}</Text>
-                <View style={styles.idRow}>
-                  <Text style={[styles.cardValue, { color: theme.text }]}>#{shortId}</Text>
-                  <Ionicons name="copy-outline" size={16} color={theme.textDim} />
+              <View style={[s.divider, { backgroundColor: theme.border }]} />
+              <TouchableOpacity style={s.cardRow} onPress={copyId} activeOpacity={0.7}>
+                <Text style={[s.cardLabel, { color: theme.textDim }]}>{tr('requestId')}</Text>
+                <View style={s.idRow}>
+                  <Text style={[s.cardValue, { color: theme.text }]}>#{shortId}</Text>
+                  <Ionicons name="copy-outline" size={17} color={theme.textDim} />
                 </View>
               </TouchableOpacity>
             </>
           )}
         </Animated.View>
 
-        {/* Buttons */}
-        <View style={styles.btnRow}>
+        <View style={s.btnRow}>
           <TouchableOpacity
             onPress={() => navigation.replace('NewRequest')}
-            style={[styles.btnOutline, { borderColor: theme.border }]}
+            style={[s.btnOutline, { borderColor: theme.border }]}
             activeOpacity={0.75}
           >
-            <Text style={[styles.btnOutlineText, { color: theme.text }]}>{tr('newRequest')}</Text>
+            <Text style={[s.btnOutlineText, { color: theme.text }]}>{tr('newRequest')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.replace('Home')}
-            style={[styles.btnFilled, { backgroundColor: theme.primary }]}
+            style={[s.btnFilled, { backgroundColor: theme.primary }]}
             activeOpacity={0.85}
           >
-            <Text style={styles.btnFilledText}>{tr('backHome')}</Text>
+            <Text style={s.btnFilledText}>{tr('backHome')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -121,39 +114,55 @@ export default function RequestSuccessScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:  { flex: 1 },
   inner: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    padding: 24, gap: 20,
+    flex:           1,
+    alignItems:     'center',
+    justifyContent: 'center',
+    padding:        spacing.lg,
+    gap:            spacing.md + 4,
   },
-  iconWrap:   { marginBottom: 6 },
+  iconWrap:   { marginBottom: spacing.sm - 2 },
   iconCircle: {
-    width: 140, height: 140, borderRadius: 70,
-    alignItems: 'center', justifyContent: 'center',
+    width:          148,
+    height:         148,
+    borderRadius:   74,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
-  title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center' }, // was 24
-  sub:   { fontSize: 18, textAlign: 'center', lineHeight: 28 },                          // was 14
 
-  card: { width: '100%', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  title: { fontSize: 34, fontFamily: fonts.display, letterSpacing: -0.5, textAlign: 'center' },
+  sub:   { fontSize: 18, fontFamily: fonts.body,    textAlign: 'center', lineHeight: 28 },
+
+  card:    { width: '100%', borderRadius: radius.xl - 2, borderWidth: 1, overflow: 'hidden' },
   cardRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', padding: 16,
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+    padding:        spacing.md,
   },
-  cardLabel: { fontSize: 17 },           // was 13
-  cardValue: { fontSize: 18, fontWeight: '700' },  // was 14
+  cardLabel: { fontSize: 17, fontFamily: fonts.body },
+  cardValue: { fontSize: 19, fontFamily: fonts.bodyBold },
   divider:   { height: 1 },
-  idRow:     { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  idRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 1 },
 
-  btnRow: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 6 },
+  btnRow: { flexDirection: 'row', gap: spacing.md - 4, width: '100%', marginTop: spacing.sm - 2 },
   btnOutline: {
-    flex: 1, height: 58, borderRadius: 16, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+    flex:           1,
+    height:         58,
+    borderRadius:   radius.lg,
+    borderWidth:    1.5,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
-  btnOutlineText: { fontSize: 18, fontWeight: '700' },  // was 15
+  btnOutlineText: { fontSize: 18, fontFamily: fonts.bodyBold },
   btnFilled: {
-    flex: 1, height: 58, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
+    flex:           1,
+    height:         58,
+    borderRadius:   radius.lg,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
-  btnFilledText: { color: '#fff', fontSize: 18, fontWeight: '700' },  // was 15
+  btnFilledText: { color: '#fff', fontSize: 18, fontFamily: fonts.bodyBold },
 });

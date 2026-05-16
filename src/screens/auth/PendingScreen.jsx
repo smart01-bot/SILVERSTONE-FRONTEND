@@ -5,8 +5,9 @@ import {
   StatusBar, SafeAreaView, Image, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 
 const STEPS = [
   { label: 'Application Received',  done: true  },
@@ -21,227 +22,127 @@ export default function PendingScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1, duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
 
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.bg}
-      />
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-
-        {/* Logo row */}
-        <View style={styles.logoRow}>
-          <View style={styles.logoTile}>
-            <Image
-              source={require('../../../assets/images/SilverS.png')}
-              style={styles.logoImg}
-              resizeMode="contain"
-            />
+      <Animated.View style={[s.inner, { opacity: fadeAnim }]}>
+        <View style={s.logoRow}>
+          <View style={s.logoTile}>
+            <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
           </View>
-          <Text style={[styles.logoText, { color: theme.text }]}>
-            silverstone
-          </Text>
+          <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
         </View>
 
-        {/* Icon */}
-        <View style={[styles.iconTile, { backgroundColor: theme.primaryLight }]}>
-          <Ionicons name="time-outline" size={48} color={theme.primary} />
+        <View style={[s.iconTile, { backgroundColor: theme.primaryLight }]}>
+          <Ionicons name="time-outline" size={52} color={theme.primary} />
         </View>
 
-        {/* Heading */}
-        <Text style={[styles.heading, { color: theme.text }]}>
-          Application Under Review
-        </Text>
-        <Text style={[styles.name, { color: theme.primary }]}>
-          {firstName}
-        </Text>
-        <Text style={[styles.desc, { color: theme.textDim }]}>
+        <Text style={[s.heading, { color: theme.text }]}>Application Under Review</Text>
+        <Text style={[s.name,    { color: theme.primary }]}>{firstName}</Text>
+        <Text style={[s.desc,    { color: theme.textDim }]}>
           Your application is being reviewed. This typically takes 24–48 hours.
         </Text>
 
-        {/* Step tracker */}
-        <View style={[styles.tracker, {
-          backgroundColor: theme.surfaceAlt,
-          borderColor:     theme.border,
-        }]}>
+        <View style={[s.tracker, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           {STEPS.map((step, i) => (
-            <View key={step.label} style={styles.stepRow}>
-              {/* Icon */}
+            <View key={step.label} style={s.stepRow}>
               <View style={[
-                styles.stepIcon,
+                s.stepIcon,
                 {
-                  backgroundColor: step.done
-                    ? '#16A34A14'
-                    : step.active
-                      ? theme.primaryLight
-                      : theme.surfaceAlt,
-                  borderColor: step.done
-                    ? '#16A34A'
-                    : step.active
-                      ? theme.primary
-                      : theme.border,
+                  backgroundColor: step.done ? '#16A34A14' : step.active ? theme.primaryLight : theme.surfaceAlt,
+                  borderColor:     step.done ? '#16A34A'   : step.active ? theme.primary      : theme.border,
                   borderWidth: 1.5,
                 },
               ]}>
-                {step.done ? (
-                  <Ionicons name="checkmark" size={14} color="#16A34A" />
-                ) : step.active ? (
-                  <Ionicons name="radio-button-on" size={14} color={theme.primary} />
-                ) : (
-                  <Ionicons name="radio-button-off" size={14} color={theme.muted} />
-                )}
+                {step.done   ? <Ionicons name="checkmark"        size={14} color="#16A34A" /> :
+                 step.active ? <Ionicons name="radio-button-on"  size={14} color={theme.primary} /> :
+                               <Ionicons name="radio-button-off" size={14} color={theme.muted} />}
               </View>
-
-              {/* Label */}
               <Text style={[
-                styles.stepLabel,
+                s.stepLabel,
                 {
-                  color: step.done
-                    ? '#16A34A'
-                    : step.active
-                      ? theme.primary
-                      : theme.textDim,
-                  fontWeight: step.active ? '600' : '400',
+                  color:      step.done ? '#16A34A' : step.active ? theme.primary : theme.textDim,
+                  fontFamily: step.active ? fonts.bodySemi : fonts.body,
                 },
               ]}>
                 {step.label}
               </Text>
-
-              {/* Connector */}
               {i < STEPS.length - 1 && (
-                <View style={[
-                  styles.connector,
-                  { backgroundColor: step.done ? '#16A34A' : theme.border },
-                ]} />
+                <View style={[s.connector, { backgroundColor: step.done ? '#16A34A' : theme.border }]} />
               )}
             </View>
           ))}
         </View>
 
-        <Text style={[styles.eta, { color: theme.textDim }]}>
-          Estimated time: 24–48 hours
-        </Text>
+        <Text style={[s.eta, { color: theme.textDim }]}>Estimated time: 24–48 hours</Text>
 
-        {/* Sign out */}
-        <TouchableOpacity
-          onPress={logout}
-          style={styles.signOutWrap}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.signOut, { color: theme.primary }]}>
-            Sign Out
-          </Text>
+        <TouchableOpacity onPress={logout} style={s.signOutWrap} activeOpacity={0.75}>
+          <Text style={[s.signOut, { color: theme.primary }]}>Sign Out</Text>
         </TouchableOpacity>
-
       </Animated.View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:  { flex: 1 },
-  inner: {
-    flex:           1,
-    alignItems:     'center',
-    padding:        24,
-    paddingTop:     16,
-  },
+  inner: { flex: 1, alignItems: 'center', padding: spacing.lg, paddingTop: spacing.md },
+
   logoRow: {
     flexDirection:  'row',
     alignItems:     'center',
     justifyContent: 'center',
-    gap:            10,
-    marginBottom:   32,
+    gap:            spacing.sm + 2,
+    marginBottom:   spacing.xl,
   },
   logoTile: {
-    width:           32,
-    height:          32,
-    borderRadius:    9,
-    backgroundColor: '#C8102E',
-    alignItems:      'center',
-    justifyContent:  'center',
-    padding:         6,
+    width: 36, height: 36, borderRadius: radius.sm + 1,
+    backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center', padding: spacing.sm - 2,
   },
   logoImg:  { width: '100%', height: '100%' },
-  logoText: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
+
   iconTile: {
-    width:          88,
-    height:         88,
-    borderRadius:   22,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginBottom:   20,
+    width: 96, height: 96, borderRadius: radius.xl + 2,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
   },
-  heading: {
-    fontSize:      20,
-    fontWeight:    '800',
-    letterSpacing: -0.4,
-    textAlign:     'center',
-  },
-  name: {
-    fontSize:   17,
-    fontWeight: '700',
-    marginTop:  4,
-  },
-  desc: {
-    fontSize:   14,
-    textAlign:  'center',
-    lineHeight: 22,
-    marginTop:  10,
-    marginBottom: 24,
-  },
+  heading: { fontSize: 24, fontFamily: fonts.heading, letterSpacing: -0.4, textAlign: 'center' },
+  name:    { fontSize: 20, fontFamily: fonts.bodyBold, marginTop: spacing.xs },
+  desc:    { fontSize: 17, fontFamily: fonts.body, textAlign: 'center', lineHeight: 26, marginTop: spacing.sm + 2, marginBottom: spacing.lg },
+
   tracker: {
     width:        '100%',
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth:  1,
-    padding:      16,
-    gap:          0,
+    padding:      spacing.md,
   },
   stepRow: {
     flexDirection: 'row',
     alignItems:    'center',
-    gap:           12,
+    gap:           spacing.md - 4,
     position:      'relative',
-    paddingBottom: 16,
+    paddingBottom: spacing.md,
   },
   stepIcon: {
-    width:          28,
-    height:         28,
-    borderRadius:   14,
-    alignItems:     'center',
-    justifyContent: 'center',
-    flexShrink:     0,
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  stepLabel: {
-    fontSize: 14,
-    flex:     1,
-  },
+  stepLabel: { fontSize: 17, flex: 1 },
   connector: {
     position: 'absolute',
-    left:     13,
-    top:      28,
+    left:     14,
+    top:      30,
     width:    2,
-    height:   16,
+    height:   spacing.md,
   },
-  eta: {
-    fontSize:  13,
-    marginTop: 16,
-  },
-  signOutWrap: {
-    marginTop: 'auto',
-    padding:   16,
-  },
-  signOut: {
-    fontSize:   15,
-    fontWeight: '600',
-  },
+
+  eta:         { fontSize: 16, fontFamily: fonts.body, marginTop: spacing.md },
+  signOutWrap: { marginTop: 'auto', padding: spacing.md },
+  signOut:     { fontSize: 18, fontFamily: fonts.bodySemi },
 });

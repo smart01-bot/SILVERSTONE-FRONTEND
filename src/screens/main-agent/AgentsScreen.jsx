@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 import {
   collection, query, where, onSnapshot,
 } from 'firebase/firestore';
@@ -24,7 +25,7 @@ export default function AgentsScreen() {
       query(
         collection(db, 'agents'),
         where('status', '==', 'approved'),
-        where('role', '==', 'sub-agent')
+        where('role',   '==', 'sub-agent')
       ),
       snap => setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     );
@@ -41,47 +42,38 @@ export default function AgentsScreen() {
     );
   });
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
   const avatarColor = (name) => {
     const colors = ['#C8102E', '#0891B2', '#16A34A', '#7C3AED', '#F59E0B'];
-    const i = (name?.charCodeAt(0) ?? 0) % colors.length;
-    return colors[i];
+    return colors[(name?.charCodeAt(0) ?? 0) % colors.length];
   };
 
   const initials = (name) =>
     name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Agents</Text>
-        <Text style={styles.headerSub}>{agents.length} active</Text>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Agents</Text>
+        <Text style={s.headerSub}>{agents.length} active</Text>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchWrap, { backgroundColor: theme.bg }]}>
-        <View style={[styles.searchBox, {
-          backgroundColor: theme.surfaceAlt,
-          borderColor:     theme.border,
-        }]}>
-          <Ionicons name="search-outline" size={16} color={theme.textDim} />
+      <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
+        <View style={[s.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Ionicons name="search-outline" size={18} color={theme.textDim} />
           <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
+            style={[s.searchInput, { color: theme.text }]}
             value={search}
             onChangeText={setSearch}
             placeholder="Search agents..."
             placeholderTextColor={theme.muted}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={16} color={theme.textDim} />
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color={theme.textDim} />
             </TouchableOpacity>
           )}
         </View>
@@ -89,101 +81,53 @@ export default function AgentsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#C8102E']}
-            tintColor="#C8102E"
-          />
-        }
+        contentContainerStyle={s.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="people-outline" size={56} color={theme.muted} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>
-              No agents yet
-            </Text>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>
-              Approved agents will appear here
-            </Text>
+          <View style={s.empty}>
+            <Ionicons name="people-outline" size={64} color={theme.muted} />
+            <Text style={[s.emptyTitle, { color: theme.text }]}>No agents yet</Text>
+            <Text style={[s.emptyText,  { color: theme.textDim }]}>Approved agents will appear here</Text>
           </View>
         ) : (
           filtered.map(agent => (
-            <View
-              key={agent.id}
-              style={[styles.card, {
-                backgroundColor: theme.surfaceAlt,
-                borderColor:     theme.border,
-              }]}
-            >
-              {/* Top row */}
-              <View style={styles.cardTop}>
-                <View style={[
-                  styles.avatar,
-                  { backgroundColor: avatarColor(agent.name) + '20' },
-                ]}>
-                  <Text style={[
-                    styles.avatarText,
-                    { color: avatarColor(agent.name) },
-                  ]}>
-                    {initials(agent.name)}
-                  </Text>
+            <View key={agent.id} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <View style={s.cardTop}>
+                <View style={[s.avatar, { backgroundColor: avatarColor(agent.name) + '20' }]}>
+                  <Text style={[s.avatarText, { color: avatarColor(agent.name) }]}>{initials(agent.name)}</Text>
                 </View>
-                <View style={styles.agentInfo}>
-                  <Text style={[styles.agentName, { color: theme.text }]}>
-                    {agent.name}
-                  </Text>
-                  <Text style={[styles.agentPhone, { color: theme.textDim }]}>
-                    {agent.phone}
-                  </Text>
-                  <Text style={[styles.agentBiz, { color: theme.textDim }]}>
+                <View style={s.agentInfo}>
+                  <Text style={[s.agentName,  { color: theme.text }]}>{agent.name}</Text>
+                  <Text style={[s.agentPhone, { color: theme.textDim }]}>{agent.phone}</Text>
+                  <Text style={[s.agentBiz,   { color: theme.textDim }]}>
                     {agent.businessName} · {agent.businessLocation}
                   </Text>
                 </View>
-                <View style={[styles.activeBadge, { backgroundColor: '#16A34A20' }]}>
-                  <Text style={styles.activeText}>Active</Text>
+                <View style={[s.activeBadge, { backgroundColor: '#16A34A20' }]}>
+                  <Text style={s.activeText}>Active</Text>
                 </View>
               </View>
 
-              {/* Networks */}
               {agent.networks?.length > 0 && (
-                <View style={styles.networksRow}>
+                <View style={s.networksRow}>
                   {agent.networks.map(net => (
-                    <View
-                      key={net}
-                      style={[styles.netChip, {
-                        backgroundColor: theme.primaryLight,
-                        borderColor:     theme.primary + '30',
-                      }]}
-                    >
-                      <Text style={[styles.netChipText, { color: theme.primary }]}>
-                        {net}
-                      </Text>
+                    <View key={net} style={[s.netChip, { backgroundColor: theme.primaryLight, borderColor: theme.primary + '30' }]}>
+                      <Text style={[s.netChipText, { color: theme.primary }]}>{net}</Text>
                     </View>
                   ))}
                 </View>
               )}
 
-              {/* Stats row */}
-              <View style={[styles.statsRow, { borderTopColor: theme.border }]}>
-                <View style={styles.stat}>
-                  <Text style={[styles.statValue, { color: theme.text }]}>
-                    {agent.requestCount ?? 0}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: theme.textDim }]}>
-                    Requests
-                  </Text>
+              <View style={[s.statsRow, { borderTopColor: theme.border }]}>
+                <View style={s.stat}>
+                  <Text style={[s.statValue, { color: theme.text }]}>{agent.requestCount ?? 0}</Text>
+                  <Text style={[s.statLabel, { color: theme.textDim }]}>Requests</Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-                <View style={styles.stat}>
-                  <Text style={[styles.statValue, { color: theme.text }]}>
-                    {agent.businessLocation ?? '—'}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: theme.textDim }]}>
-                    Location
-                  </Text>
+                <View style={[s.statDivider, { backgroundColor: theme.border }]} />
+                <View style={s.stat}>
+                  <Text style={[s.statValue, { color: theme.text }]}>{agent.businessLocation ?? '—'}</Text>
+                  <Text style={[s.statLabel, { color: theme.textDim }]}>Location</Text>
                 </View>
               </View>
             </View>
@@ -194,97 +138,81 @@ export default function AgentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 100 },
+  scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:       '#C8102E',
-    paddingHorizontal:     18,
-    paddingTop:            10,
-    paddingBottom:         14,
-    borderBottomLeftRadius:  24,
-    borderBottomRightRadius: 24,
+    backgroundColor:         '#C8102E',
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.sm + 2,
+    paddingBottom:           spacing.md - 2,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body,    color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md - 4, paddingBottom: spacing.xs },
   searchBox: {
     flexDirection:     'row',
     alignItems:        'center',
-    gap:               8,
-    height:            44,
-    borderRadius:      12,
+    gap:               spacing.sm,
+    height:            48,
+    borderRadius:      radius.md,
     borderWidth:       1.5,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md - 4,
   },
-  searchInput: { flex: 1, fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 18, fontFamily: fonts.body },
 
-  empty: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap:        12,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700' },
-  emptyText:  { fontSize: 14 },
+  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.lg, gap: spacing.md - 4 },
+  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
+  emptyText:  { fontSize: 17, fontFamily: fonts.body },
 
   card: {
-    borderRadius:  16,
-    borderWidth:   1,
-    marginBottom:  12,
-    overflow:      'hidden',
+    borderRadius: radius.lg,
+    borderWidth:  1,
+    marginBottom: spacing.md - 4,
+    overflow:     'hidden',
   },
   cardTop: {
     flexDirection: 'row',
     alignItems:    'flex-start',
-    gap:           12,
-    padding:       14,
+    gap:           spacing.md - 4,
+    padding:       spacing.md - 2,
   },
   avatar: {
-    width:          44,
-    height:         44,
-    borderRadius:   22,
-    alignItems:     'center',
-    justifyContent: 'center',
-    flexShrink:     0,
+    width: 52, height: 52, borderRadius: 26,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText: { fontSize: 16, fontWeight: '700' },
-  agentInfo:  { flex: 1, gap: 2 },
-  agentName:  { fontSize: 15, fontWeight: '700' },
-  agentPhone: { fontSize: 13 },
-  agentBiz:   { fontSize: 12 },
-  activeBadge:{
-    paddingHorizontal: 8,
-    paddingVertical:   3,
-    borderRadius:      6,
+  avatarText:  { fontSize: 20, fontFamily: fonts.bodyBold },
+  agentInfo:   { flex: 1, gap: 2 },
+  agentName:   { fontSize: 19, fontFamily: fonts.bodyBold },
+  agentPhone:  { fontSize: 17, fontFamily: fonts.body },
+  agentBiz:    { fontSize: 15, fontFamily: fonts.body },
+  activeBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical:   spacing.xs - 1,
+    borderRadius:      radius.sm - 2,
   },
-  activeText: {
-    color:      '#16A34A',
-    fontSize:   11,
-    fontWeight: '700',
-  },
+  activeText:  { color: '#16A34A', fontSize: 15, fontFamily: fonts.bodyBold },
   networksRow: {
     flexDirection:     'row',
-    gap:               6,
-    paddingHorizontal: 14,
-    paddingBottom:     12,
+    gap:               spacing.sm - 2,
+    paddingHorizontal: spacing.md - 2,
+    paddingBottom:     spacing.md - 4,
     flexWrap:          'wrap',
   },
   netChip: {
-    paddingHorizontal: 8,
-    paddingVertical:   4,
-    borderRadius:      6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical:   spacing.xs,
+    borderRadius:      radius.sm - 2,
     borderWidth:       1,
   },
-  netChipText: { fontSize: 11, fontWeight: '600' },
-  statsRow: {
-    flexDirection:  'row',
-    borderTopWidth: 1,
-    padding:        12,
-  },
-  stat:      { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 14, fontWeight: '700' },
-  statLabel: { fontSize: 11, marginTop: 2 },
-  statDivider:{ width: 1, marginVertical: 4 },
+  netChipText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  statsRow:    { flexDirection: 'row', borderTopWidth: 1, padding: spacing.md - 4 },
+  stat:        { flex: 1, alignItems: 'center' },
+  statValue:   { fontSize: 18, fontFamily: fonts.bodyBold },
+  statLabel:   { fontSize: 14, fontFamily: fonts.body, marginTop: 2 },
+  statDivider: { width: 1, marginVertical: spacing.xs },
 });
