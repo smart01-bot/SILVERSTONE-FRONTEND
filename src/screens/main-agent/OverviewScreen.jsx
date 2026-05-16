@@ -1,32 +1,70 @@
 // src/screens/main-agent/OverviewScreen.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl,
+  RefreshControl, Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+import { SkeletonBox, SkeletonCard } from '../../components/SkeletonLoader';
+import EmptyState    from '../../components/EmptyState';
+import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, orderBy,
-  onSnapshot, Timestamp,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+
+// ─── Animated stat card ───────────────────────────────────────────────────────
+function StatCard({ stat, index, theme }) {
+  const mountAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(mountAnim, {
+      toValue:         1,
+      tension:         80,
+      friction:        10,
+      delay:           index * 60,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={{
+      opacity:   mountAnim,
+      transform: [{ scale: mountAnim.interpolate({ inputRange: [0,1], outputRange: [0.92,1] }) }],
+      width: '47%',
+    }}>
+      <View style={[s.statCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        <View style={[s.statIcon, { backgroundColor: theme.primaryLight }]}>
+          <Ionicons name={stat.icon} size={20} color={theme.primary} />
+        </View>
+        <Text style={[s.statValue, { color: theme.text }]}>
+          {stat.isText ? stat.value : stat.value.toLocaleString()}
+        </Text>
+        <Text style={[s.statLabel, { color: theme.textDim }]}>{stat.label}</Text>
+        <Text style={[s.statSub,   { color: stat.subColor }]}>{stat.sub}</Text>
+      </View>
+    </Animated.View>
+  );
+}
 
 export default function OverviewScreen({ navigation }) {
   const { profile } = useAuth();
   const { theme, isDark, tr } = useTheme();
 
-  const [refreshing,      setRefreshing]      = useState(false);
-  const [totalRequests,   setTotalRequests]   = useState(0);
-  const [pendingRequests, setPendingRequests] = useState(0);
-  const [urgentRequests,  setUrgentRequests]  = useState(0);
-  const [completedToday,  setCompletedToday]  = useState(0);
-  const [activeAgents,    setActiveAgents]    = useState(0);
-  const [totalVolume,     setTotalVolume]     = useState(0);
-  const [recentRequests,  setRecentRequests]  = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [refreshing,      setRefreshing]       = useState(false);
+  const [totalRequests,   setTotalRequests]    = useState(0);
+  const [pendingRequests, setPendingRequests]  = useState(0);
+  const [completedToday,  setCompletedToday]   = useState(0);
+  const [activeAgents,    setActiveAgents]     = useState(0);
+  const [totalVolume,     setTotalVolume]      = useState(0);
+  const [recentRequests,  setRecentRequests]   = useState([]);
 
   const initials = profile?.name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'MA';
@@ -37,8 +75,8 @@ export default function OverviewScreen({ navigation }) {
     return `TSh ${n}`;
   };
 
-  const reqId    = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
-  const timeAgo  = (ts) => {
+  const reqId   = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
+  const timeAgo = (ts) => {
     if (!ts?.toDate) return '';
     const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
     if (secs < 60)     return tr('justNow');
@@ -67,17 +105,16 @@ export default function OverviewScreen({ navigation }) {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setTotalRequests(docs.length);
         setRecentRequests(docs.slice(0, 5));
-        let pending = 0, urgent = 0, compToday = 0, volume = 0;
+        let pending = 0, compToday = 0, volume = 0;
         docs.forEach(r => {
           if (r.status === 'pending') pending++;
-          if (r.status === 'pending' && r.urgent) urgent++;
           if (r.status === 'completed' && r.processedAt?.toDate?.() >= todayStart) compToday++;
           if (r.status === 'completed') volume += Number(r.amount) || 0;
         });
         setPendingRequests(pending);
-        setUrgentRequests(urgent);
         setCompletedToday(compToday);
         setTotalVolume(volume);
+        setLoading(false);
       }
     );
 
@@ -85,7 +122,7 @@ export default function OverviewScreen({ navigation }) {
       query(
         collection(db, 'agents'),
         where('status', '==', 'approved'),
-        where('role', '==', 'sub-agent')
+        where('role',   '==', 'sub-agent')
       ),
       snap => setActiveAgents(snap.size)
     );
@@ -176,34 +213,47 @@ export default function OverviewScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
-        {/* Hero card */}
-        <View style={s.heroCard}>
+        {/* ── Hero gradient card ── */}
+        <LinearGradient
+          colors={[theme.gradPrimA, theme.gradPrimB]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.heroCard}
+        >
           <View style={s.decorCircle} />
+          <View style={s.decorCircle2} />
           <Text style={s.heroLabel}>{tr('totalVolume').toUpperCase()} · 30D</Text>
-          <Text style={s.heroAmount}>{fmt(totalVolume)}</Text>
+          {loading ? (
+            <SkeletonBox width={200} height={48} borderRadius={10} style={{ marginTop: 6, opacity: 0.35 }} />
+          ) : (
+            <Text style={s.heroAmount}>{fmt(totalVolume)}</Text>
+          )}
           <View style={s.heroSubRow}>
             <Ionicons name="trending-up-outline" size={14} color="rgba(255,255,255,0.8)" />
             <Text style={s.heroSub}>+{fmt(totalVolume * 0.124)} vs last month</Text>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Stats 2×2 */}
+        {/* ── Stat cards 2×2 ── */}
         <View style={s.statsGrid}>
-          {STATS.map(stat => (
-            <View key={stat.label} style={[s.statCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <View style={[s.statIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name={stat.icon} size={20} color={theme.primary} />
-              </View>
-              <Text style={[s.statValue, { color: theme.text }]}>
-                {stat.isText ? stat.value : stat.value.toLocaleString()}
-              </Text>
-              <Text style={[s.statLabel, { color: theme.textDim }]}>{stat.label}</Text>
-              <Text style={[s.statSub,   { color: stat.subColor }]}>{stat.sub}</Text>
-            </View>
-          ))}
+          {loading
+            ? [0,1,2,3].map(i => (
+                <View key={i} style={{ width: '47%' }}>
+                  <View style={[s.statCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                    <SkeletonBox width={40} height={40} borderRadius={radius.md} />
+                    <SkeletonBox width={60} height={28} borderRadius={6} style={{ marginTop: spacing.sm }} />
+                    <SkeletonBox width={90} height={16} borderRadius={5} style={{ marginTop: 4 }} />
+                    <SkeletonBox width={70} height={14} borderRadius={5} style={{ marginTop: 2 }} />
+                  </View>
+                </View>
+              ))
+            : STATS.map((stat, i) => (
+                <StatCard key={stat.label} stat={stat} index={i} theme={theme} />
+              ))
+          }
         </View>
 
-        {/* Monthly activity */}
+        {/* ── Monthly activity ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>Monthly Activity</Text>
@@ -233,7 +283,7 @@ export default function OverviewScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Recent requests */}
+        {/* ── Recent requests ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
@@ -242,16 +292,26 @@ export default function OverviewScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {recentRequests.length === 0 ? (
-            <View style={[s.emptyCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Ionicons name="checkmark-circle-outline" size={36} color={theme.muted} />
-              <Text style={[s.emptyText, { color: theme.textDim }]}>{tr('queueEmpty')}</Text>
-            </View>
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : recentRequests.length === 0 ? (
+            <EmptyState
+              icon="checkmark-circle-outline"
+              title="Queue is clear"
+              subtitle="No pending requests right now"
+            />
           ) : (
             <View style={[s.requestsCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
               {recentRequests.map((req, i) => (
                 <View key={req.id}>
-                  <View style={s.reqRow}>
+                  <PressableScale
+                    onPress={() => navigation.navigate('Queue')}
+                    style={s.reqRow}
+                  >
                     <View style={[s.reqDot, { backgroundColor: statusColor(req.status) }]} />
                     <View style={s.reqInfo}>
                       <Text style={[s.reqAgent,  { color: theme.text }]}>{req.agentName ?? 'Agent'}</Text>
@@ -271,7 +331,7 @@ export default function OverviewScreen({ navigation }) {
                         </Text>
                       </View>
                     </View>
-                  </View>
+                  </PressableScale>
                   {i < recentRequests.length - 1 && (
                     <View style={[s.divider, { backgroundColor: theme.border }]} />
                   )}
@@ -301,7 +361,7 @@ const s = StyleSheet.create({
   menuLine:  { width: 24, height: 2, borderRadius: 2 },
   brandWrap: { flexDirection: 'row', alignItems: 'center' },
   brandName: { fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.4 },
-  brandTag:  { fontSize: 17, fontFamily: fonts.body,    marginLeft: 2 },
+  brandTag:  { fontSize: 17, fontFamily: fonts.body, marginLeft: 2 },
   topRight:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   livePill: {
     flexDirection:     'row',
@@ -329,7 +389,6 @@ const s = StyleSheet.create({
   avatarBadgeText: { color: '#fff', fontSize: 13, fontFamily: fonts.bodyXBold },
 
   heroCard: {
-    backgroundColor:  '#C8102E',
     marginHorizontal: spacing.md,
     marginTop:        spacing.md,
     borderRadius:     radius.xl,
@@ -340,8 +399,12 @@ const s = StyleSheet.create({
     position: 'absolute', width: 160, height: 160, borderRadius: 80,
     backgroundColor: 'rgba(255,255,255,0.08)', top: -40, right: -40,
   },
+  decorCircle2: {
+    position: 'absolute', width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: -20,
+  },
   heroLabel:  { fontSize: 15, fontFamily: fonts.bodySemi, letterSpacing: 1.2, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' },
-  heroAmount: { fontSize: 44, fontFamily: fonts.display,  letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm - 2 },
+  heroAmount: { fontSize: 44, fontFamily: fonts.display, letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm - 2 },
   heroSubRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
   heroSub:    { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)' },
 
@@ -353,16 +416,12 @@ const s = StyleSheet.create({
     marginTop:         spacing.md,
   },
   statCard: {
-    width:        '47%',
-    borderRadius: radius.lg,
-    borderWidth:  1,
-    padding:      spacing.md - 2,
-    gap:          spacing.xs,
+    borderRadius: radius.lg, borderWidth: 1,
+    padding: spacing.md - 2, gap: spacing.xs,
   },
   statIcon: {
     width: 40, height: 40, borderRadius: radius.md,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.sm - 2,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm - 2,
   },
   statValue: { fontSize: 30, fontFamily: fonts.display },
   statLabel: { fontSize: 17, fontFamily: fonts.bodySemi },
@@ -395,10 +454,4 @@ const s = StyleSheet.create({
   statusPill:   { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm - 2 },
   statusText:   { fontSize: 14, fontFamily: fonts.bodyBold },
   divider:      { height: 1, marginHorizontal: spacing.md - 2 },
-
-  emptyCard: {
-    borderRadius: radius.lg, borderWidth: 1, padding: spacing.xl,
-    alignItems: 'center', gap: spacing.sm,
-  },
-  emptyText: { fontSize: 17, fontFamily: fonts.body },
 });

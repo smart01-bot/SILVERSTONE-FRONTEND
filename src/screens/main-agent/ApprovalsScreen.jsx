@@ -5,14 +5,41 @@ import {
   StyleSheet, StatusBar, SafeAreaView,
   RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+import { SkeletonBox } from '../../components/SkeletonLoader';
+import EmptyState     from '../../components/EmptyState';
+import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, onSnapshot,
   doc, updateDoc, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+
+function SkeletonAgentCard({ theme }) {
+  return (
+    <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+      <View style={[s.cardTop, { padding: spacing.md - 2 }]}>
+        <SkeletonBox width={52} height={52} borderRadius={26} />
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <SkeletonBox width={140} height={20} borderRadius={6} />
+          <SkeletonBox width={100} height={16} borderRadius={5} />
+        </View>
+        <SkeletonBox width={50} height={14} borderRadius={4} />
+      </View>
+      <View style={[s.details, { borderTopColor: theme.border, gap: spacing.sm - 2 }]}>
+        {[0,1,2].map(i => (
+          <View key={i} style={s.detailRow}>
+            <SkeletonBox width={60}  height={14} borderRadius={4} />
+            <SkeletonBox width={100} height={14} borderRadius={4} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 export default function ApprovalsScreen() {
   const { theme, isDark } = useTheme();
@@ -20,14 +47,18 @@ export default function ApprovalsScreen() {
   const [agents,     setAgents]     = useState([]);
   const [filter,     setFilter]     = useState('Pending');
   const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [actionLoad, setActionLoad] = useState(null);
 
   const FILTERS = ['Pending', 'Approved', 'Rejected'];
 
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, 'agents'), where('role', '==', 'sub-agent')),
-      snap => setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => {
+        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }
     );
     return unsub;
   }, []);
@@ -36,13 +67,13 @@ export default function ApprovalsScreen() {
   const pendingCount = agents.filter(a => a.status === 'pending').length;
 
   const handleApprove = async (agent) => {
-    setLoading(agent.id + '_approve');
+    setActionLoad(agent.id + '_approve');
     try {
       await updateDoc(doc(db, 'agents', agent.id), { status: 'approved', approvedAt: Timestamp.now() });
     } catch (e) {
       Alert.alert('Error', 'Failed to approve agent.');
     } finally {
-      setLoading(null);
+      setActionLoad(null);
     }
   };
 
@@ -56,7 +87,7 @@ export default function ApprovalsScreen() {
   };
 
   const doReject = async (agent, reason) => {
-    setLoading(agent.id + '_reject');
+    setActionLoad(agent.id + '_reject');
     try {
       await updateDoc(doc(db, 'agents', agent.id), {
         status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
@@ -64,7 +95,7 @@ export default function ApprovalsScreen() {
     } catch (e) {
       Alert.alert('Error', 'Failed to reject agent.');
     } finally {
-      setLoading(null);
+      setActionLoad(null);
     }
   };
 
@@ -86,15 +117,34 @@ export default function ApprovalsScreen() {
 
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
+  const emptyMessages = {
+    Pending:  { title: 'No pending applications', subtitle: 'New agent applications will appear here' },
+    Approved: { title: 'No approved agents yet',  subtitle: 'Approved applications will show here' },
+    Rejected: { title: 'No rejected applications',subtitle: 'Rejected applications will show here' },
+  };
+
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <View style={s.header}>
+      {/* ── Gradient header ── */}
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <View style={s.headerDecor} />
         <Text style={s.headerTitle}>Agent Approvals</Text>
         <Text style={s.headerSub}>Review applications & ID docs</Text>
-      </View>
+        {pendingCount > 0 && (
+          <View style={s.headerBadge}>
+            <Text style={s.headerBadgeText}>{pendingCount} pending</Text>
+          </View>
+        )}
+      </LinearGradient>
 
+      {/* ── Filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={s.filterRow}>
@@ -122,14 +172,21 @@ export default function ApprovalsScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
-        {filtered.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="checkmark-circle-outline" size={64} color={theme.muted} />
-            <Text style={[s.emptyTitle, { color: theme.text }]}>No {filter.toLowerCase()} applications</Text>
-          </View>
+        {loading ? (
+          <>
+            <SkeletonAgentCard theme={theme} />
+            <SkeletonAgentCard theme={theme} />
+            <SkeletonAgentCard theme={theme} />
+          </>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="person-outline"
+            title={emptyMessages[filter].title}
+            subtitle={emptyMessages[filter].subtitle}
+          />
         ) : (
           filtered.map(agent => (
-            <View key={agent.id} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+            <PressableScale key={agent.id} scaleDown={0.98} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
               <View style={s.cardTop}>
                 <View style={[s.avatar, { backgroundColor: avatarColor(agent.name) + '20' }]}>
                   <Text style={[s.avatarText, { color: avatarColor(agent.name) }]}>{initials(agent.name)}</Text>
@@ -171,7 +228,7 @@ export default function ApprovalsScreen() {
                     style={[s.btnFilled, { backgroundColor: '#C8102E' }]}
                     activeOpacity={0.85}
                   >
-                    {loading === agent.id + '_approve'
+                    {actionLoad === agent.id + '_approve'
                       ? <ActivityIndicator size="small" color="#fff" />
                       : <Text style={s.btnFilledText}>Approve</Text>
                     }
@@ -181,14 +238,14 @@ export default function ApprovalsScreen() {
                     style={[s.btnOutline, { borderColor: '#C8102E' }]}
                     activeOpacity={0.75}
                   >
-                    {loading === agent.id + '_reject'
+                    {actionLoad === agent.id + '_reject'
                       ? <ActivityIndicator size="small" color="#C8102E" />
                       : <Text style={[s.btnOutlineText, { color: '#C8102E' }]}>Reject</Text>
                     }
                   </TouchableOpacity>
                 </View>
               )}
-            </View>
+            </PressableScale>
           ))
         )}
       </ScrollView>
@@ -201,48 +258,48 @@ const s = StyleSheet.create({
   scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       spacing.md + 2,
-    paddingTop:              spacing.sm + 2,
-    paddingBottom:           spacing.md - 2,
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
     borderBottomLeftRadius:  radius.xxl,
     borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
   headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerBadge: {
+    marginTop:         spacing.sm,
+    alignSelf:         'flex-start',
+    backgroundColor:   'rgba(255,255,255,0.2)',
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical:   spacing.xs,
+    borderRadius:      radius.full,
+  },
+  headerBadgeText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodySemi },
 
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2,
-    paddingVertical:   spacing.sm + 1,
-    borderRadius:      radius.full,
-    borderWidth:       1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    borderRadius: radius.full, borderWidth: 1,
   },
   pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
 
-  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.lg, gap: spacing.md - 4 },
-  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
-
   card: {
-    borderRadius: radius.lg,
-    borderWidth:  1,
-    marginBottom: spacing.md - 4,
-    overflow:     'hidden',
+    borderRadius: radius.lg, borderWidth: 1,
+    marginBottom: spacing.md - 4, overflow: 'hidden',
   },
   cardTop: {
-    flexDirection: 'row',
-    alignItems:    'flex-start',
-    gap:           spacing.md - 4,
-    padding:       spacing.md - 2,
+    flexDirection: 'row', alignItems: 'flex-start',
+    gap: spacing.md - 4, padding: spacing.md - 2,
   },
   avatar: {
-    width:          52,
-    height:         52,
-    borderRadius:   26,
-    alignItems:     'center',
-    justifyContent: 'center',
-    flexShrink:     0,
+    width: 52, height: 52, borderRadius: 26,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   avatarText:      { fontSize: 20, fontFamily: fonts.bodyBold },
   agentInfo:       { flex: 1, gap: 2 },
@@ -252,24 +309,17 @@ const s = StyleSheet.create({
   daysAgo:         { fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.4 },
 
   details: {
-    borderTopWidth:    1,
-    paddingHorizontal: spacing.md - 2,
-    paddingVertical:   spacing.sm + 2,
-    gap:               spacing.sm - 2,
+    borderTopWidth: 1, paddingHorizontal: spacing.md - 2,
+    paddingVertical: spacing.sm + 2, gap: spacing.sm - 2,
   },
   detailRow:   { flexDirection: 'row', justifyContent: 'space-between' },
   detailLabel: { fontSize: 15, fontFamily: fonts.body },
   detailValue: { fontSize: 15, fontFamily: fonts.bodySemi },
 
-  actions: {
-    flexDirection: 'row',
-    gap:           spacing.sm,
-    padding:       spacing.md - 2,
-    paddingTop:    0,
-  },
+  actions: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md - 2, paddingTop: 0 },
   btnOutline: {
-    flex: 1, height: 46, borderRadius: radius.md,
-    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
+    flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
   },
   btnOutlineText: { fontSize: 16, fontFamily: fonts.bodySemi },
   btnFilled: {
