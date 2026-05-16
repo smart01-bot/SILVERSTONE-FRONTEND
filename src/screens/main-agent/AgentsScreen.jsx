@@ -1,17 +1,46 @@
 // src/screens/main-agent/AgentsScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, TextInput,
+  RefreshControl, TextInput, TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+import { SkeletonBox } from '../../components/SkeletonLoader';
+import EmptyState     from '../../components/EmptyState';
+import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+
+function SkeletonAgentCard({ theme }) {
+  return (
+    <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, overflow: 'hidden' }]}>
+      <View style={[s.cardTop, { padding: spacing.md - 2 }]}>
+        <SkeletonBox width={52} height={52} borderRadius={26} />
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <SkeletonBox width={150} height={20} borderRadius={6} />
+          <SkeletonBox width={100} height={16} borderRadius={5} />
+          <SkeletonBox width={130} height={14} borderRadius={5} />
+        </View>
+        <SkeletonBox width={52} height={26} borderRadius={6} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing.sm - 2, paddingHorizontal: spacing.md - 2, paddingBottom: spacing.md - 4 }}>
+        <SkeletonBox width={60} height={28} borderRadius={6} />
+        <SkeletonBox width={50} height={28} borderRadius={6} />
+        <SkeletonBox width={70} height={28} borderRadius={6} />
+      </View>
+      <View style={{ flexDirection: 'row', padding: spacing.md - 4, gap: spacing.md }}>
+        <SkeletonBox width="40%" height={40} borderRadius={radius.sm} />
+        <SkeletonBox width="40%" height={40} borderRadius={radius.sm} />
+      </View>
+    </View>
+  );
+}
 
 export default function AgentsScreen() {
   const { theme, isDark } = useTheme();
@@ -19,6 +48,7 @@ export default function AgentsScreen() {
   const [agents,     setAgents]     = useState([]);
   const [search,     setSearch]     = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -27,7 +57,10 @@ export default function AgentsScreen() {
         where('status', '==', 'approved'),
         where('role',   '==', 'sub-agent')
       ),
-      snap => setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => {
+        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }
     );
     return unsub;
   }, []);
@@ -54,13 +87,21 @@ export default function AgentsScreen() {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <View style={s.header}>
+      {/* ── Gradient header ── */}
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <View style={s.headerDecor} />
         <Text style={s.headerTitle}>Agents</Text>
-        <Text style={s.headerSub}>{agents.length} active</Text>
-      </View>
+        <Text style={s.headerSub}>{loading ? '—' : agents.length} active</Text>
+      </LinearGradient>
 
+      {/* ── Search ── */}
       <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
         <View style={[s.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <Ionicons name="search-outline" size={18} color={theme.textDim} />
@@ -84,15 +125,25 @@ export default function AgentsScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
-        {filtered.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="people-outline" size={64} color={theme.muted} />
-            <Text style={[s.emptyTitle, { color: theme.text }]}>No agents yet</Text>
-            <Text style={[s.emptyText,  { color: theme.textDim }]}>Approved agents will appear here</Text>
-          </View>
+        {loading ? (
+          <>
+            <SkeletonAgentCard theme={theme} />
+            <SkeletonAgentCard theme={theme} />
+            <SkeletonAgentCard theme={theme} />
+          </>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="people-outline"
+            title={search ? 'No results found' : 'No agents yet'}
+            subtitle={search ? `No agents match "${search}"` : 'Approved agents will appear here'}
+          />
         ) : (
           filtered.map(agent => (
-            <View key={agent.id} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+            <PressableScale
+              key={agent.id}
+              scaleDown={0.98}
+              style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
+            >
               <View style={s.cardTop}>
                 <View style={[s.avatar, { backgroundColor: avatarColor(agent.name) + '20' }]}>
                   <Text style={[s.avatarText, { color: avatarColor(agent.name) }]}>{initials(agent.name)}</Text>
@@ -130,7 +181,7 @@ export default function AgentsScreen() {
                   <Text style={[s.statLabel, { color: theme.textDim }]}>Location</Text>
                 </View>
               </View>
-            </View>
+            </PressableScale>
           ))
         )}
       </ScrollView>
@@ -143,43 +194,34 @@ const s = StyleSheet.create({
   scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       spacing.md + 2,
-    paddingTop:              spacing.sm + 2,
-    paddingBottom:           spacing.md - 2,
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
     borderBottomLeftRadius:  radius.xxl,
     borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body,    color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
   searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md - 4, paddingBottom: spacing.xs },
   searchBox: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               spacing.sm,
-    height:            48,
-    borderRadius:      radius.md,
-    borderWidth:       1.5,
-    paddingHorizontal: spacing.md - 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    height: 48, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
   searchInput: { flex: 1, fontSize: 18, fontFamily: fonts.body },
 
-  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.lg, gap: spacing.md - 4 },
-  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
-  emptyText:  { fontSize: 17, fontFamily: fonts.body },
-
   card: {
-    borderRadius: radius.lg,
-    borderWidth:  1,
-    marginBottom: spacing.md - 4,
-    overflow:     'hidden',
+    borderRadius: radius.lg, borderWidth: 1,
+    marginBottom: spacing.md - 4, overflow: 'hidden',
   },
   cardTop: {
-    flexDirection: 'row',
-    alignItems:    'flex-start',
-    gap:           spacing.md - 4,
-    padding:       spacing.md - 2,
+    flexDirection: 'row', alignItems: 'flex-start',
+    gap: spacing.md - 4, padding: spacing.md - 2,
   },
   avatar: {
     width: 52, height: 52, borderRadius: 26,
@@ -190,26 +232,16 @@ const s = StyleSheet.create({
   agentName:   { fontSize: 19, fontFamily: fonts.bodyBold },
   agentPhone:  { fontSize: 17, fontFamily: fonts.body },
   agentBiz:    { fontSize: 15, fontFamily: fonts.body },
-  activeBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical:   spacing.xs - 1,
-    borderRadius:      radius.sm - 2,
-  },
+  activeBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
   activeText:  { color: '#16A34A', fontSize: 15, fontFamily: fonts.bodyBold },
+
   networksRow: {
-    flexDirection:     'row',
-    gap:               spacing.sm - 2,
-    paddingHorizontal: spacing.md - 2,
-    paddingBottom:     spacing.md - 4,
-    flexWrap:          'wrap',
+    flexDirection: 'row', gap: spacing.sm - 2,
+    paddingHorizontal: spacing.md - 2, paddingBottom: spacing.md - 4, flexWrap: 'wrap',
   },
-  netChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical:   spacing.xs,
-    borderRadius:      radius.sm - 2,
-    borderWidth:       1,
-  },
+  netChip:     { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm - 2, borderWidth: 1 },
   netChipText: { fontSize: 14, fontFamily: fonts.bodySemi },
+
   statsRow:    { flexDirection: 'row', borderTopWidth: 1, padding: spacing.md - 4 },
   stat:        { flex: 1, alignItems: 'center' },
   statValue:   { fontSize: 18, fontFamily: fonts.bodyBold },

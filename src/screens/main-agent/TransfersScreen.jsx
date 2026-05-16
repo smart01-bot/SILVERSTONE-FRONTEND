@@ -5,13 +5,36 @@ import {
   StyleSheet, StatusBar, SafeAreaView,
   RefreshControl, TextInput,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+import { SkeletonBox } from '../../components/SkeletonLoader';
+import EmptyState     from '../../components/EmptyState';
+import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, orderBy, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+
+function SkeletonTransferRow({ theme, last }) {
+  return (
+    <View>
+      <View style={s.row}>
+        <View style={s.rowLeft}>
+          <SkeletonBox width={70}  height={14} borderRadius={4} />
+          <SkeletonBox width={130} height={18} borderRadius={6} style={{ marginTop: 3 }} />
+          <SkeletonBox width={100} height={14} borderRadius={5} style={{ marginTop: 3 }} />
+        </View>
+        <View style={[s.rowRight, { alignItems: 'flex-end', gap: spacing.xs }]}>
+          <SkeletonBox width={80} height={18} borderRadius={6} />
+          <SkeletonBox width={55} height={14} borderRadius={4} />
+        </View>
+      </View>
+      {!last && <View style={[s.divider, { backgroundColor: theme.border }]} />}
+    </View>
+  );
+}
 
 export default function TransfersScreen() {
   const { theme, isDark } = useTheme();
@@ -20,6 +43,7 @@ export default function TransfersScreen() {
   const [filter,     setFilter]     = useState('All');
   const [search,     setSearch]     = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading,    setLoading]    = useState(true);
 
   const FILTERS = ['All', 'Today', 'This Week', 'This Month'];
 
@@ -30,7 +54,10 @@ export default function TransfersScreen() {
         where('status', '==', 'completed'),
         orderBy('processedAt', 'desc')
       ),
-      snap => setTransfers(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => {
+        setTransfers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }
     );
     return unsub;
   }, []);
@@ -50,16 +77,16 @@ export default function TransfersScreen() {
 
   const filtered = filterByDate(transfers).filter(t => {
     if (!search) return true;
-    const s = search.toLowerCase();
+    const sv = search.toLowerCase();
     return (
-      t.agentName?.toLowerCase().includes(s) ||
-      String(t.amount).includes(s) ||
-      t.sourceNetwork?.toLowerCase().includes(s) ||
-      t.destNetwork?.toLowerCase().includes(s)
+      t.agentName?.toLowerCase().includes(sv) ||
+      String(t.amount).includes(sv) ||
+      t.sourceNetwork?.toLowerCase().includes(sv) ||
+      t.destNetwork?.toLowerCase().includes(sv)
     );
   });
 
-  const totalVolume = filtered.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const totalVolume = filtered.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
   const fmt = (n) => {
     if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
@@ -80,13 +107,21 @@ export default function TransfersScreen() {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <View style={s.header}>
+      {/* ── Gradient header ── */}
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <View style={s.headerDecor} />
         <Text style={s.headerTitle}>Transfers</Text>
-        <Text style={s.headerSub}>{filtered.length} completed</Text>
-      </View>
+        <Text style={s.headerSub}>{loading ? '—' : filtered.length} completed</Text>
+      </LinearGradient>
 
+      {/* ── Search ── */}
       <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
         <View style={[s.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <Ionicons name="search-outline" size={18} color={theme.textDim} />
@@ -105,6 +140,7 @@ export default function TransfersScreen() {
         </View>
       </View>
 
+      {/* ── Date filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={s.filterRow}>
@@ -130,23 +166,37 @@ export default function TransfersScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
-        <View style={[s.volumeCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        {/* ── Volume summary card ── */}
+        <LinearGradient
+          colors={isDark ? [theme.surfaceAlt, theme.surface] : [theme.gradSurfA, theme.gradSurfB]}
+          style={[s.volumeCard, { borderColor: theme.border }]}
+        >
           <Text style={[s.volumeLabel,  { color: theme.textDim }]}>TOTAL VOLUME</Text>
-          <Text style={[s.volumeAmount, { color: theme.text }]}>{fmt(totalVolume)}</Text>
-          <Text style={[s.volumeSub,    { color: theme.textDim }]}>{filtered.length} transactions</Text>
-        </View>
+          {loading
+            ? <SkeletonBox width={160} height={36} borderRadius={8} style={{ marginTop: spacing.xs }} />
+            : <Text style={[s.volumeAmount, { color: theme.text }]}>{fmt(totalVolume)}</Text>
+          }
+          <Text style={[s.volumeSub, { color: theme.textDim }]}>{loading ? '—' : filtered.length} transactions</Text>
+        </LinearGradient>
 
-        {filtered.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="swap-horizontal-outline" size={64} color={theme.muted} />
-            <Text style={[s.emptyTitle, { color: theme.text }]}>No transfers yet</Text>
-            <Text style={[s.emptyText,  { color: theme.textDim }]}>Processed transfers will appear here</Text>
+        {/* ── Transfer list ── */}
+        {loading ? (
+          <View style={[s.listCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+            {[0,1,2,3,4].map((i, _, arr) => (
+              <SkeletonTransferRow key={i} theme={theme} last={i === arr.length - 1} />
+            ))}
           </View>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="swap-horizontal-outline"
+            title="No transfers yet"
+            subtitle={search ? `No transfers match "${search}"` : 'Processed transfers will appear here'}
+          />
         ) : (
           <View style={[s.listCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             {filtered.map((t, i) => (
               <View key={t.id}>
-                <View style={s.row}>
+                <PressableScale style={s.row} scaleDown={0.98}>
                   <View style={s.rowLeft}>
                     <Text style={[s.rowId,    { color: theme.textDim }]}>#{t.id.slice(-6).toUpperCase()}</Text>
                     <Text style={[s.rowAgent, { color: theme.text }]}>{t.agentName ?? 'Agent'}</Text>
@@ -156,7 +206,7 @@ export default function TransfersScreen() {
                     <Text style={[s.rowAmount, { color: theme.primary }]}>{fmt(Number(t.amount) || 0)}</Text>
                     <Text style={[s.rowTime,   { color: theme.textDim }]}>{timeAgo(t.processedAt)}</Text>
                   </View>
-                </View>
+                </PressableScale>
                 {i < filtered.length - 1 && (
                   <View style={[s.divider, { backgroundColor: theme.border }]} />
                 )}
@@ -174,35 +224,32 @@ const s = StyleSheet.create({
   scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       spacing.md + 2,
-    paddingTop:              spacing.sm + 2,
-    paddingBottom:           spacing.md - 2,
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
     borderBottomLeftRadius:  radius.xxl,
     borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body,    color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
   searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md - 4 },
   searchBox: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               spacing.sm,
-    height:            48,
-    borderRadius:      radius.md,
-    borderWidth:       1.5,
-    paddingHorizontal: spacing.md - 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    height: 48, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
   searchInput: { flex: 1, fontSize: 18, fontFamily: fonts.body },
 
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2,
-    paddingVertical:   spacing.sm + 1,
-    borderRadius:      radius.full,
-    borderWidth:       1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    borderRadius: radius.full, borderWidth: 1,
   },
   pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
 
@@ -214,18 +261,13 @@ const s = StyleSheet.create({
     alignItems:    'center',
   },
   volumeLabel:  { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 1 },
-  volumeAmount: { fontSize: 36, fontFamily: fonts.display,  marginTop: spacing.xs },
-  volumeSub:    { fontSize: 17, fontFamily: fonts.body,     marginTop: spacing.xs },
-
-  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.lg, gap: spacing.md - 4 },
-  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
-  emptyText:  { fontSize: 17, fontFamily: fonts.body },
+  volumeAmount: { fontSize: 36, fontFamily: fonts.display, marginTop: spacing.xs },
+  volumeSub:    { fontSize: 17, fontFamily: fonts.body, marginTop: spacing.xs },
 
   listCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
   row: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    padding:        spacing.md - 2,
+    flexDirection: 'row', justifyContent: 'space-between',
+    padding: spacing.md - 2,
   },
   rowLeft:   { gap: 2 },
   rowId:     { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 0.4 },

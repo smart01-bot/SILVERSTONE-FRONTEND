@@ -5,9 +5,13 @@ import {
   StyleSheet, StatusBar, SafeAreaView,
   RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+import { SkeletonBox } from '../../components/SkeletonLoader';
+import EmptyState     from '../../components/EmptyState';
+import PressableScale from '../../components/PressableScale';
 import {
   collection, query, orderBy,
   onSnapshot, doc, updateDoc, Timestamp,
@@ -21,13 +25,52 @@ const REJECTION_REASONS = [
   'Other',
 ];
 
+function SkeletonQueueCard({ theme }) {
+  return (
+    <View style={[s.card, {
+      backgroundColor: theme.surfaceAlt,
+      borderColor: theme.border, borderLeftColor: theme.border,
+    }]}>
+      <View style={s.cardTop}>
+        <View style={s.agentRow}>
+          <SkeletonBox width={44} height={44} borderRadius={22} />
+          <View style={{ gap: spacing.xs - 2 }}>
+            <SkeletonBox width={120} height={18} borderRadius={6} />
+            <SkeletonBox width={80}  height={14} borderRadius={5} />
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing.sm - 2 }}>
+          <SkeletonBox width={60} height={26} borderRadius={6} />
+          <SkeletonBox width={44} height={26} borderRadius={6} />
+        </View>
+      </View>
+      <View style={s.routeRow}>
+        <SkeletonBox width={80}  height={20} borderRadius={6} />
+        <SkeletonBox width={16}  height={16} borderRadius={4} />
+        <SkeletonBox width={80}  height={20} borderRadius={6} />
+        <SkeletonBox width={100} height={22} borderRadius={6} style={{ marginLeft: 'auto' }} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+        <SkeletonBox width={110} height={16} borderRadius={5} />
+        <SkeletonBox width={90}  height={16} borderRadius={5} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <SkeletonBox width="30%" height={46} borderRadius={radius.md} />
+        <SkeletonBox width="40%" height={46} borderRadius={radius.md} />
+        <SkeletonBox width="24%" height={46} borderRadius={radius.md} />
+      </View>
+    </View>
+  );
+}
+
 export default function QueueScreen() {
   const { theme, isDark } = useTheme();
 
   const [requests,   setRequests]   = useState([]);
   const [filter,     setFilter]     = useState('All');
   const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [actionLoad, setActionLoad] = useState(null);
 
   const FILTERS = ['All', 'Urgent', 'Pending', 'Approved'];
 
@@ -42,6 +85,7 @@ export default function QueueScreen() {
           return 0;
         });
         setRequests(docs);
+        setLoading(false);
       }
     );
     return unsub;
@@ -59,22 +103,15 @@ export default function QueueScreen() {
   const urgentCount   = requests.filter(r => r.status === 'pending' && r.urgent).length;
   const approvedCount = requests.filter(r => r.status === 'approved').length;
 
-  const waitMins  = (createdAt) => {
-    if (!createdAt?.toDate) return 0;
-    return Math.floor((Date.now() - createdAt.toDate().getTime()) / 60000);
-  };
-  const waitColor = (mins) => {
-    if (mins < 5)  return '#16A34A';
-    if (mins < 15) return '#F59E0B';
-    return '#C8102E';
-  };
+  const waitMins  = (ts) => { if (!ts?.toDate) return 0; return Math.floor((Date.now() - ts.toDate().getTime()) / 60000); };
+  const waitColor = (m)  => { if (m < 5) return '#16A34A'; if (m < 15) return '#F59E0B'; return '#C8102E'; };
 
   const handleApprove = async (req) => {
-    setLoading(req.id + '_approve');
+    setActionLoad(req.id + '_approve');
     try {
       await updateDoc(doc(db, 'requests', req.id), { status: 'approved', approvedAt: Timestamp.now() });
     } catch (e) { Alert.alert('Error', 'Failed to approve request.'); }
-    finally { setLoading(null); }
+    finally { setActionLoad(null); }
   };
 
   const handleProcess = async (req) => {
@@ -86,11 +123,11 @@ export default function QueueScreen() {
         {
           text: 'Confirm', style: 'destructive',
           onPress: async () => {
-            setLoading(req.id + '_process');
+            setActionLoad(req.id + '_process');
             try {
               await updateDoc(doc(db, 'requests', req.id), { status: 'completed', processedAt: Timestamp.now() });
             } catch (e) { Alert.alert('Error', 'Failed to process transfer.'); }
-            finally { setLoading(null); }
+            finally { setActionLoad(null); }
           },
         },
       ]
@@ -102,13 +139,13 @@ export default function QueueScreen() {
       ...REJECTION_REASONS.map(reason => ({
         text: reason,
         onPress: async () => {
-          setLoading(req.id + '_reject');
+          setActionLoad(req.id + '_reject');
           try {
             await updateDoc(doc(db, 'requests', req.id), {
               status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
             });
           } catch (e) { Alert.alert('Error', 'Failed to reject request.'); }
-          finally { setLoading(null); }
+          finally { setActionLoad(null); }
         },
       })),
       { text: 'Cancel', style: 'cancel' },
@@ -117,22 +154,39 @@ export default function QueueScreen() {
 
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
+  const emptyMessages = {
+    All:      { title: 'Queue is clear',         subtitle: 'All requests have been processed' },
+    Urgent:   { title: 'No urgent requests',     subtitle: 'Urgent requests will appear here' },
+    Pending:  { title: 'No pending requests',    subtitle: 'Pending requests will appear here' },
+    Approved: { title: 'No approved requests',   subtitle: 'Approved requests will appear here' },
+  };
+
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <View style={s.header}>
-        <View>
-          <Text style={s.headerTitle}>Queue</Text>
-          <Text style={s.headerSub}>
-            {pendingCount} pending · {urgentCount} urgent · {approvedCount} approved
-          </Text>
+      {/* ── Gradient header ── */}
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <View style={s.headerDecor} />
+        <View style={s.headerRow}>
+          <View>
+            <Text style={s.headerTitle}>Queue</Text>
+            <Text style={s.headerSub}>
+              {pendingCount} pending · {urgentCount} urgent · {approvedCount} approved
+            </Text>
+          </View>
+          <View style={s.iconBtn}>
+            <Ionicons name="options-outline" size={22} color="#fff" />
+          </View>
         </View>
-        <View style={s.iconBtn}>
-          <Ionicons name="options-outline" size={22} color="#fff" />
-        </View>
-      </View>
+      </LinearGradient>
 
+      {/* ── Filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={s.filterRow}>
@@ -162,18 +216,25 @@ export default function QueueScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
-        {filtered.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="checkmark-circle-outline" size={64} color={theme.muted} />
-            <Text style={[s.emptyTitle, { color: theme.text }]}>Queue is clear</Text>
-            <Text style={[s.emptyText,  { color: theme.textDim }]}>All requests have been processed</Text>
-          </View>
+        {loading ? (
+          <>
+            <SkeletonQueueCard theme={theme} />
+            <SkeletonQueueCard theme={theme} />
+            <SkeletonQueueCard theme={theme} />
+          </>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title={emptyMessages[filter].title}
+            subtitle={emptyMessages[filter].subtitle}
+          />
         ) : (
           filtered.map(req => {
             const mins = waitMins(req.createdAt);
             return (
-              <View
+              <PressableScale
                 key={req.id}
+                scaleDown={0.98}
                 style={[s.card, {
                   backgroundColor: theme.surfaceAlt,
                   borderColor:     theme.border,
@@ -219,7 +280,7 @@ export default function QueueScreen() {
                 <View style={s.actions}>
                   {req.status === 'pending' && (
                     <TouchableOpacity onPress={() => handleApprove(req)} style={[s.btnOutline, { borderColor: '#0891B2' }]} activeOpacity={0.75}>
-                      {loading === req.id + '_approve'
+                      {actionLoad === req.id + '_approve'
                         ? <ActivityIndicator size="small" color="#0891B2" />
                         : <Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Approve</Text>
                       }
@@ -227,20 +288,20 @@ export default function QueueScreen() {
                   )}
                   {(req.status === 'pending' || req.status === 'approved') && (
                     <TouchableOpacity onPress={() => handleProcess(req)} style={[s.btnFilled, { backgroundColor: '#C8102E' }]} activeOpacity={0.85}>
-                      {loading === req.id + '_process'
+                      {actionLoad === req.id + '_process'
                         ? <ActivityIndicator size="small" color="#fff" />
                         : <Text style={s.btnFilledText}>Process</Text>
                       }
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={() => handleReject(req)} style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
-                    {loading === req.id + '_reject'
+                    {actionLoad === req.id + '_reject'
                       ? <ActivityIndicator size="small" color={theme.textDim} />
                       : <Text style={[s.btnOutlineText, { color: theme.textDim }]}>Reject</Text>
                     }
                   </TouchableOpacity>
                 </View>
-              </View>
+              </PressableScale>
             );
           })
         )}
@@ -254,17 +315,19 @@ const s = StyleSheet.create({
   scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       spacing.md + 2,
-    paddingTop:              spacing.sm + 2,
-    paddingBottom:           spacing.md - 2,
-    flexDirection:           'row',
-    alignItems:              'center',
-    justifyContent:          'space-between',
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
     borderBottomLeftRadius:  radius.xxl,
     borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
   headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   iconBtn: {
     width: 42, height: 42, borderRadius: radius.md,
@@ -275,24 +338,14 @@ const s = StyleSheet.create({
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2,
-    paddingVertical:   spacing.sm + 1,
-    borderRadius:      radius.full,
-    borderWidth:       1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    borderRadius: radius.full, borderWidth: 1,
   },
   pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
 
-  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.xl, gap: spacing.md - 4 },
-  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
-  emptyText:  { fontSize: 17, fontFamily: fonts.body },
-
   card: {
-    borderRadius:    radius.lg,
-    borderWidth:     1,
-    borderLeftWidth: 4,
-    padding:         spacing.md,
-    marginBottom:    spacing.md - 4,
-    gap:             spacing.md - 4,
+    borderRadius: radius.lg, borderWidth: 1, borderLeftWidth: 4,
+    padding: spacing.md, marginBottom: spacing.md - 4, gap: spacing.md - 4,
   },
   cardTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   agentRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
@@ -305,18 +358,13 @@ const s = StyleSheet.create({
   agentSub:     { fontSize: 17, fontFamily: fonts.body, marginTop: 1 },
   cardTopRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
   urgentTag: {
-    backgroundColor:   '#F59E0B20',
-    paddingHorizontal: spacing.sm,
-    paddingVertical:   spacing.xs - 1,
-    borderRadius:      radius.sm - 2,
+    backgroundColor: '#F59E0B20', paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2,
   },
   urgentText: { color: '#F59E0B', fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.6 },
-  waitBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical:   spacing.xs - 1,
-    borderRadius:      radius.sm - 2,
-  },
-  waitText:  { fontSize: 15, fontFamily: fonts.bodyBold },
+  waitBadge:  { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
+  waitText:   { fontSize: 15, fontFamily: fonts.bodyBold },
+
   routeRow:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   route:     { fontSize: 20, fontFamily: fonts.bodyBold },
   amount:    { fontSize: 22, fontFamily: fonts.bodyXBold, marginLeft: 'auto' },
@@ -325,8 +373,8 @@ const s = StyleSheet.create({
 
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   btnOutline: {
-    flex: 1, height: 46, borderRadius: radius.md,
-    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
+    flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
   },
   btnOutlineText: { fontSize: 17, fontFamily: fonts.bodySemi },
   btnFilled: {
