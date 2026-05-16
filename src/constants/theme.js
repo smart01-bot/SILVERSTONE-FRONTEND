@@ -1,9 +1,7 @@
 // src/constants/theme.js
 import { Platform } from 'react-native';
 
-// ─── FONT FAMILIES ────────────────────────────────────────────────────────────
-// Manrope → display / headings (geometric, distinctive, premium)
-// Inter   → body / labels / inputs (optimised for screens, legible at any size)
+// ─── FONT FAMILIES (requires @expo-google-fonts/inter + manrope installed) ────
 export const fonts = {
   display:   'Manrope_800ExtraBold',
   heading:   'Manrope_700Bold',

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 import {
   collection, query, where, onSnapshot,
   doc, updateDoc, Timestamp,
@@ -31,22 +32,13 @@ export default function ApprovalsScreen() {
     return unsub;
   }, []);
 
-  const filtered = agents.filter(a => {
-    if (filter === 'Pending')  return a.status === 'pending';
-    if (filter === 'Approved') return a.status === 'approved';
-    if (filter === 'Rejected') return a.status === 'rejected';
-    return true;
-  });
-
+  const filtered     = agents.filter(a => a.status === filter.toLowerCase());
   const pendingCount = agents.filter(a => a.status === 'pending').length;
 
   const handleApprove = async (agent) => {
     setLoading(agent.id + '_approve');
     try {
-      await updateDoc(doc(db, 'agents', agent.id), {
-        status:     'approved',
-        approvedAt: Timestamp.now(),
-      });
+      await updateDoc(doc(db, 'agents', agent.id), { status: 'approved', approvedAt: Timestamp.now() });
     } catch (e) {
       Alert.alert('Error', 'Failed to approve agent.');
     } finally {
@@ -55,25 +47,19 @@ export default function ApprovalsScreen() {
   };
 
   const handleReject = (agent) => {
-    Alert.alert(
-      'Reject Application',
-      'Select a reason:',
-      [
-        { text: 'Does not meet requirements', onPress: () => doReject(agent, 'Does not meet requirements') },
-        { text: 'Invalid documentation',       onPress: () => doReject(agent, 'Invalid documentation') },
-        { text: 'Duplicate application',       onPress: () => doReject(agent, 'Duplicate application') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert('Reject Application', 'Select a reason:', [
+      { text: 'Does not meet requirements', onPress: () => doReject(agent, 'Does not meet requirements') },
+      { text: 'Invalid documentation',      onPress: () => doReject(agent, 'Invalid documentation') },
+      { text: 'Duplicate application',      onPress: () => doReject(agent, 'Duplicate application') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const doReject = async (agent, reason) => {
     setLoading(agent.id + '_reject');
     try {
       await updateDoc(doc(db, 'agents', agent.id), {
-        status:          'rejected',
-        rejectionReason: reason,
-        rejectedAt:      Timestamp.now(),
+        status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
       });
     } catch (e) {
       Alert.alert('Error', 'Failed to reject agent.');
@@ -98,45 +84,32 @@ export default function ApprovalsScreen() {
   const initials = (name) =>
     name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Agent Approvals</Text>
-        <Text style={styles.headerSub}>Review applications & ID docs</Text>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Agent Approvals</Text>
+        <Text style={s.headerSub}>Review applications & ID docs</Text>
       </View>
 
-      {/* Filter pills */}
-      <View style={[styles.filters, { backgroundColor: theme.bg }]}>
+      <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.filterRow}>
+          <View style={s.filterRow}>
             {FILTERS.map(f => (
               <TouchableOpacity
                 key={f}
                 onPress={() => setFilter(f)}
-                style={[
-                  styles.pill,
-                  {
-                    backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
-                    borderColor:     filter === f ? theme.primary : theme.border,
-                  },
-                ]}
+                style={[s.pill, {
+                  backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
+                  borderColor:     filter === f ? theme.primary : theme.border,
+                }]}
+                activeOpacity={0.75}
               >
-                <Text style={[
-                  styles.pillText,
-                  { color: filter === f ? '#fff' : theme.textDim },
-                ]}>
-                  {f}
-                  {f === 'Pending' && pendingCount > 0
-                    ? `  ${pendingCount}`
-                    : ''}
+                <Text style={[s.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>
+                  {f}{f === 'Pending' && pendingCount > 0 ? `  ${pendingCount}` : ''}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -146,65 +119,34 @@ export default function ApprovalsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#C8102E']}
-            tintColor="#C8102E"
-          />
-        }
+        contentContainerStyle={s.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={56} color={theme.muted} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>
-              No {filter.toLowerCase()} applications
-            </Text>
+          <View style={s.empty}>
+            <Ionicons name="checkmark-circle-outline" size={64} color={theme.muted} />
+            <Text style={[s.emptyTitle, { color: theme.text }]}>No {filter.toLowerCase()} applications</Text>
           </View>
         ) : (
           filtered.map(agent => (
-            <View
-              key={agent.id}
-              style={[styles.card, {
-                backgroundColor: theme.surfaceAlt,
-                borderColor:     theme.border,
-              }]}
-            >
-              {/* Top row */}
-              <View style={styles.cardTop}>
-                <View style={[
-                  styles.avatar,
-                  { backgroundColor: avatarColor(agent.name) + '20' },
-                ]}>
-                  <Text style={[
-                    styles.avatarText,
-                    { color: avatarColor(agent.name) },
-                  ]}>
-                    {initials(agent.name)}
-                  </Text>
+            <View key={agent.id} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <View style={s.cardTop}>
+                <View style={[s.avatar, { backgroundColor: avatarColor(agent.name) + '20' }]}>
+                  <Text style={[s.avatarText, { color: avatarColor(agent.name) }]}>{initials(agent.name)}</Text>
                 </View>
-                <View style={styles.agentInfo}>
-                  <Text style={[styles.agentName, { color: theme.text }]}>
-                    {agent.name}
-                  </Text>
-                  <Text style={[styles.agentSub, { color: theme.textDim }]}>
+                <View style={s.agentInfo}>
+                  <Text style={[s.agentName, { color: theme.text }]}>{agent.name}</Text>
+                  <Text style={[s.agentSub,  { color: theme.textDim }]}>
                     {agent.businessLocation} · {agent.networks?.length ?? 0} tills
                   </Text>
                   {agent.rejectionReason && (
-                    <Text style={styles.rejectionReason}>
-                      {agent.rejectionReason}
-                    </Text>
+                    <Text style={s.rejectionReason}>{agent.rejectionReason}</Text>
                   )}
                 </View>
-                <Text style={[styles.daysAgo, { color: theme.textDim }]}>
-                  {daysAgo(agent.createdAt)}
-                </Text>
+                <Text style={[s.daysAgo, { color: theme.textDim }]}>{daysAgo(agent.createdAt)}</Text>
               </View>
 
-              {/* Details */}
-              <View style={[styles.details, { borderTopColor: theme.border }]}>
+              <View style={[s.details, { borderTopColor: theme.border }]}>
                 {[
                   { label: 'Phone',    value: agent.phone },
                   { label: 'Business', value: agent.businessName },
@@ -212,48 +154,36 @@ export default function ApprovalsScreen() {
                   { label: 'TIN',      value: agent.tin },
                   { label: 'NIDA',     value: agent.nida },
                 ].map(row => (
-                  <View key={row.label} style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textDim }]}>
-                      {row.label}
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {row.value ?? '—'}
-                    </Text>
+                  <View key={row.label} style={s.detailRow}>
+                    <Text style={[s.detailLabel, { color: theme.textDim }]}>{row.label}</Text>
+                    <Text style={[s.detailValue, { color: theme.text }]}>{row.value ?? '—'}</Text>
                   </View>
                 ))}
               </View>
 
-              {/* Actions — only for pending */}
               {agent.status === 'pending' && (
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.btnOutline, { borderColor: theme.border }]}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.btnOutlineText, { color: theme.textDim }]}>
-                      View docs
-                    </Text>
+                <View style={s.actions}>
+                  <TouchableOpacity style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
+                    <Text style={[s.btnOutlineText, { color: theme.textDim }]}>View docs</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleApprove(agent)}
-                    style={[styles.btnFilled, { backgroundColor: '#C8102E' }]}
+                    style={[s.btnFilled, { backgroundColor: '#C8102E' }]}
                     activeOpacity={0.85}
                   >
                     {loading === agent.id + '_approve'
                       ? <ActivityIndicator size="small" color="#fff" />
-                      : <Text style={styles.btnFilledText}>Approve</Text>
+                      : <Text style={s.btnFilledText}>Approve</Text>
                     }
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleReject(agent)}
-                    style={[styles.btnOutline, { borderColor: '#C8102E' }]}
+                    style={[s.btnOutline, { borderColor: '#C8102E' }]}
                     activeOpacity={0.75}
                   >
                     {loading === agent.id + '_reject'
                       ? <ActivityIndicator size="small" color="#C8102E" />
-                      : <Text style={[styles.btnOutlineText, { color: '#C8102E' }]}>
-                          Reject
-                        </Text>
+                      : <Text style={[s.btnOutlineText, { color: '#C8102E' }]}>Reject</Text>
                     }
                   </TouchableOpacity>
                 </View>
@@ -266,99 +196,85 @@ export default function ApprovalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 100 },
+  scroll: { padding: spacing.md, paddingBottom: 100 },
 
   header: {
-    backgroundColor:       '#C8102E',
-    paddingHorizontal:     18,
-    paddingTop:            10,
-    paddingBottom:         14,
-    borderBottomLeftRadius:  24,
-    borderBottomRightRadius: 24,
+    backgroundColor:         '#C8102E',
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.sm + 2,
+    paddingBottom:           spacing.md - 2,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  filters:   { paddingVertical: 10, paddingHorizontal: 16 },
-  filterRow: { flexDirection: 'row', gap: 8 },
+  filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
+  filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical:   7,
-    borderRadius:      9999,
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical:   spacing.sm + 1,
+    borderRadius:      radius.full,
     borderWidth:       1,
   },
-  pillText: { fontSize: 13, fontWeight: '600' },
+  pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
 
-  empty: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap:        12,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700' },
+  empty:      { alignItems: 'center', paddingTop: spacing.xxl + spacing.lg, gap: spacing.md - 4 },
+  emptyTitle: { fontSize: 22, fontFamily: fonts.heading },
 
   card: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth:  1,
-    marginBottom: 12,
+    marginBottom: spacing.md - 4,
     overflow:     'hidden',
   },
   cardTop: {
     flexDirection: 'row',
     alignItems:    'flex-start',
-    gap:           12,
-    padding:       14,
+    gap:           spacing.md - 4,
+    padding:       spacing.md - 2,
   },
   avatar: {
-    width:          44,
-    height:         44,
-    borderRadius:   22,
+    width:          52,
+    height:         52,
+    borderRadius:   26,
     alignItems:     'center',
     justifyContent: 'center',
     flexShrink:     0,
   },
-  avatarText:       { fontSize: 16, fontWeight: '700' },
-  agentInfo:        { flex: 1, gap: 2 },
-  agentName:        { fontSize: 15, fontWeight: '700' },
-  agentSub:         { fontSize: 12 },
-  rejectionReason:  { fontSize: 12, color: '#C8102E', marginTop: 2 },
-  daysAgo:          { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  avatarText:      { fontSize: 20, fontFamily: fonts.bodyBold },
+  agentInfo:       { flex: 1, gap: 2 },
+  agentName:       { fontSize: 19, fontFamily: fonts.bodyBold },
+  agentSub:        { fontSize: 15, fontFamily: fonts.body },
+  rejectionReason: { fontSize: 15, fontFamily: fonts.body, color: '#C8102E', marginTop: 2 },
+  daysAgo:         { fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.4 },
 
   details: {
     borderTopWidth:    1,
-    paddingHorizontal: 14,
-    paddingVertical:   10,
-    gap:               6,
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical:   spacing.sm + 2,
+    gap:               spacing.sm - 2,
   },
-  detailRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-  },
-  detailLabel: { fontSize: 12 },
-  detailValue: { fontSize: 12, fontWeight: '600' },
+  detailRow:   { flexDirection: 'row', justifyContent: 'space-between' },
+  detailLabel: { fontSize: 15, fontFamily: fonts.body },
+  detailValue: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   actions: {
-    flexDirection:     'row',
-    gap:               8,
-    padding:           14,
-    paddingTop:        0,
+    flexDirection: 'row',
+    gap:           spacing.sm,
+    padding:       spacing.md - 2,
+    paddingTop:    0,
   },
   btnOutline: {
-    flex:           1,
-    height:         38,
-    borderRadius:   10,
-    borderWidth:    1.5,
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex: 1, height: 46, borderRadius: radius.md,
+    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
   },
-  btnOutlineText: { fontSize: 13, fontWeight: '600' },
+  btnOutlineText: { fontSize: 16, fontFamily: fonts.bodySemi },
   btnFilled: {
-    flex:           1,
-    height:         38,
-    borderRadius:   10,
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex: 1, height: 46, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
   },
-  btnFilledText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  btnFilledText: { color: '#fff', fontSize: 16, fontFamily: fonts.bodyBold },
 });

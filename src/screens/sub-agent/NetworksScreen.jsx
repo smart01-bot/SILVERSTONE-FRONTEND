@@ -8,6 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -68,37 +69,41 @@ export default function NetworksScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      <View style={s.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={s.backBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{tr('volumeByNetwork')}</Text>
+        <Text style={s.headerTitle}>{tr('volumeByNetwork')}</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.desc, { color: theme.textDim }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        <Text style={[s.desc, { color: theme.textDim }]}>
           {tr('sourceNetwork')} — {tr('destNetwork')}
         </Text>
 
         {NETWORKS.map(net => (
           <View
             key={net.name}
-            style={[styles.card, {
+            style={[s.card, {
               backgroundColor: theme.surfaceAlt,
               borderColor:     active.includes(net.name) ? net.color + '60' : theme.border,
             }]}
           >
-            <View style={styles.cardHeader}>
-              <View style={[styles.netAvatar, { backgroundColor: net.color + '20' }]}>
-                <Text style={[styles.netShort, { color: net.color }]}>{net.short}</Text>
+            <View style={s.cardHeader}>
+              <View style={[s.netAvatar, { backgroundColor: net.color + '20' }]}>
+                <Text style={[s.netShort, { color: net.color }]}>{net.short}</Text>
               </View>
-              <View style={styles.netInfo}>
-                <Text style={[styles.netName,   { color: theme.text }]}>{net.name}</Text>
-                <Text style={[styles.netWallet, { color: theme.textDim }]}>{net.wallet}</Text>
+              <View style={s.netInfo}>
+                <Text style={[s.netName,   { color: theme.text }]}>{net.name}</Text>
+                <Text style={[s.netWallet, { color: theme.textDim }]}>{net.wallet}</Text>
               </View>
               <Switch
                 value={active.includes(net.name)}
@@ -108,10 +113,10 @@ export default function NetworksScreen({ navigation }) {
               />
             </View>
 
-            <View style={[styles.phoneWrap, { borderTopColor: theme.border }]}>
-              <Text style={[styles.phoneLabel, { color: theme.textDim }]}>{tr('phone')}</Text>
+            <View style={[s.phoneWrap, { borderTopColor: theme.border }]}>
+              <Text style={[s.phoneLabel, { color: theme.textDim }]}>{tr('phone')}</Text>
               <TextInput
-                style={[styles.phoneInput, {
+                style={[s.phoneInput, {
                   backgroundColor: theme.bg,
                   borderColor: phones[net.name] && !validatePhone(phones[net.name]) ? '#C8102E' : theme.border,
                   color: theme.text,
@@ -123,7 +128,7 @@ export default function NetworksScreen({ navigation }) {
                 keyboardType="phone-pad"
               />
               {phones[net.name] && !validatePhone(phones[net.name]) && (
-                <Text style={styles.phoneError}>{tr('error')}</Text>
+                <Text style={s.phoneError}>{tr('error')}</Text>
               )}
             </View>
           </View>
@@ -132,14 +137,12 @@ export default function NetworksScreen({ navigation }) {
         <TouchableOpacity
           onPress={handleSave}
           disabled={saving}
-          style={[styles.saveBtn, { backgroundColor: saved ? '#16A34A' : theme.primary }]}
+          style={[s.saveBtn, { backgroundColor: saved ? '#16A34A' : theme.primary }]}
           activeOpacity={0.85}
         >
           {saving
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.saveBtnText}>
-                {saved ? tr('save') + ' ✓' : tr('save')}
-              </Text>
+            : <Text style={s.saveBtnText}>{saved ? tr('save') + ' ✓' : tr('save')}</Text>
           }
         </TouchableOpacity>
       </ScrollView>
@@ -147,47 +150,59 @@ export default function NetworksScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 110 },
+  scroll: { padding: spacing.md, paddingBottom: 110 },
 
   header: {
     backgroundColor:         '#C8102E',
-    paddingHorizontal:       18,
-    paddingTop:              12,
-    paddingBottom:           18,
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.md - 4,
+    paddingBottom:           spacing.md + 2,
     flexDirection:           'row',
     alignItems:              'center',
     justifyContent:          'space-between',
-    borderBottomLeftRadius:  26,
-    borderBottomRightRadius: 26,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   },
   backBtn:     { width: 44, height: 44, justifyContent: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },   // was 18
+  headerTitle: { fontSize: 26, fontFamily: fonts.display, color: '#fff' },
 
-  desc: { fontSize: 17, lineHeight: 26, marginBottom: 18 },   // was 14
+  desc: { fontSize: 17, fontFamily: fonts.body, lineHeight: 26, marginBottom: spacing.md + 2 },
 
-  card: { borderRadius: 18, borderWidth: 1.5, marginBottom: 14, overflow: 'hidden' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  card: { borderRadius: radius.xl - 2, borderWidth: 1.5, marginBottom: spacing.md - 2, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md - 2, padding: spacing.md },
   netAvatar: {
-    width: 52, height: 52, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width:          52,
+    height:         52,
+    borderRadius:   radius.md + 2,
+    alignItems:     'center',
+    justifyContent: 'center',
+    flexShrink:     0,
   },
-  netShort:  { fontSize: 16, fontWeight: '800' },  // was 13
+  netShort:  { fontSize: 17, fontFamily: fonts.bodyXBold },
   netInfo:   { flex: 1 },
-  netName:   { fontSize: 19, fontWeight: '700' },  // was 15
-  netWallet: { fontSize: 15, marginTop: 2 },        // was 12
+  netName:   { fontSize: 19, fontFamily: fonts.bodyBold },
+  netWallet: { fontSize: 15, fontFamily: fonts.body, marginTop: 2 },
 
-  phoneWrap:  { borderTopWidth: 1, padding: 16 },
-  phoneLabel: { fontSize: 15, fontWeight: '600', marginBottom: 10 },  // was 12
+  phoneWrap:  { borderTopWidth: 1, padding: spacing.md },
+  phoneLabel: { fontSize: 15, fontFamily: fonts.bodySemi, marginBottom: spacing.sm + 2 },
   phoneInput: {
-    height: 54, borderWidth: 1.5, borderRadius: 12,
-    paddingHorizontal: 16, fontSize: 19,             // was 15
+    height:            54,
+    borderWidth:       1.5,
+    borderRadius:      radius.md,
+    paddingHorizontal: spacing.md,
+    fontSize:          19,
+    fontFamily:        fonts.body,
   },
-  phoneError: { color: '#C8102E', fontSize: 15, marginTop: 5 },  // was 12
+  phoneError: { color: '#C8102E', fontSize: 15, fontFamily: fonts.body, marginTop: spacing.xs + 1 },
 
   saveBtn: {
-    height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 8,
+    height:         58,
+    borderRadius:   radius.lg,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginTop:      spacing.sm,
   },
-  saveBtnText: { color: '#fff', fontSize: 19, fontWeight: '700' },  // was 15
+  saveBtnText: { color: '#fff', fontSize: 19, fontFamily: fonts.bodyBold },
 });

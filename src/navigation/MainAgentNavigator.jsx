@@ -1,17 +1,18 @@
 // src/navigation/MainAgentNavigator.jsx
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { View, Text, StyleSheet } from 'react-native';
+import { createDrawerNavigator }    from '@react-navigation/drawer';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/DrawerContent';
+import { spacing, radius, fonts } from '../constants/theme';
 
-import OverviewScreen   from '../screens/main-agent/OverviewScreen';
-import QueueScreen      from '../screens/main-agent/QueueScreen';
-import TransfersScreen  from '../screens/main-agent/TransfersScreen';
-import AgentsScreen     from '../screens/main-agent/AgentsScreen';
-import ApprovalsScreen  from '../screens/main-agent/ApprovalsScreen';
+import OverviewScreen  from '../screens/main-agent/OverviewScreen';
+import QueueScreen     from '../screens/main-agent/QueueScreen';
+import TransfersScreen from '../screens/main-agent/TransfersScreen';
+import AgentsScreen    from '../screens/main-agent/AgentsScreen';
+import ApprovalsScreen from '../screens/main-agent/ApprovalsScreen';
 
 const Tab    = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -24,16 +25,55 @@ const DRAWER_ITEMS = [
   { label: 'Approvals', icon: 'checkmark-circle-outline', onPress: nav => nav.navigate('MainTabs', { screen: 'Approvals' }) },
 ];
 
+// ─── Animated tab icon — matches SubAgentNavigator pattern exactly ────────────
+// CRASH-SAFE: native driver (scale) and non-native (glow) in separate useEffects
 function TabIcon({ name, focused, color, badge }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const glow  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue:         focused ? 1.25 : 1,
+      useNativeDriver: true,
+      tension:         200,
+      friction:        7,
+    }).start();
+  }, [focused]);
+
+  useEffect(() => {
+    Animated.timing(glow, {
+      toValue:         focused ? 1 : 0,
+      duration:        180,
+      useNativeDriver: false,
+    }).start();
+  }, [focused]);
+
+  const bgColor = glow.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['rgba(0,0,0,0)', color + '25'],
+  });
+
   return (
-    <View>
-      <Ionicons name={focused ? name : `${name}-outline`} size={24} color={color} />
-      {badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
-        </View>
-      )}
-    </View>
+    <Animated.View style={[styles.tabIconWrap, { backgroundColor: bgColor }]}>
+      <Animated.View style={{ transform: [{ scale }], alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons
+          name={focused ? name : `${name}-outline`}
+          size={26}
+          color={color}
+          style={focused && Platform.OS === 'ios' ? {
+            shadowColor:   color,
+            shadowOffset:  { width: 0, height: 3 },
+            shadowOpacity: 0.6,
+            shadowRadius:  6,
+          } : undefined}
+        />
+        {badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -43,22 +83,26 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        lazy:        true,
         tabBarStyle: {
-          backgroundColor:       theme.surface,
-          borderTopColor:        theme.border,
-          borderTopWidth:        1,
-          paddingBottom:         8,
-          paddingTop:            8,
-          height:                64,
-          sceneAnimationEnabled: true,
-          sceneAnimationType:    'shifting',
+          backgroundColor: theme.surface,
+          borderTopColor:  theme.border,
+          borderTopWidth:  1,
+          paddingBottom:   Platform.OS === 'ios' ? 22 : 10,
+          paddingTop:      spacing.sm,
+          height:          Platform.OS === 'ios' ? 86 : 68,
+          ...Platform.select({
+            ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.10, shadowRadius: 14 },
+            android: { elevation: 16 },
+          }),
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
         tabBarLabelStyle: {
-          fontSize:   10,
-          fontWeight: '600',
-          marginTop:  2,
+          fontSize:      13,
+          fontFamily:    fonts.bodyBold,
+          marginTop:     2,
+          letterSpacing: 0.1,
         },
       }}
     >
@@ -67,9 +111,7 @@ function MainTabs() {
         component={OverviewScreen}
         options={{
           tabBarLabel: 'Overview',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon name="bar-chart" focused={focused} color={color} />
-          ),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="bar-chart"       focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -77,9 +119,7 @@ function MainTabs() {
         component={QueueScreen}
         options={{
           tabBarLabel: 'Queue',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon name="list" focused={focused} color={color} />
-          ),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="list"            focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -87,9 +127,7 @@ function MainTabs() {
         component={TransfersScreen}
         options={{
           tabBarLabel: 'Transfers',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon name="swap-horizontal" focused={focused} color={color} />
-          ),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="swap-horizontal" focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -97,9 +135,7 @@ function MainTabs() {
         component={AgentsScreen}
         options={{
           tabBarLabel: 'Agents',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon name="people" focused={focused} color={color} />
-          ),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="people"         focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -107,9 +143,7 @@ function MainTabs() {
         component={ApprovalsScreen}
         options={{
           tabBarLabel: 'Approvals',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon name="checkmark-circle" focused={focused} color={color} />
-          ),
+          tabBarIcon:  ({ focused, color }) => <TabIcon name="checkmark-circle" focused={focused} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -121,12 +155,17 @@ export default function MainAgentNavigator() {
   return (
     <Drawer.Navigator
       screenOptions={{
-        headerShown:  false,
-        drawerType:   'front',
-        overlayColor: 'rgba(0,0,0,0.5)',
+        headerShown:    false,
+        drawerType:     'front',
+        overlayColor:   'rgba(0,0,0,0.55)',
+        swipeEdgeWidth: 60,
         drawerStyle: {
-          width:           280,
+          width:           290,
           backgroundColor: theme.surface,
+          ...Platform.select({
+            ios:     { shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.22, shadowRadius: 18 },
+            android: { elevation: 22 },
+          }),
         },
       }}
       drawerContent={(props) => (
@@ -139,21 +178,24 @@ export default function MainAgentNavigator() {
 }
 
 const styles = StyleSheet.create({
+  tabIconWrap: {
+    width:          46,
+    height:         38,
+    borderRadius:   radius.md,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
   badge: {
     position:          'absolute',
     top:               -4,
     right:             -8,
     backgroundColor:   '#C8102E',
-    borderRadius:      9999,
-    minWidth:          16,
-    height:            16,
+    borderRadius:      radius.full,
+    minWidth:          18,
+    height:            18,
     alignItems:        'center',
     justifyContent:    'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
-  badgeText: {
-    color:      '#fff',
-    fontSize:   9,
-    fontWeight: '800',
-  },
+  badgeText: { color: '#fff', fontSize: 11, fontFamily: fonts.bodyXBold },
 });

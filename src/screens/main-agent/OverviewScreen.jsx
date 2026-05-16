@@ -6,8 +6,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 import {
   collection, query, where, orderBy,
   onSnapshot, Timestamp,
@@ -36,9 +37,8 @@ export default function OverviewScreen({ navigation }) {
     return `TSh ${n}`;
   };
 
-  const reqId = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
-
-  const timeAgo = (ts) => {
+  const reqId    = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
+  const timeAgo  = (ts) => {
     if (!ts?.toDate) return '';
     const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
     if (secs < 60)     return tr('justNow');
@@ -59,8 +59,7 @@ export default function OverviewScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
     const reqUnsub = onSnapshot(
       query(collection(db, 'requests'), orderBy('createdAt', 'desc')),
@@ -132,40 +131,38 @@ export default function OverviewScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.bg}
-      />
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      {/* Top header bar */}
-      <View style={[styles.topBar, {
-        backgroundColor:   theme.bg,
-        borderBottomColor: theme.border,
-      }]}>
-        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
-          <View style={[styles.menuLine, { backgroundColor: theme.text }]} />
-          <View style={[styles.menuLine, { width: 20, backgroundColor: theme.text }]} />
-          <View style={[styles.menuLine, { width: 16, backgroundColor: theme.text }]} />
+      {/* Top bar */}
+      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+        <TouchableOpacity
+          style={s.menuBtn}
+          onPress={() => navigation.openDrawer()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <View style={[s.menuLine, { backgroundColor: theme.text }]} />
+          <View style={[s.menuLine, { width: 20, backgroundColor: theme.text }]} />
+          <View style={[s.menuLine, { width: 16, backgroundColor: theme.text }]} />
         </TouchableOpacity>
 
-        <View style={styles.brandWrap}>
-          <Text style={[styles.brandName, { color: theme.primary }]}>Silverstone</Text>
-          <Text style={[styles.brandTag, { color: theme.textDim }]}>· admin</Text>
+        <View style={s.brandWrap}>
+          <Text style={[s.brandName, { color: theme.primary }]}>Silverstone</Text>
+          <Text style={[s.brandTag,  { color: theme.textDim }]}>· admin</Text>
         </View>
 
-        <View style={styles.topRight}>
-          <View style={[styles.livePill, { backgroundColor: '#16A34A20' }]}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
+        <View style={s.topRight}>
+          <View style={[s.livePill, { backgroundColor: '#16A34A20' }]}>
+            <View style={s.liveDot} />
+            <Text style={s.liveText}>LIVE</Text>
           </View>
-          <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.openDrawer()}>
-            <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-              <Text style={styles.avatarText}>{initials}</Text>
+          <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.openDrawer()}>
+            <View style={[s.avatarCircle, { backgroundColor: theme.primary }]}>
+              <Text style={s.avatarText}>{initials}</Text>
             </View>
             {pendingRequests > 0 && (
-              <View style={[styles.avatarBadge, { borderColor: theme.bg }]}>
-                <Text style={styles.avatarBadgeText}>{pendingRequests}</Text>
+              <View style={[s.avatarBadge, { borderColor: theme.bg }]}>
+                <Text style={s.avatarBadgeText}>{pendingRequests}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -174,95 +171,62 @@ export default function OverviewScreen({ navigation }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#C8102E']}
-            tintColor="#C8102E"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
-        {/* Hero volume card */}
-        <View style={styles.heroCard}>
-          <View style={styles.decorCircle} />
-          <Text style={styles.heroLabel}>
-            {tr('totalVolume').toUpperCase()} · 30D
-          </Text>
-          <Text style={styles.heroAmount}>{fmt(totalVolume)}</Text>
-          <View style={styles.heroSubRow}>
+        {/* Hero card */}
+        <View style={s.heroCard}>
+          <View style={s.decorCircle} />
+          <Text style={s.heroLabel}>{tr('totalVolume').toUpperCase()} · 30D</Text>
+          <Text style={s.heroAmount}>{fmt(totalVolume)}</Text>
+          <View style={s.heroSubRow}>
             <Ionicons name="trending-up-outline" size={14} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.heroSub}>
-              +{fmt(totalVolume * 0.124)} vs last month
-            </Text>
+            <Text style={s.heroSub}>+{fmt(totalVolume * 0.124)} vs last month</Text>
           </View>
         </View>
 
-        {/* Stat cards 2x2 grid */}
-        <View style={styles.statsGrid}>
+        {/* Stats 2×2 */}
+        <View style={s.statsGrid}>
           {STATS.map(stat => (
-            <View
-              key={stat.label}
-              style={[styles.statCard, {
-                backgroundColor: theme.surfaceAlt,
-                borderColor:     theme.border,
-              }]}
-            >
-              <View style={[styles.statIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name={stat.icon} size={18} color={theme.primary} />
+            <View key={stat.label} style={[s.statCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <View style={[s.statIcon, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name={stat.icon} size={20} color={theme.primary} />
               </View>
-              <Text style={[styles.statValue, { color: theme.text }]}>
+              <Text style={[s.statValue, { color: theme.text }]}>
                 {stat.isText ? stat.value : stat.value.toLocaleString()}
               </Text>
-              <Text style={[styles.statLabel, { color: theme.textDim }]}>
-                {stat.label}
-              </Text>
-              <Text style={[styles.statSub, { color: stat.subColor }]}>
-                {stat.sub}
-              </Text>
+              <Text style={[s.statLabel, { color: theme.textDim }]}>{stat.label}</Text>
+              <Text style={[s.statSub,   { color: stat.subColor }]}>{stat.sub}</Text>
             </View>
           ))}
         </View>
 
-        {/* Monthly activity chart */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Monthly Activity
-            </Text>
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#C8102E' }]} />
-                <Text style={[styles.legendText, { color: theme.textDim }]}>Reqs</Text>
+        {/* Monthly activity */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: theme.text }]}>Monthly Activity</Text>
+            <View style={s.legendRow}>
+              <View style={s.legendItem}>
+                <View style={[s.legendDot, { backgroundColor: '#C8102E' }]} />
+                <Text style={[s.legendText, { color: theme.textDim }]}>Reqs</Text>
               </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#0891B2' }]} />
-                <Text style={[styles.legendText, { color: theme.textDim }]}>Txns</Text>
+              <View style={s.legendItem}>
+                <View style={[s.legendDot, { backgroundColor: '#0891B2' }]} />
+                <Text style={[s.legendText, { color: theme.textDim }]}>Txns</Text>
               </View>
             </View>
           </View>
-
-          <View style={[styles.chartCard, {
-            backgroundColor: theme.surfaceAlt,
-            borderColor:     theme.border,
-          }]}>
-            <Text style={[styles.chartLabel, { color: theme.textDim }]}>
+          <View style={[s.chartCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+            <Text style={[s.chartLabel, { color: theme.textDim }]}>
               Requests vs Transactions · {totalRequests} total
             </Text>
-            <View style={styles.chartBars}>
+            <View style={s.chartBars}>
               {[0.4, 0.7, 0.5, 0.9, 0.6, 0.8, 1.0].map((h, i) => (
-                <View key={i} style={styles.barGroup}>
-                  <View style={[styles.bar, {
-                    height:          h * 140,
-                    backgroundColor: '#C8102E',
-                    opacity:         0.85,
-                  }]} />
-                  <View style={[styles.bar, {
-                    height:          h * 0.7 * 140,
-                    backgroundColor: '#0891B2',
-                    opacity:         0.85,
-                  }]} />
+                <View key={i} style={s.barGroup}>
+                  <View style={[s.bar, { height: h * 140, backgroundColor: '#C8102E', opacity: 0.85 }]} />
+                  <View style={[s.bar, { height: h * 0.7 * 140, backgroundColor: '#0891B2', opacity: 0.85 }]} />
                 </View>
               ))}
             </View>
@@ -270,80 +234,58 @@ export default function OverviewScreen({ navigation }) {
         </View>
 
         {/* Recent requests */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {tr('recentRequests')}
-            </Text>
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Queue')}>
-              <Text style={[styles.sectionAction, { color: theme.primary }]}>
-                {tr('queue')} →
-              </Text>
+              <Text style={[s.sectionAction, { color: theme.primary }]}>{tr('queue')} →</Text>
             </TouchableOpacity>
           </View>
 
           {recentRequests.length === 0 ? (
-            <View style={[styles.emptyCard, {
-              backgroundColor: theme.surfaceAlt,
-              borderColor:     theme.border,
-            }]}>
-              <Ionicons name="checkmark-circle-outline" size={32} color={theme.muted} />
-              <Text style={[styles.emptyText, { color: theme.textDim }]}>
-                {tr('queueEmpty')}
-              </Text>
+            <View style={[s.emptyCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <Ionicons name="checkmark-circle-outline" size={36} color={theme.muted} />
+              <Text style={[s.emptyText, { color: theme.textDim }]}>{tr('queueEmpty')}</Text>
             </View>
           ) : (
-            <View style={[styles.requestsCard, {
-              backgroundColor: theme.surfaceAlt,
-              borderColor:     theme.border,
-            }]}>
+            <View style={[s.requestsCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
               {recentRequests.map((req, i) => (
                 <View key={req.id}>
-                  <View style={styles.reqRow}>
-                    <View style={[styles.reqDot, { backgroundColor: statusColor(req.status) }]} />
-                    <View style={styles.reqInfo}>
-                      <Text style={[styles.reqAgent, { color: theme.text }]}>
-                        {req.agentName ?? 'Agent'}
-                      </Text>
-                      <Text style={[styles.reqMeta, { color: theme.textDim }]}>
+                  <View style={s.reqRow}>
+                    <View style={[s.reqDot, { backgroundColor: statusColor(req.status) }]} />
+                    <View style={s.reqInfo}>
+                      <Text style={[s.reqAgent,  { color: theme.text }]}>{req.agentName ?? 'Agent'}</Text>
+                      <Text style={[s.reqMeta,   { color: theme.textDim }]}>
                         {reqId(req.id)} · {req.sourceNetwork} → {req.destNetwork}
                         {req.urgent ? ' · URGENT' : ''}
                       </Text>
-                      <Text style={[styles.reqTime, { color: theme.textDim }]}>
-                        {timeAgo(req.createdAt)}
-                      </Text>
+                      <Text style={[s.reqTime,   { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
                     </View>
-                    <View style={styles.reqRight}>
-                      <Text style={[styles.reqAmount, { color: theme.primary }]}>
-                        {req.amount >= 1000
-                          ? `TSh ${(req.amount / 1000).toFixed(0)}k`
-                          : `TSh ${req.amount}`}
+                    <View style={s.reqRight}>
+                      <Text style={[s.reqAmount, { color: theme.primary }]}>
+                        {req.amount >= 1000 ? `TSh ${(req.amount / 1000).toFixed(0)}k` : `TSh ${req.amount}`}
                       </Text>
-                      <View style={[
-                        styles.statusPill,
-                        { backgroundColor: statusColor(req.status) + '20' },
-                      ]}>
-                        <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
+                      <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
+                        <Text style={[s.statusText, { color: statusColor(req.status) }]}>
                           {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
                         </Text>
                       </View>
                     </View>
                   </View>
                   {i < recentRequests.length - 1 && (
-                    <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                    <View style={[s.divider, { backgroundColor: theme.border }]} />
                   )}
                 </View>
               ))}
             </View>
           )}
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingBottom: 100 },
 
@@ -351,164 +293,112 @@ const styles = StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
-    paddingHorizontal: 18,
-    paddingVertical:   12,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical:   spacing.md - 4,
     borderBottomWidth: 1,
   },
-  menuBtn:  { gap: 5, padding: 4 },
-  menuLine: { width: 24, height: 2, borderRadius: 2 },
+  menuBtn:   { gap: spacing.xs + 1, padding: spacing.xs },
+  menuLine:  { width: 24, height: 2, borderRadius: 2 },
   brandWrap: { flexDirection: 'row', alignItems: 'center' },
-  brandName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
-  brandTag:  { fontSize: 15, fontWeight: '400', marginLeft: 2 },
-  topRight:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandName: { fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.4 },
+  brandTag:  { fontSize: 17, fontFamily: fonts.body,    marginLeft: 2 },
+  topRight:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   livePill: {
     flexDirection:     'row',
     alignItems:        'center',
-    gap:               4,
-    paddingHorizontal: 8,
-    paddingVertical:   4,
-    borderRadius:      6,
+    gap:               spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical:   spacing.xs,
+    borderRadius:      radius.sm - 2,
   },
   liveDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#16A34A' },
-  liveText: { fontSize: 10, fontWeight: '700', color: '#16A34A', letterSpacing: 0.6 },
+  liveText: { fontSize: 13, fontFamily: fonts.bodyBold, color: '#16A34A', letterSpacing: 0.6 },
   avatarBtn:    { position: 'relative' },
   avatarCircle: {
-    width:          38,
-    height:         38,
-    borderRadius:   19,
-    alignItems:     'center',
-    justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  avatarText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 17 },
   avatarBadge: {
-    position:          'absolute',
-    top:               -2,
-    right:             -2,
-    backgroundColor:   '#C8102E',
-    borderRadius:      9999,
-    minWidth:          16,
-    height:            16,
-    alignItems:        'center',
-    justifyContent:    'center',
-    paddingHorizontal: 3,
-    borderWidth:       2,
+    position: 'absolute', top: -2, right: -2,
+    backgroundColor: '#C8102E', borderRadius: radius.full,
+    minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, borderWidth: 2,
   },
-  avatarBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  avatarBadgeText: { color: '#fff', fontSize: 13, fontFamily: fonts.bodyXBold },
 
   heroCard: {
     backgroundColor:  '#C8102E',
-    marginHorizontal: 16,
-    marginTop:        16,
-    borderRadius:     20,
-    padding:          20,
+    marginHorizontal: spacing.md,
+    marginTop:        spacing.md,
+    borderRadius:     radius.xl,
+    padding:          spacing.md + 4,
     overflow:         'hidden',
   },
   decorCircle: {
-    position:        'absolute',
-    width:           160,
-    height:          160,
-    borderRadius:    80,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    top:             -40,
-    right:           -40,
+    position: 'absolute', width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.08)', top: -40, right: -40,
   },
-  heroLabel: {
-    fontSize:      11,
-    fontWeight:    '600',
-    letterSpacing: 1.2,
-    color:         'rgba(255,255,255,0.85)',
-    textTransform: 'uppercase',
-  },
-  heroAmount: {
-    fontSize:      32,
-    fontWeight:    '800',
-    letterSpacing: -0.8,
-    color:         '#fff',
-    marginTop:     6,
-  },
-  heroSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  heroSub:    { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  heroLabel:  { fontSize: 15, fontFamily: fonts.bodySemi, letterSpacing: 1.2, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' },
+  heroAmount: { fontSize: 44, fontFamily: fonts.display,  letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm - 2 },
+  heroSubRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
+  heroSub:    { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)' },
 
   statsGrid: {
     flexDirection:     'row',
     flexWrap:          'wrap',
-    gap:               10,
-    paddingHorizontal: 16,
-    marginTop:         16,
+    gap:               spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    marginTop:         spacing.md,
   },
   statCard: {
     width:        '47%',
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth:  1,
-    padding:      14,
-    gap:          4,
+    padding:      spacing.md - 2,
+    gap:          spacing.xs,
   },
   statIcon: {
-    width:          36,
-    height:         36,
-    borderRadius:   10,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginBottom:   6,
+    width: 40, height: 40, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.sm - 2,
   },
-  statValue: { fontSize: 22, fontWeight: '800' },
-  statLabel: { fontSize: 13, fontWeight: '600' },
-  statSub:   { fontSize: 12 },
+  statValue: { fontSize: 30, fontFamily: fonts.display },
+  statLabel: { fontSize: 17, fontFamily: fonts.bodySemi },
+  statSub:   { fontSize: 15, fontFamily: fonts.body },
 
-  section: { paddingHorizontal: 16, marginTop: 20 },
-  sectionHeader: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   12,
-  },
-  sectionTitle:  { fontSize: 15, fontWeight: '700' },
-  sectionAction: { fontSize: 13, fontWeight: '600' },
+  section:       { paddingHorizontal: spacing.md, marginTop: spacing.md + 4 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md - 4 },
+  sectionTitle:  { fontSize: 21, fontFamily: fonts.heading },
+  sectionAction: { fontSize: 17, fontFamily: fonts.bodySemi },
 
-  chartCard: { borderRadius: 16, borderWidth: 1, padding: 16 },
-  chartLabel: { fontSize: 12, marginBottom: 12 },
-  chartBars: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-    gap:           8,
-    height:        140,
-  },
-  barGroup: {
-    flex:          1,
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-    gap:           2,
-  },
-  bar:        { flex: 1, borderRadius: 3 },
-  legendRow:  { flexDirection: 'row', gap: 12 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  chartCard:  { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md },
+  chartLabel: { fontSize: 15, fontFamily: fonts.body, marginBottom: spacing.md - 4 },
+  chartBars:  { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, height: 140 },
+  barGroup:   { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  bar:        { flex: 1, borderRadius: radius.sm - 5 },
+  legendRow:  { flexDirection: 'row', gap: spacing.md - 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   legendDot:  { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 12 },
+  legendText: { fontSize: 15, fontFamily: fonts.body },
 
-  requestsCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  reqRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-start',
-    gap:           10,
-    padding:       14,
-  },
-  reqDot:    { width: 8, height: 8, borderRadius: 4, flexShrink: 0, marginTop: 4 },
-  reqInfo:   { flex: 1, gap: 2 },
-  reqAgent:  { fontSize: 14, fontWeight: '600' },
-  reqMeta:   { fontSize: 12, fontFamily: 'monospace' },
-  reqTime:   { fontSize: 11 },
-  reqRight:  { alignItems: 'flex-end', gap: 4 },
-  reqAmount: { fontSize: 14, fontWeight: '700' },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  divider:    { height: 1, marginHorizontal: 14 },
+  requestsCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  reqRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm + 2, padding: spacing.md - 2 },
+  reqDot:       { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 4 },
+  reqInfo:      { flex: 1, gap: 2 },
+  reqAgent:     { fontSize: 18, fontFamily: fonts.bodyBold },
+  reqMeta:      { fontSize: 15, fontFamily: 'monospace' },
+  reqTime:      { fontSize: 14, fontFamily: fonts.body },
+  reqRight:     { alignItems: 'flex-end', gap: spacing.xs },
+  reqAmount:    { fontSize: 18, fontFamily: fonts.bodyBold },
+  statusPill:   { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm - 2 },
+  statusText:   { fontSize: 14, fontFamily: fonts.bodyBold },
+  divider:      { height: 1, marginHorizontal: spacing.md - 2 },
 
   emptyCard: {
-    borderRadius: 16,
-    borderWidth:  1,
-    padding:      32,
-    alignItems:   'center',
-    gap:          8,
+    borderRadius: radius.lg, borderWidth: 1, padding: spacing.xl,
+    alignItems: 'center', gap: spacing.sm,
   },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: 17, fontFamily: fonts.body },
 });

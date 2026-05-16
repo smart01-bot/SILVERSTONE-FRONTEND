@@ -8,6 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius, fonts } from '../../constants/theme';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import Constants from 'expo-constants';
@@ -58,28 +59,28 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const EditableRow = ({ label, field, value }) => (
-    <View style={[styles.editRow, { borderBottomColor: theme.border }]}>
-      <View style={styles.editRowLeft}>
-        <Text style={[styles.editLabel, { color: theme.textDim }]}>{label}</Text>
+    <View style={[s.editRow, { borderBottomColor: theme.border }]}>
+      <View style={s.editRowLeft}>
+        <Text style={[s.editLabel, { color: theme.textDim }]}>{label}</Text>
         {editing === field ? (
           <TextInput
-            style={[styles.editInput, { color: theme.text }]}
+            style={[s.editInput, { color: theme.text }]}
             value={editValue}
             onChangeText={setEditValue}
             autoFocus
           />
         ) : (
-          <Text style={[styles.editValue, { color: theme.text }]}>{value ?? '—'}</Text>
+          <Text style={[s.editValue, { color: theme.text }]}>{value ?? '—'}</Text>
         )}
       </View>
       {editing === field ? (
         <TouchableOpacity onPress={saveEdit} disabled={saving}>
-          <Text style={[styles.saveBtn, { color: theme.primary }]}>
+          <Text style={[s.saveBtn, { color: theme.primary }]}>
             {saving ? 'Saving...' : 'Save'}
           </Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={() => startEdit(field, value)}>
+        <TouchableOpacity onPress={() => startEdit(field, value)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="pencil-outline" size={20} color={theme.textDim} />
         </TouchableOpacity>
       )}
@@ -89,15 +90,13 @@ export default function ProfileScreen({ navigation }) {
   const MenuItem = ({ icon, label, onPress, danger, value, isSwitch }) => (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.menuItem, { borderBottomColor: theme.border }]}
+      style={[s.menuItem, { borderBottomColor: theme.border }]}
       activeOpacity={0.7}
     >
-      <View style={[styles.menuIcon, { backgroundColor: danger ? '#C8102E14' : theme.primaryLight }]}>
+      <View style={[s.menuIcon, { backgroundColor: danger ? '#C8102E14' : theme.primaryLight }]}>
         <Ionicons name={icon} size={22} color={danger ? '#C8102E' : theme.primary} />
       </View>
-      <Text style={[styles.menuLabel, { color: danger ? '#C8102E' : theme.text }]}>
-        {label}
-      </Text>
+      <Text style={[s.menuLabel, { color: danger ? '#C8102E' : theme.text }]}>{label}</Text>
       {isSwitch
         ? <Switch value={value} onValueChange={onPress} thumbColor="#fff"
             trackColor={{ true: theme.primary, false: theme.border }} />
@@ -107,50 +106,47 @@ export default function ProfileScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{tr('profile')}</Text>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>{tr('profile')}</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
-          <View style={[styles.avatar, { backgroundColor: avatarColor() + '20' }]}>
-            <Text style={[styles.avatarText, { color: avatarColor() }]}>{initials}</Text>
+        <View style={s.avatarSection}>
+          <View style={[s.avatar, { backgroundColor: avatarColor() + '20' }]}>
+            <Text style={[s.avatarText, { color: avatarColor() }]}>{initials}</Text>
           </View>
-          <Text style={[styles.name,  { color: theme.text }]}>{profile?.name ?? 'Agent'}</Text>
-          <Text style={[styles.email, { color: theme.textDim }]}>{user?.email ?? ''}</Text>
+          <Text style={[s.name,  { color: theme.text }]}>{profile?.name ?? 'Agent'}</Text>
+          <Text style={[s.email, { color: theme.textDim }]}>{user?.email ?? ''}</Text>
           {profile?.networks?.length > 0 && (
-            <View style={styles.chips}>
+            <View style={s.chips}>
               {profile.networks.map(net => (
-                <View key={net} style={[styles.chip, {
+                <View key={net} style={[s.chip, {
                   backgroundColor: NETWORK_COLORS[net] + '14',
                   borderColor:     NETWORK_COLORS[net] + '40',
                 }]}>
-                  <Text style={[styles.chipText, { color: NETWORK_COLORS[net] }]}>{net}</Text>
+                  <Text style={[s.chipText, { color: NETWORK_COLORS[net] }]}>{net}</Text>
                 </View>
               ))}
             </View>
           )}
         </View>
 
-        {/* Personal info */}
-        <View style={[styles.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textDim }]}>PERSONAL INFO</Text>
+        <View style={[s.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Text style={[s.sectionTitle, { color: theme.textDim }]}>PERSONAL INFO</Text>
           <EditableRow label="Full Name" field="name"             value={profile?.name} />
           <EditableRow label="Phone"     field="phone"            value={profile?.phone} />
           <EditableRow label="Location"  field="businessLocation" value={profile?.businessLocation} />
         </View>
 
-        {/* Settings */}
-        <View style={[styles.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textDim }]}>SETTINGS</Text>
-          <MenuItem icon="wifi-outline"        label="My Networks"  onPress={() => navigation.navigate('Networks')} />
-          <MenuItem icon="moon-outline"        label="Dark Mode"    isSwitch value={isDark} onPress={val => setTheme(val ? 'dark' : 'light')} />
-          <MenuItem icon="lock-closed-outline" label="Change PIN"   onPress={() => {}} />
+        <View style={[s.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Text style={[s.sectionTitle, { color: theme.textDim }]}>SETTINGS</Text>
+          <MenuItem icon="wifi-outline"        label="My Networks" onPress={() => navigation.navigate('Networks')} />
+          <MenuItem icon="moon-outline"        label="Dark Mode"   isSwitch value={isDark} onPress={val => setTheme(val ? 'dark' : 'light')} />
+          <MenuItem icon="lock-closed-outline" label="Change PIN"  onPress={() => {}} />
           <MenuItem
             icon="language-outline"
             label={lang === 'sw' ? 'Badilisha: English' : 'Switch to: Kiswahili'}
@@ -160,18 +156,17 @@ export default function ProfileScreen({ navigation }) {
           />
         </View>
 
-        {/* Support */}
-        <View style={[styles.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textDim }]}>SUPPORT</Text>
-          <MenuItem icon="help-circle-outline"    label="Help & Support"   onPress={() => {}} />
-          <MenuItem icon="document-text-outline"  label="Terms of Service" onPress={() => {}} />
+        <View style={[s.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Text style={[s.sectionTitle, { color: theme.textDim }]}>SUPPORT</Text>
+          <MenuItem icon="help-circle-outline"   label="Help & Support"   onPress={() => {}} />
+          <MenuItem icon="document-text-outline" label="Terms of Service" onPress={() => {}} />
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        <View style={[s.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <MenuItem icon="log-out-outline" label="Sign Out" onPress={handleLogout} danger />
         </View>
 
-        <Text style={[styles.version, { color: theme.muted }]}>
+        <Text style={[s.version, { color: theme.muted }]}>
           Silverstone v{Constants.expoConfig?.version ?? '1.0.0'}
         </Text>
       </ScrollView>
@@ -179,60 +174,78 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingBottom: 110 },
 
   header: {
     backgroundColor:         '#C8102E',
-    paddingHorizontal:       18,
-    paddingTop:              12,
-    paddingBottom:           18,
-    borderBottomLeftRadius:  26,
-    borderBottomRightRadius: 26,
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.md - 4,
+    paddingBottom:           spacing.md + 2,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },   // was 20
+  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
 
-  avatarSection: { alignItems: 'center', paddingTop: 28, paddingBottom: 18 },
+  avatarSection: { alignItems: 'center', paddingTop: spacing.lg + 4, paddingBottom: spacing.md + 2 },
   avatar: {
     width: 88, height: 88, borderRadius: 44,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md - 2,
   },
-  avatarText: { fontSize: 34, fontWeight: '800' },   // was 26
-  name:       { fontSize: 24, fontWeight: '800' },   // was 18
-  email:      { fontSize: 17, marginTop: 5 },         // was 13
+  avatarText: { fontSize: 34, fontFamily: fonts.display },
+  name:       { fontSize: 24, fontFamily: fonts.heading },
+  email:      { fontSize: 17, fontFamily: fonts.body, marginTop: spacing.xs + 1 },
   chips: {
-    flexDirection: 'row', gap: 7, marginTop: 14,
+    flexDirection: 'row', gap: spacing.sm - 1, marginTop: spacing.md - 2,
     flexWrap: 'wrap', justifyContent: 'center',
   },
-  chip: { paddingHorizontal: 13, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
-  chipText: { fontSize: 15, fontWeight: '600' },   // was 12
+  chip:     { paddingHorizontal: 13, paddingVertical: spacing.xs + 1, borderRadius: radius.sm, borderWidth: 1 },
+  chipText: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   section: {
-    marginHorizontal: 16, marginBottom: 14,
-    borderRadius: 18, borderWidth: 1, overflow: 'hidden',
+    marginHorizontal: spacing.md,
+    marginBottom:     spacing.md - 2,
+    borderRadius:     radius.xl - 2,
+    borderWidth:      1,
+    overflow:         'hidden',
   },
   sectionTitle: {
-    fontSize: 14, fontWeight: '700', letterSpacing: 0.8,   // was 11
-    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 10,
+    fontSize:          14,
+    fontFamily:        fonts.bodyBold,
+    letterSpacing:     0.8,
+    paddingHorizontal: spacing.md + 2,
+    paddingTop:        spacing.md,
+    paddingBottom:     spacing.sm + 2,
   },
 
   editRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1,
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical:   spacing.md - 2,
+    borderBottomWidth: 1,
   },
-  editRowLeft: { flex: 1, marginRight: 14 },
-  editLabel:   { fontSize: 15 },           // was 12
-  editValue:   { fontSize: 19, fontWeight: '500', marginTop: 3 },  // was 15
-  editInput:   { fontSize: 19, fontWeight: '500', marginTop: 3 },  // was 15
-  saveBtn:     { fontSize: 17, fontWeight: '700' },  // was 14
+  editRowLeft: { flex: 1, marginRight: spacing.md - 2 },
+  editLabel:   { fontSize: 15, fontFamily: fonts.body },
+  editValue:   { fontSize: 19, fontFamily: fonts.bodyMed, marginTop: 3 },
+  editInput:   { fontSize: 19, fontFamily: fonts.bodyMed, marginTop: 3 },
+  saveBtn:     { fontSize: 17, fontFamily: fonts.bodyBold },
 
   menuItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 18, paddingVertical: 16, borderBottomWidth: 1,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               spacing.md - 2,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical:   spacing.md,
+    borderBottomWidth: 1,
   },
-  menuIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  menuLabel: { flex: 1, fontSize: 19, fontWeight: '500' },   // was 15
+  menuIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  menuLabel: { flex: 1, fontSize: 19, fontFamily: fonts.bodyMed },
 
-  version: { textAlign: 'center', fontSize: 15, paddingTop: 10, paddingBottom: 18 }, // was 12
+  version: { textAlign: 'center', fontSize: 15, fontFamily: fonts.body, paddingTop: spacing.sm + 2, paddingBottom: spacing.md + 2 },
 });
