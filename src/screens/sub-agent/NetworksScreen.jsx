@@ -70,7 +70,7 @@ export default function NetworksScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+      <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
 
       <View style={s.header}>
         <TouchableOpacity

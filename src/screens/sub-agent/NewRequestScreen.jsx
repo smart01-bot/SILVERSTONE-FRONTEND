@@ -10,8 +10,9 @@ import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
-import AnimatedInput      from '../../components/AnimatedInput';
-import PressableScale     from '../../components/PressableScale';
+import { fonts, spacing, radius } from '../../constants/theme';
+import AnimatedInput  from '../../components/AnimatedInput';
+import PressableScale from '../../components/PressableScale';
 import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -72,7 +73,7 @@ export default function NewRequestScreen({ navigation, route }) {
     setError('');
     setLoading(true);
     try {
-      const q   = query(collection(db, 'requests'), where('status', '==', 'pending'));
+      const q    = query(collection(db, 'requests'), where('status', '==', 'pending'));
       const snap = await getDocs(q);
       const pos  = snap.size + 1;
       await addDoc(collection(db, 'requests'), {
@@ -98,15 +99,15 @@ export default function NewRequestScreen({ navigation, route }) {
   };
 
   const NetworkPicker = ({ label, selected, onSelect }) => (
-    <View style={styles.pickerWrap}>
-      <Text style={[styles.label, { color: theme.textDim }]}>{label}</Text>
-      <View style={styles.networkGrid}>
+    <View style={s.pickerWrap}>
+      <Text style={[s.label, { color: theme.textDim }]}>{label}</Text>
+      <View style={s.networkGrid}>
         {NETWORKS.map(net => (
           <PressableScale
             key={net}
             onPress={() => onSelect(net)}
             style={[
-              styles.netBtn,
+              s.netBtn,
               {
                 backgroundColor: selected === net ? NETWORK_COLORS[net] + '20' : theme.surfaceAlt,
                 borderColor:     selected === net ? NETWORK_COLORS[net]         : theme.border,
@@ -114,12 +115,12 @@ export default function NewRequestScreen({ navigation, route }) {
             ]}
             scaleDown={0.94}
           >
-            <View style={[styles.netColorDot, { backgroundColor: NETWORK_COLORS[net] }]} />
+            <View style={[s.netColorDot, { backgroundColor: NETWORK_COLORS[net] }]} />
             <Text style={[
-              styles.netBtnText,
+              s.netBtnText,
               {
                 color:      selected === net ? NETWORK_COLORS[net] : theme.text,
-                fontWeight: selected === net ? '700' : '500',
+                fontFamily: selected === net ? fonts.bodyBold : fonts.bodyMed,
               },
             ]}>
               {net}
@@ -131,29 +132,29 @@ export default function NewRequestScreen({ navigation, route }) {
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={s.header}
       >
-        <Text style={styles.headerTitle}>{tr('floatRequest')}</Text>
-        <Text style={styles.headerSub}>{tr('submitRequest')}</Text>
+        <View style={s.headerDecor} />
+        <Text style={s.headerTitle}>{tr('floatRequest')}</Text>
+        <Text style={s.headerSub}>{tr('submitRequest')}</Text>
       </LinearGradient>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
         >
           <NetworkPicker label={tr('sourceNetwork')} selected={sourceNetwork} onSelect={setSourceNetwork} />
           <NetworkPicker label={tr('destNetwork')}   selected={destNetwork}   onSelect={setDestNetwork}   />
 
-          {/* Source phone */}
           <AnimatedInput
             label={tr('sourcePhone')}
             value={sourcePhone}
@@ -162,7 +163,6 @@ export default function NewRequestScreen({ navigation, route }) {
             keyboardType="phone-pad"
           />
 
-          {/* Destination phone */}
           <AnimatedInput
             label={tr('destPhone')}
             value={destPhone}
@@ -171,7 +171,6 @@ export default function NewRequestScreen({ navigation, route }) {
             keyboardType="phone-pad"
           />
 
-          {/* Amount */}
           <AnimatedInput
             label={tr('amount')}
             value={amount}
@@ -180,74 +179,72 @@ export default function NewRequestScreen({ navigation, route }) {
             keyboardType="numeric"
             prefix="TZS"
             height={60}
-            inputStyle={{ fontSize: 28, fontWeight: '700' }}
+            inputStyle={{ fontSize: 28, fontFamily: fonts.bodyBold }}
           />
-          <View style={styles.quickRow}>
+
+          <View style={s.quickRow}>
             {[10000, 50000, 100000, 500000].map(n => (
               <TouchableOpacity
                 key={n}
                 onPress={() => addQuick(n)}
-                style={[styles.quickBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
+                style={[s.quickBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.quickBtnText, { color: theme.primary }]}>
+                <Text style={[s.quickBtnText, { color: theme.primary }]}>
                   +{n >= 1000 ? `${n / 1000}k` : n}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Urgent toggle */}
           <TouchableOpacity
             onPress={() => setUrgent(v => !v)}
-            style={[styles.urgentRow, {
+            style={[s.urgentRow, {
               backgroundColor: urgent ? '#F59E0B14' : theme.surfaceAlt,
               borderColor:     urgent ? '#F59E0B'   : theme.border,
             }]}
             activeOpacity={0.8}
           >
             <View>
-              <Text style={[styles.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
-              <Text style={[styles.urgentSub,   { color: theme.textDim }]}>{tr('urgentDesc')}</Text>
+              <Text style={[s.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
+              <Text style={[s.urgentSub,   { color: theme.textDim }]}>{tr('urgentDesc')}</Text>
             </View>
-            <View style={[styles.toggle, { backgroundColor: urgent ? '#F59E0B' : theme.border }]}>
-              <View style={[styles.toggleKnob, { transform: [{ translateX: urgent ? 18 : 2 }] }]} />
+            <View style={[s.toggle, { backgroundColor: urgent ? '#F59E0B' : theme.border }]}>
+              <View style={[s.toggleKnob, { transform: [{ translateX: urgent ? 18 : 2 }] }]} />
             </View>
           </TouchableOpacity>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[s.error, { color: theme.danger }]}>{error}</Text> : null}
 
-          {/* Summary */}
           {sourceNetwork && destNetwork && amount ? (
-            <View style={[styles.summary, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <Text style={[styles.summaryTitle, { color: theme.text }]}>{tr('summary')}</Text>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>{tr('route')}</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>{sourceNetwork} → {destNetwork}</Text>
+            <View style={[s.summary, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+              <Text style={[s.summaryTitle, { color: theme.text }]}>{tr('summary')}</Text>
+              <View style={s.summaryRow}>
+                <Text style={[s.summaryLabel, { color: theme.textDim }]}>{tr('route')}</Text>
+                <Text style={[s.summaryValue, { color: theme.text }]}>{sourceNetwork} → {destNetwork}</Text>
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
-                <Text style={[styles.summaryValue, { color: theme.primary }]}>TZS {amount}</Text>
+              <View style={s.summaryRow}>
+                <Text style={[s.summaryLabel, { color: theme.textDim }]}>{tr('amount')}</Text>
+                <Text style={[s.summaryValue, { color: theme.primary }]}>TZS {amount}</Text>
               </View>
               {urgent && (
-                <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: theme.textDim }]}>Priority</Text>
-                  <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>URGENT</Text>
+                <View style={s.summaryRow}>
+                  <Text style={[s.summaryLabel, { color: theme.textDim }]}>Priority</Text>
+                  <Text style={[s.summaryValue, { color: '#F59E0B' }]}>URGENT</Text>
                 </View>
               )}
             </View>
           ) : null}
 
-          {/* Submit */}
           <PressableScale
             onPress={handleSubmit}
             disabled={loading}
-            style={[styles.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
+            style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
             scaleDown={0.97}
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>{tr('submitRequest')}</Text>
+              : <Text style={s.submitText}>{tr('submitRequest')}</Text>
             }
           </PressableScale>
         </ScrollView>
@@ -256,58 +253,63 @@ export default function NewRequestScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: 16, paddingBottom: 110 },
+  scroll: { padding: spacing.md, paddingBottom: 110 },
 
   header: {
-    paddingHorizontal:       18,
-    paddingTop:              12,
-    paddingBottom:           22,
-    borderBottomLeftRadius:  26,
-    borderBottomRightRadius: 26,
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.xxl + spacing.sm,
+    paddingBottom:           spacing.lg,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    overflow:                'hidden',
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  headerDecor: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
+  },
+  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  pickerWrap:  { marginTop: 18 },
-  label:       { fontSize: 15, fontWeight: '600', marginBottom: 10, letterSpacing: 0.1 },
-  networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pickerWrap:  { marginTop: spacing.md + 2 },
+  label:       { fontSize: 16, fontFamily: fonts.bodySemi, marginBottom: spacing.sm + 2, letterSpacing: 0.1 },
+  networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   netBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderRadius: 13, borderWidth: 1.5,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 1,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md - 4,
+    borderRadius: radius.md + 1, borderWidth: 1.5,
   },
   netColorDot: { width: 10, height: 10, borderRadius: 5 },
   netBtnText:  { fontSize: 17 },
 
-  quickRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  quickRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 2 },
   quickBtn: {
-    flex: 1, height: 40, borderRadius: 10, borderWidth: 1,
+    flex: 1, height: 42, borderRadius: radius.sm + 2, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  quickBtnText: { fontSize: 15, fontWeight: '700' },
+  quickBtnText: { fontSize: 15, fontFamily: fonts.bodyBold },
 
   urgentRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderRadius: 14, borderWidth: 1.5, marginTop: 18,
+    padding: spacing.md, borderRadius: radius.lg - 2, borderWidth: 1.5, marginTop: spacing.md + 2,
   },
-  urgentLabel: { fontSize: 18, fontWeight: '600' },
-  urgentSub:   { fontSize: 15, marginTop: 3 },
+  urgentLabel: { fontSize: 18, fontFamily: fonts.bodySemi },
+  urgentSub:   { fontSize: 15, fontFamily: fonts.body, marginTop: 3 },
   toggle:      { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
   toggleKnob:  { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
 
-  error: { color: '#C8102E', fontSize: 16, textAlign: 'center', marginTop: 14 },
+  error: { fontSize: 16, fontFamily: fonts.body, textAlign: 'center', marginTop: spacing.md - 2 },
 
-  summary: { borderRadius: 16, borderWidth: 1, padding: 16, marginTop: 18, gap: 10 },
-  summaryTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  summary: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, marginTop: spacing.md + 2, gap: spacing.sm + 2 },
+  summaryTitle: { fontSize: 18, fontFamily: fonts.bodyBold, marginBottom: spacing.xs },
   summaryRow:   { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryLabel: { fontSize: 16 },
-  summaryValue: { fontSize: 16, fontWeight: '600' },
+  summaryLabel: { fontSize: 16, fontFamily: fonts.body },
+  summaryValue: { fontSize: 16, fontFamily: fonts.bodySemi },
 
   submitBtn: {
-    height: 58, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', marginTop: 22,
+    height: 58, borderRadius: radius.lg,
+    alignItems: 'center', justifyContent: 'center', marginTop: spacing.lg - 2,
   },
-  submitText: { color: '#fff', fontSize: 19, fontWeight: '700' },
+  submitText: { color: '#fff', fontSize: 19, fontFamily: fonts.bodyBold },
 });

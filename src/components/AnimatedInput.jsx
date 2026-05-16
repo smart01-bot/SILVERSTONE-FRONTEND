@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { TextInput, Animated, View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { fonts }    from '../constants/theme';
 
 /**
  * AnimatedInput — styled TextInput with:
@@ -17,7 +18,7 @@ export default function AnimatedInput({
   value,
   onChangeText,
   placeholder,
-  keyboardType   = 'default',
+  keyboardType    = 'default',
   secureTextEntry = false,
   prefix,
   wrapStyle,
@@ -32,13 +33,13 @@ export default function AnimatedInput({
   const scaleAnim  = useRef(new Animated.Value(1)).current;
 
   const animate = (toFocus) => {
-    // border colour: non-native
+    // border colour — non-native driver
     Animated.timing(borderAnim, {
       toValue:         toFocus ? 1 : 0,
       duration:        200,
       useNativeDriver: false,
     }).start();
-    // scale: native
+    // scale — native driver
     Animated.spring(scaleAnim, {
       toValue:         toFocus ? 1.012 : 1,
       useNativeDriver: true,
@@ -62,17 +63,12 @@ export default function AnimatedInput({
           {label}
         </Text>
       ) : null}
-      <Animated.View
-        style={[
-          s.box,
-          {
-            backgroundColor: theme.surfaceAlt,
-            borderColor,
-            borderWidth: focused ? 2 : 1.5,
-            height,
-          },
-        ]}
-      >
+      <Animated.View style={[s.box, {
+        backgroundColor: theme.surfaceAlt,
+        borderColor,
+        borderWidth: focused ? 2 : 1.5,
+        height,
+      }]}>
         {prefix ? (
           <Text style={[s.prefix, { color: theme.textDim }]}>{prefix}</Text>
         ) : null}
@@ -95,7 +91,7 @@ export default function AnimatedInput({
 
 const s = StyleSheet.create({
   wrap:   { marginTop: 18 },
-  label:  { fontSize: 15, fontWeight: '600', marginBottom: 8, letterSpacing: 0.1 },
+  label:  { fontSize: 15, fontFamily: fonts.bodySemi, marginBottom: 8, letterSpacing: 0.1 },
   box: {
     flexDirection:     'row',
     alignItems:        'center',
@@ -103,6 +99,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
     overflow:          'hidden',
   },
-  prefix: { fontSize: 19, marginRight: 10, fontWeight: '500' },
-  input:  { flex: 1, fontSize: 19 },
+  prefix: { fontSize: 19, marginRight: 10, fontFamily: fonts.bodyMed },
+  input:  { flex: 1, fontSize: 19, fontFamily: fonts.body },
 });

@@ -3,22 +3,23 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { fonts }    from '../constants/theme';
 
 export default function EmptyState({
-  icon     = 'document-outline',
+  icon        = 'document-outline',
   title,
   subtitle,
   actionLabel,
   onAction,
 }) {
   const { theme } = useTheme();
-  const fadeY = useRef(new Animated.Value(20)).current;
+  const fadeY   = useRef(new Animated.Value(20)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(fadeY, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+      Animated.spring(fadeY,   { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -46,11 +47,11 @@ export default function EmptyState({
 
 const s = StyleSheet.create({
   wrap: {
-    alignItems:      'center',
-    paddingTop:      60,
-    paddingBottom:   40,
+    alignItems:        'center',
+    paddingTop:        60,
+    paddingBottom:     40,
     paddingHorizontal: 32,
-    gap:             14,
+    gap:               14,
   },
   iconCircle: {
     width:          80,
@@ -60,22 +61,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginBottom:   4,
   },
-  title: {
-    fontSize:      22,
-    fontWeight:    '800',
-    textAlign:     'center',
-    letterSpacing: -0.3,
-  },
-  sub: {
-    fontSize:   17,
-    textAlign:  'center',
-    lineHeight: 26,
-  },
+  title:   { fontSize: 22, fontFamily: fonts.heading,   textAlign: 'center', letterSpacing: -0.3 },
+  sub:     { fontSize: 17, fontFamily: fonts.body,      textAlign: 'center', lineHeight: 26 },
   btn: {
     paddingHorizontal: 28,
     paddingVertical:   14,
     borderRadius:      14,
     marginTop:         6,
   },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 17 },
+  btnText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 17 },
 });

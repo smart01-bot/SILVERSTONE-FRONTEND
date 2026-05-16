@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }         from '../context/ThemeContext';
 import DrawerContent        from '../components/DrawerContent';
+import { fonts, radius, spacing } from '../constants/theme';
+
 import HomeScreen           from '../screens/sub-agent/HomeScreen';
 import NewRequestScreen     from '../screens/sub-agent/NewRequestScreen';
 import RequestSuccessScreen from '../screens/sub-agent/RequestSuccessScreen';
@@ -22,12 +24,10 @@ const Drawer = createDrawerNavigator();
 // ─── Animated tab icon ────────────────────────────────────────────────────────
 // CRASH FIX: native driver (scale) and non-native driver (backgroundColor glow)
 // MUST live in separate useEffect calls and separate Animated.View wrappers.
-// Mixing them in Animated.parallel causes a RN crash on Android.
 function TabIcon({ name, focused, color, badge }) {
   const scale = useRef(new Animated.Value(1)).current;
   const glow  = useRef(new Animated.Value(0)).current;
 
-  // Native driver — scale only
   useEffect(() => {
     Animated.spring(scale, {
       toValue:         focused ? 1.25 : 1,
@@ -37,7 +37,6 @@ function TabIcon({ name, focused, color, badge }) {
     }).start();
   }, [focused]);
 
-  // Non-native driver — backgroundColor only (cannot use native driver)
   useEffect(() => {
     Animated.timing(glow, {
       toValue:         focused ? 1 : 0,
@@ -51,8 +50,6 @@ function TabIcon({ name, focused, color, badge }) {
     outputRange: ['rgba(0,0,0,0)', color + '25'],
   });
 
-  // Outer Animated.View → glow background (non-native)
-  // Inner Animated.View → scale transform (native)
   return (
     <Animated.View style={[styles.tabIconWrap, { backgroundColor: bgColor }]}>
       <Animated.View style={{ transform: [{ scale }], alignItems: 'center', justifyContent: 'center' }}>
@@ -78,7 +75,6 @@ function TabIcon({ name, focused, color, badge }) {
 }
 
 // ─── Bottom tabs ──────────────────────────────────────────────────────────────
-// HomeTabs must be a proper component so tr() and useTheme() are available.
 function HomeTabs() {
   const { theme, tr } = useTheme();
 
@@ -92,7 +88,7 @@ function HomeTabs() {
           borderTopColor:  theme.border,
           borderTopWidth:  1,
           paddingBottom:   Platform.OS === 'ios' ? 22 : 10,
-          paddingTop:      8,
+          paddingTop:      spacing.sm,
           height:          Platform.OS === 'ios' ? 86 : 68,
           ...Platform.select({
             ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.10, shadowRadius: 14 },
@@ -101,7 +97,12 @@ function HomeTabs() {
         },
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
-        tabBarLabelStyle:        { fontSize: 13, fontWeight: '700', marginTop: 2, letterSpacing: 0.1 },
+        tabBarLabelStyle: {
+          fontSize:      13,
+          fontFamily:    fonts.bodyBold,
+          marginTop:     2,
+          letterSpacing: 0.1,
+        },
       }}
     >
       <Tab.Screen
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   tabIconWrap: {
     width:          46,
     height:         38,
-    borderRadius:   13,
+    borderRadius:   radius.md,
     alignItems:     'center',
     justifyContent: 'center',
   },
@@ -208,12 +209,12 @@ const styles = StyleSheet.create({
     top:               -4,
     right:             -8,
     backgroundColor:   '#C8102E',
-    borderRadius:      9999,
+    borderRadius:      radius.full,
     minWidth:          18,
     height:            18,
     alignItems:        'center',
     justifyContent:    'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  badgeText: { color: '#fff', fontSize: 11, fontFamily: fonts.bodyXBold },
 });
