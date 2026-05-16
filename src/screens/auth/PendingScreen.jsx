@@ -1,168 +1,436 @@
-// src/screens/auth/PendingScreen.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, SafeAreaView, Image, Animated,
+  View, Text, StyleSheet, TouchableOpacity, Animated,
+  StatusBar, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth }  from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { spacing, radius, fonts } from '../../constants/theme';
+import { useHaptics } from '../../hooks/useHaptics';
+import { getAuth } from 'firebase/auth';
+
+const TARGET_PCT = 60; // %
+const ANIMATE_FROM = 25;
 
 const STEPS = [
-  { label: 'Application Received',  done: true  },
-  { label: 'Identity Verification', done: false, active: true },
-  { label: 'Admin Review',          done: false },
-  { label: 'Account Activated',     done: false },
+  { label: 'Application submitted', sub: 'Just now',         done: true,  active: false },
+  { label: 'Identity check',        sub: 'Done',             done: true,  active: false },
+  { label: 'Main-agent review',     sub: 'In progress',      done: false, active: true  },
+  { label: 'Account activated',     sub: 'Usually within 4 hrs', done: false, active: false },
 ];
 
-function StepRow({ step, index, theme }) {
-  const anim = useRef(new Animated.Value(0)).current;
+
+export default function PendingScreen({ navigation }) {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
+
+  const [pctDisplay, setPctDisplay] = useState(ANIMATE_FROM);
+
+  // Animated values
+  const ringAnim    = useRef(new Animated.Value(ANIMATE_FROM)).current;
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const stepsAnim   = useRef(STEPS.map(() => new Animated.Value(0))).current;
+
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const phone = user?.phoneNumber ?? '+255 ••• ••• •••';
+  // Mask phone: show +255 XXX ••• XXX
+  const maskedPhone = phone.replace(/(\+255\s?\d{3})\s?\d{3}\s?(\d{3})/, '$1 ••• $2');
 
   useEffect(() => {
-    Animated.spring(anim, {
-      toValue: 1, tension: 80, friction: 10,
-      delay: 300 + index * 100, useNativeDriver: true,
+    // Animate ring
+    Animated.timing(ringAnim, {
+      toValue: TARGET_PCT,
+      duration: 1800,
+      delay: 400,
+      useNativeDriver: false,
     }).start();
+
+    // Track display number
+    ringAnim.addListener(({ value }) => {
+      setPctDisplay(Math.round(value));
+    });
+
+    // Content fade-in
+    Animated.timing(contentAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+
+    // Stagger steps
+    Animated.stagger(120,
+      stepsAnim.map(a =>
+        Animated.spring(a, {
+          toValue: 1,
+          tension: 60,
+          friction: 9,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+
+    return () => ringAnim.removeAllListeners();
   }, []);
 
-  return (
-    <Animated.View style={[
-      s.stepRow,
-      { opacity: anim, transform: [{ translateX: anim.interpolate({ inputRange: [0,1], outputRange: [-20,0] }) }] },
-    ]}>
-      <View style={[
-        s.stepIcon,
-        {
-          backgroundColor: step.done ? '#16A34A14' : step.active ? theme.primaryLight : theme.surfaceAlt,
-          borderColor:     step.done ? '#16A34A'   : step.active ? theme.primary      : theme.border,
-          borderWidth: 1.5,
-        },
-      ]}>
-        {step.done   ? <Ionicons name="checkmark"        size={14} color="#16A34A" /> :
-         step.active ? <Ionicons name="radio-button-on"  size={14} color={theme.primary} /> :
-                       <Ionicons name="radio-button-off" size={14} color={theme.muted} />}
-      </View>
-      <Text style={[
-        s.stepLabel,
-        {
-          color:      step.done ? '#16A34A' : step.active ? theme.primary : theme.textDim,
-          fontFamily: step.active ? fonts.bodySemi : fonts.body,
-        },
-      ]}>
-        {step.label}
-      </Text>
-    </Animated.View>
-  );
-}
+  const strokeDashoffset = ringAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: [CIRCUMFERENCE, CIRCUMFERENCE - (CIRCUMFERENCE * TARGET_PCT / 100)],
+  });
 
-export default function PendingScreen() {
-  const { logout, profile } = useAuth();
-  const { theme, isDark }   = useTheme();
-
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
+  // Since Animated SVG Circle is complex, we use a JS ticker approach
+  // We'll render a manual arc using border/clip approach
+  const s = styles(theme, insets);
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
 
-      <Animated.View style={[s.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      {/* Background */}
+      <View style={s.bgTop} />
 
-        {/* Logo */}
-        <View style={s.logoRow}>
-          <View style={s.logoTile}>
-            <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
+      <Animated.View style={[s.content, { opacity: contentAnim }]}>
+
+        {/* Ring */}
+        <View style={[s.ringWrap, { paddingTop: insets.top + 32 }]}>
+          <View style={s.ringOuter}>
+            {/* Track ring */}
+            <View style={s.ringTrack} />
+
+            {/* Progress arc — we approximate with a rotating clip */}
+            <View style={s.ringProgressWrap}>
+              <View style={[s.ringHalf, s.ringHalfLeft]}>
+                <Animated.View style={[s.ringFill, {
+                  transform: [{
+                    rotate: ringAnim.interpolate({
+                      inputRange: [0, 50, 100],
+                      outputRange: ['-180deg', '0deg', '0deg'],
+                    }),
+                  }],
+                  backgroundColor: theme.gradPrimA,
+                }]} />
+              </View>
+              <View style={[s.ringHalf, s.ringHalfRight]}>
+                <Animated.View style={[s.ringFill, {
+                  transform: [{
+                    rotate: ringAnim.interpolate({
+                      inputRange: [0, 50, 100],
+                      outputRange: ['-180deg', '-180deg', '0deg'],
+                    }),
+                  }],
+                  backgroundColor: theme.gradPrimA,
+                }]} />
+              </View>
+            </View>
+
+            {/* Center content */}
+            <View style={s.ringCenter}>
+              <Text style={s.ringPct}>{pctDisplay}%</Text>
+              <Text style={s.ringLabel}>VERIFIED</Text>
+            </View>
           </View>
-          <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
         </View>
 
-        {/* Gradient icon */}
-        <LinearGradient
-          colors={[theme.gradPrimA, theme.gradPrimB]}
-          style={s.iconTile}
-        >
-          <Ionicons name="time-outline" size={52} color="#fff" />
-        </LinearGradient>
+        {/* Main text */}
+        <View style={s.textBlock}>
+          <Text style={s.headline}>You're under review.</Text>
+          <Text style={s.subtext}>
+            You can close the app — we'll send you an SMS the moment you're cleared to log in.
+          </Text>
+        </View>
 
-        <Text style={[s.heading, { color: theme.text }]}>Application Under Review</Text>
-        <Text style={[s.name,    { color: theme.primary }]}>{firstName}</Text>
-        <Text style={[s.desc,    { color: theme.textDim }]}>
-          Your application is being reviewed. This typically takes 24–48 hours.
-        </Text>
-
-        {/* Step tracker */}
-        <View style={[s.tracker, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        {/* Steps list */}
+        <View style={s.stepsList}>
           {STEPS.map((step, i) => (
-            <View key={step.label}>
-              <StepRow step={step} index={i} theme={theme} />
+            <Animated.View
+              key={i}
+              style={[s.stepRow, {
+                opacity: stepsAnim[i],
+                transform: [{
+                  translateX: stepsAnim[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                }],
+              }]}
+            >
+              {/* Icon */}
+              <View style={[
+                s.stepIcon,
+                step.done   && s.stepIconDone,
+                step.active && s.stepIconActive,
+              ]}>
+                {step.done ? (
+                  <Text style={s.stepIconText}>✓</Text>
+                ) : step.active ? (
+                  <View style={s.stepActiveDot} />
+                ) : (
+                  <View style={s.stepEmptyDot} />
+                )}
+              </View>
+
+              {/* Connector line */}
               {i < STEPS.length - 1 && (
-                <View style={[s.connector, { backgroundColor: step.done ? '#16A34A' : theme.border }]} />
+                <View style={[s.connector, step.done && s.connectorDone]} />
               )}
-            </View>
+
+              {/* Text */}
+              <View style={s.stepText}>
+                <Text style={[
+                  s.stepLabel,
+                  !step.done && !step.active && s.stepLabelDim,
+                ]}>
+                  {step.label}
+                </Text>
+                <Text style={[
+                  s.stepSub,
+                  step.active && s.stepSubActive,
+                ]}>
+                  {step.sub}
+                </Text>
+              </View>
+            </Animated.View>
           ))}
         </View>
 
-        <Text style={[s.eta, { color: theme.textDim }]}>Estimated time: 24–48 hours</Text>
+        {/* Footer */}
+        <View style={[s.footer, { paddingBottom: insets.bottom + 20 }]}>
+          <Text style={s.footerText}>SMS will be sent to</Text>
+          <Text style={s.footerPhone}>{maskedPhone}</Text>
 
-        <TouchableOpacity onPress={logout} style={s.signOutWrap} activeOpacity={0.75}>
-          <Text style={[s.signOut, { color: theme.primary }]}>Sign Out</Text>
-        </TouchableOpacity>
-
+          {/* Demo CTA — remove in production */}
+          <TouchableOpacity
+            style={s.demoBtn}
+            onPress={() => {
+              haptics.light();
+              navigation.reset({ index: 0, routes: [{ name: 'PinSetup' }] });
+            }}
+          >
+            <Text style={s.demoBtnText}>Simulate approval (demo) →</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const s = StyleSheet.create({
-  safe:  { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', padding: spacing.lg, paddingTop: spacing.md },
+const RING_SIZE = 168;
+const RING_BORDER = 10;
 
-  logoRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm + 2, marginBottom: spacing.xl,
-  },
-  logoTile: {
-    width: 36, height: 36, borderRadius: radius.sm + 1,
-    backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center', padding: spacing.sm - 2,
-  },
-  logoImg:  { width: '100%', height: '100%' },
-  logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
+const styles = (theme, insets) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.bg },
 
-  iconTile: {
-    width: 100, height: 100, borderRadius: radius.xl + 4,
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
+  bgTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    backgroundColor: theme.surfaceAlt,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
 
-  heading: { fontSize: 24, fontFamily: fonts.heading, letterSpacing: -0.4, textAlign: 'center' },
-  name:    { fontSize: 20, fontFamily: fonts.bodyBold, marginTop: spacing.xs },
-  desc:    {
-    fontSize: 17, fontFamily: fonts.body, textAlign: 'center',
-    lineHeight: 26, marginTop: spacing.sm + 2, marginBottom: spacing.lg,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 
-  tracker: {
-    width: '100%', borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
+  ringWrap: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md - 4, paddingVertical: spacing.sm - 2 },
+  ringOuter: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringTrack: {
+    position: 'absolute',
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER,
+    borderColor: theme.border,
+  },
+  ringProgressWrap: {
+    position: 'absolute',
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    overflow: 'hidden',
+  },
+  ringHalf: {
+    position: 'absolute',
+    width: RING_SIZE / 2,
+    height: RING_SIZE,
+    overflow: 'hidden',
+  },
+  ringHalfLeft: { left: 0 },
+  ringHalfRight: { right: 0 },
+  ringFill: {
+    position: 'absolute',
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER,
+    borderColor: 'transparent',
+  },
+  ringCenter: {
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  ringPct: {
+    fontSize: 34,
+    fontFamily: 'Manrope_800ExtraBold',
+    color: theme.text,
+    lineHeight: 40,
+  },
+  ringLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: theme.primary,
+    letterSpacing: 2,
+    marginTop: 2,
+  },
+
+  textBlock: {
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  headline: {
+    fontSize: 24,
+    fontFamily: 'Manrope_800ExtraBold',
+    color: theme.text,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtext: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    color: theme.textDim,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  stepsList: {
+    width: '100%',
+    paddingHorizontal: 28,
+    gap: 0,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 4,
+    minHeight: 52,
+    position: 'relative',
+  },
   stepIcon: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.surface,
+    marginRight: 14,
+    marginTop: 2,
+    zIndex: 2,
   },
-  stepLabel: { fontSize: 17, flex: 1 },
-  connector: { width: 2, height: spacing.sm, marginLeft: 14, backgroundColor: 'transparent' },
+  stepIconDone: {
+    borderColor: '#22C55E',
+    backgroundColor: '#22C55E',
+  },
+  stepIconActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FEF3C7',
+  },
+  stepIconText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  stepActiveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F59E0B',
+  },
+  stepEmptyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.border,
+  },
+  connector: {
+    position: 'absolute',
+    left: 13,
+    top: 32,
+    width: 2,
+    height: 24,
+    backgroundColor: theme.border,
+    zIndex: 1,
+  },
+  connectorDone: {
+    backgroundColor: '#22C55E',
+  },
 
-  eta:         { fontSize: 16, fontFamily: fonts.body, marginTop: spacing.md },
-  signOutWrap: { marginTop: 'auto', padding: spacing.md },
-  signOut:     { fontSize: 18, fontFamily: fonts.bodySemi },
+  stepText: { flex: 1 },
+  stepLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    color: theme.text,
+    lineHeight: 20,
+  },
+  stepLabelDim: { color: theme.muted },
+  stepSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: theme.textDim,
+    marginTop: 1,
+  },
+  stepSubActive: {
+    color: '#F59E0B',
+    fontFamily: 'Inter_600SemiBold',
+  },
+
+  footer: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    width: '100%',
+    gap: 4,
+  },
+  footerText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: theme.muted,
+  },
+  footerPhone: {
+    fontSize: 14,
+    fontFamily: 'RobotoMono_400Regular',
+    color: theme.text,
+  },
+
+  demoBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
+  },
+  demoBtnText: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: theme.muted,
+  },
 });
