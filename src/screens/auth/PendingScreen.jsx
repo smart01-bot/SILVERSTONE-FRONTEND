@@ -4,6 +4,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   StatusBar, SafeAreaView, Image, Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,13 +17,58 @@ const STEPS = [
   { label: 'Account Activated',     done: false },
 ];
 
+function StepRow({ step, index, theme }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: 1, tension: 80, friction: 10,
+      delay: 300 + index * 100, useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[
+      s.stepRow,
+      { opacity: anim, transform: [{ translateX: anim.interpolate({ inputRange: [0,1], outputRange: [-20,0] }) }] },
+    ]}>
+      <View style={[
+        s.stepIcon,
+        {
+          backgroundColor: step.done ? '#16A34A14' : step.active ? theme.primaryLight : theme.surfaceAlt,
+          borderColor:     step.done ? '#16A34A'   : step.active ? theme.primary      : theme.border,
+          borderWidth: 1.5,
+        },
+      ]}>
+        {step.done   ? <Ionicons name="checkmark"        size={14} color="#16A34A" /> :
+         step.active ? <Ionicons name="radio-button-on"  size={14} color={theme.primary} /> :
+                       <Ionicons name="radio-button-off" size={14} color={theme.muted} />}
+      </View>
+      <Text style={[
+        s.stepLabel,
+        {
+          color:      step.done ? '#16A34A' : step.active ? theme.primary : theme.textDim,
+          fontFamily: step.active ? fonts.bodySemi : fonts.body,
+        },
+      ]}>
+        {step.label}
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function PendingScreen() {
   const { logout, profile } = useAuth();
   const { theme, isDark }   = useTheme();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+    ]).start();
   }, []);
 
   const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
@@ -31,7 +77,9 @@ export default function PendingScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      <Animated.View style={[s.inner, { opacity: fadeAnim }]}>
+      <Animated.View style={[s.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+
+        {/* Logo */}
         <View style={s.logoRow}>
           <View style={s.logoTile}>
             <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
@@ -39,9 +87,13 @@ export default function PendingScreen() {
           <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
         </View>
 
-        <View style={[s.iconTile, { backgroundColor: theme.primaryLight }]}>
-          <Ionicons name="time-outline" size={52} color={theme.primary} />
-        </View>
+        {/* Gradient icon */}
+        <LinearGradient
+          colors={[theme.gradPrimA, theme.gradPrimB]}
+          style={s.iconTile}
+        >
+          <Ionicons name="time-outline" size={52} color="#fff" />
+        </LinearGradient>
 
         <Text style={[s.heading, { color: theme.text }]}>Application Under Review</Text>
         <Text style={[s.name,    { color: theme.primary }]}>{firstName}</Text>
@@ -49,30 +101,11 @@ export default function PendingScreen() {
           Your application is being reviewed. This typically takes 24–48 hours.
         </Text>
 
+        {/* Step tracker */}
         <View style={[s.tracker, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           {STEPS.map((step, i) => (
-            <View key={step.label} style={s.stepRow}>
-              <View style={[
-                s.stepIcon,
-                {
-                  backgroundColor: step.done ? '#16A34A14' : step.active ? theme.primaryLight : theme.surfaceAlt,
-                  borderColor:     step.done ? '#16A34A'   : step.active ? theme.primary      : theme.border,
-                  borderWidth: 1.5,
-                },
-              ]}>
-                {step.done   ? <Ionicons name="checkmark"        size={14} color="#16A34A" /> :
-                 step.active ? <Ionicons name="radio-button-on"  size={14} color={theme.primary} /> :
-                               <Ionicons name="radio-button-off" size={14} color={theme.muted} />}
-              </View>
-              <Text style={[
-                s.stepLabel,
-                {
-                  color:      step.done ? '#16A34A' : step.active ? theme.primary : theme.textDim,
-                  fontFamily: step.active ? fonts.bodySemi : fonts.body,
-                },
-              ]}>
-                {step.label}
-              </Text>
+            <View key={step.label}>
+              <StepRow step={step} index={i} theme={theme} />
               {i < STEPS.length - 1 && (
                 <View style={[s.connector, { backgroundColor: step.done ? '#16A34A' : theme.border }]} />
               )}
@@ -85,6 +118,7 @@ export default function PendingScreen() {
         <TouchableOpacity onPress={logout} style={s.signOutWrap} activeOpacity={0.75}>
           <Text style={[s.signOut, { color: theme.primary }]}>Sign Out</Text>
         </TouchableOpacity>
+
       </Animated.View>
     </SafeAreaView>
   );
@@ -95,11 +129,8 @@ const s = StyleSheet.create({
   inner: { flex: 1, alignItems: 'center', padding: spacing.lg, paddingTop: spacing.md },
 
   logoRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            spacing.sm + 2,
-    marginBottom:   spacing.xl,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm + 2, marginBottom: spacing.xl,
   },
   logoTile: {
     width: 36, height: 36, borderRadius: radius.sm + 1,
@@ -109,38 +140,27 @@ const s = StyleSheet.create({
   logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
 
   iconTile: {
-    width: 96, height: 96, borderRadius: radius.xl + 2,
+    width: 100, height: 100, borderRadius: radius.xl + 4,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
   },
+
   heading: { fontSize: 24, fontFamily: fonts.heading, letterSpacing: -0.4, textAlign: 'center' },
   name:    { fontSize: 20, fontFamily: fonts.bodyBold, marginTop: spacing.xs },
-  desc:    { fontSize: 17, fontFamily: fonts.body, textAlign: 'center', lineHeight: 26, marginTop: spacing.sm + 2, marginBottom: spacing.lg },
+  desc:    {
+    fontSize: 17, fontFamily: fonts.body, textAlign: 'center',
+    lineHeight: 26, marginTop: spacing.sm + 2, marginBottom: spacing.lg,
+  },
 
   tracker: {
-    width:        '100%',
-    borderRadius: radius.lg,
-    borderWidth:  1,
-    padding:      spacing.md,
+    width: '100%', borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           spacing.md - 4,
-    position:      'relative',
-    paddingBottom: spacing.md,
-  },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md - 4, paddingVertical: spacing.sm - 2 },
   stepIcon: {
     width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   stepLabel: { fontSize: 17, flex: 1 },
-  connector: {
-    position: 'absolute',
-    left:     14,
-    top:      30,
-    width:    2,
-    height:   spacing.md,
-  },
+  connector: { width: 2, height: spacing.sm, marginLeft: 14, backgroundColor: 'transparent' },
 
   eta:         { fontSize: 16, fontFamily: fonts.body, marginTop: spacing.md },
   signOutWrap: { marginTop: 'auto', padding: spacing.md },
