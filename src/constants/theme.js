@@ -51,39 +51,39 @@ export const LIGHT = {
 
 // ─── DARK ─────────────────────────────────────────────────────────────────────
 export const DARK = {
-  bg:            '#07070E',
-  surface:       '#0E0E1C',
-  surfaceAlt:    '#16162A',
-  surfaceElev:   '#1E1E35',
-  border:        '#24243C',
-  borderStrong:  '#38385A',
+  bg:           '#000000',   // was #07070E
+  surface:      '#0D0D0D',   // was #0E0E1C
+  surfaceAlt:   '#141414',   // was #16162A
+  surfaceElev:  '#1C1C1C',   // was #1E1E35
+  border:       '#2A2A2A',   // was #24243C
+  borderStrong: '#3A3A3A',   // was #38385A
 
-  text:          '#EEEEF8',
-  textMid:       '#C4C4DC',
-  textDim:       '#7474A0',
-  muted:         '#32324A',
+  text:         '#F0F0F0',   // was #EEEEF8
+  textMid:      '#C0C0C0',   // was #C4C4DC
+  textDim:      '#707070',   // was #7474A0
+  muted:        '#303030',   // was #32324A
 
   primary:       '#E01535',
   primaryLight:  '#C8102E28',
   primaryDark:   '#960B22',
   primaryBright: '#FF1A3D',
 
-  gradPrimA:     '#E01535',
-  gradPrimB:     '#960B22',
-  gradSurfA:     '#16162A',
-  gradSurfB:     '#0E0E1C',
+  gradPrimA:    '#E01535',
+  gradPrimB:    '#960B22',
+  gradSurfA:    '#141414',   // was #16162A
+  gradSurfB:    '#0D0D0D',   // was #0E0E1C
 
-  success:       '#22C55E',
-  successSoft:   '#22C55E22',
-  warning:       '#FBBF24',
-  warningSoft:   '#FBBF2422',
-  danger:        '#E01535',
-  dangerSoft:    '#E0153526',
-  info:          '#22D3EE',
-  infoSoft:      '#22D3EE22',
+  success:      '#22C55E',
+  successSoft:  '#22C55E22',
+  warning:      '#FBBF24',
+  warningSoft:  '#FBBF2422',
+  danger:       '#E01535',
+  dangerSoft:   '#E0153526',
+  info:         '#22D3EE',
+  infoSoft:     '#22D3EE22',
 
-  shadow:        'rgba(0,0,0,0.35)',
-  shadowMd:      'rgba(0,0,0,0.55)',
+  shadow:       'rgba(0,0,0,0.5)',
+  shadowMd:     'rgba(0,0,0,0.75)',
 };
 
 // ─── TYPOGRAPHY ───────────────────────────────────────────────────────────────
