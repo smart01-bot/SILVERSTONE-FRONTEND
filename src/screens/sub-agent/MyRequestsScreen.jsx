@@ -5,9 +5,13 @@ import {
   StyleSheet, StatusBar, SafeAreaView,
   RefreshControl, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth }  from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { Ionicons }    from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth }     from '../../context/AuthContext';
+import { useTheme }    from '../../context/ThemeContext';
+import { SkeletonCard } from '../../components/SkeletonLoader';
+import EmptyState       from '../../components/EmptyState';
+import PressableScale   from '../../components/PressableScale';
 import {
   collection, query, where, orderBy,
   onSnapshot, doc, updateDoc,
@@ -22,10 +26,11 @@ const NETWORK_COLORS = {
 };
 
 export default function MyRequestsScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user }              = useAuth();
   const { theme, isDark, tr } = useTheme();
 
   const [requests,   setRequests]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
   const [filter,     setFilter]     = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -45,7 +50,10 @@ export default function MyRequestsScreen({ navigation }) {
         where('agentId', '==', user.uid),
         orderBy('createdAt', 'desc')
       ),
-      snap => setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => {
+        setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }
     );
     return unsub;
   }, [user?.uid]);
@@ -115,21 +123,44 @@ export default function MyRequestsScreen({ navigation }) {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
+  // Empty state config per filter
+  const emptyConfig = () => {
+    if (filter !== 'all') {
+      return {
+        icon:     'funnel-outline',
+        title:    `No ${filter} requests`,
+        subtitle: 'Try a different filter above.',
+      };
+    }
+    return {
+      icon:        'receipt-outline',
+      title:       tr('noRequests'),
+      subtitle:    tr('noRequestsDesc'),
+      actionLabel: tr('newRequest'),
+      onAction:    () => navigation.navigate('NewRequest'),
+    };
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="#C8102E" />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <Text style={styles.headerTitle}>{tr('myRequests')}</Text>
-        <Text style={styles.headerSub}>{requests.length} total</Text>
-      </View>
+        <Text style={styles.headerSub}>{loading ? '…' : `${requests.length} total`}</Text>
+      </LinearGradient>
 
       {/* Filter pills */}
       <View style={[styles.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.filterRow}>
             {FILTERS.map(f => (
-              <TouchableOpacity
+              <PressableScale
                 key={f.key}
                 onPress={() => setFilter(f.key)}
                 style={[
@@ -139,12 +170,12 @@ export default function MyRequestsScreen({ navigation }) {
                     borderColor:     filter === f.key ? theme.primary : theme.border,
                   },
                 ]}
-                activeOpacity={0.75}
+                scaleDown={0.94}
               >
                 <Text style={[styles.pillText, { color: filter === f.key ? '#fff' : theme.textDim }]}>
                   {f.label}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         </ScrollView>
@@ -157,29 +188,25 @@ export default function MyRequestsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="document-outline" size={64} color={theme.muted} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>{tr('noRequests')}</Text>
-            <Text style={[styles.emptyText,  { color: theme.textDim }]}>{tr('noRequestsDesc')}</Text>
-            {filter === 'all' && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('NewRequest')}
-                style={[styles.emptyBtn, { backgroundColor: theme.primary }]}
-              >
-                <Text style={styles.emptyBtnText}>{tr('newRequest')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* Loading skeletons */}
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : filtered.length === 0 ? (
+          <EmptyState {...emptyConfig()} />
         ) : (
           filtered.map(req => (
-            <View
+            <PressableScale
               key={req.id}
               style={[styles.card, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
                 borderLeftColor: NETWORK_COLORS[req.sourceNetwork] ?? theme.border,
               }]}
+              scaleDown={0.98}
             >
               {/* Top row */}
               <View style={styles.cardTop}>
@@ -231,7 +258,7 @@ export default function MyRequestsScreen({ navigation }) {
                   <Text style={[styles.actionText, { color: theme.primary }]}>{tr('tryAgain')}</Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </PressableScale>
           ))
         )}
       </ScrollView>
@@ -244,15 +271,14 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 110 },
 
   header: {
-    backgroundColor:         '#C8102E',
     paddingHorizontal:       18,
     paddingTop:              12,
-    paddingBottom:           18,
+    paddingBottom:           22,
     borderBottomLeftRadius:  26,
     borderBottomRightRadius: 26,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },        // was 20
-  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 }, // was 12
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
 
   filters:   { paddingVertical: 12, paddingHorizontal: 16 },
   filterRow: { flexDirection: 'row', gap: 8 },
@@ -260,43 +286,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 9,
     borderRadius: 9999, borderWidth: 1,
   },
-  pillText: { fontSize: 16, fontWeight: '600' },   // was 13
-
-  empty: { alignItems: 'center', paddingTop: 70, gap: 14 },
-  emptyTitle: { fontSize: 24, fontWeight: '700' },   // was 18
-  emptyText:  { fontSize: 18 },                       // was 14
-  emptyBtn: {
-    paddingHorizontal: 28, paddingVertical: 14,
-    borderRadius: 14, marginTop: 4,
-  },
-  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 18 },  // was 14
+  pillText: { fontSize: 16, fontWeight: '600' },
 
   card: {
     borderRadius: 18, borderWidth: 1,
     borderLeftWidth: 4, padding: 16,
     marginBottom: 12, gap: 10,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  netDot:   { width: 10, height: 10, borderRadius: 5 },
-  network:  { fontSize: 18, fontWeight: '700' },    // was 14
-  urgentTag: {
-    backgroundColor: '#F59E0B20', paddingHorizontal: 9,
-    paddingVertical: 4, borderRadius: 7,
-  },
-  urgentText: { color: '#F59E0B', fontSize: 13, fontWeight: '700', letterSpacing: 0.6 }, // was 10
-  midRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  amount: { fontSize: 24, fontWeight: '800' },   // was 18
-  statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7,
-  },
-  statusDot:  { width: 7, height: 7, borderRadius: 4 },
-  statusText: { fontSize: 15, fontWeight: '700' },   // was 12
-  time:       { fontSize: 15 },                       // was 12
-  actionBtn: {
-    height: 42, borderRadius: 12, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center', marginTop: 4,
-  },
-  actionText: { fontSize: 16, fontWeight: '700' },   // was 13
+  cardTop:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  routeRow:   { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  netDot:     { width: 10, height: 10, borderRadius: 5 },
+  network:    { fontSize: 18, fontWeight: '700' },
+  urgentTag:  { backgroundColor: '#F59E0B20', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
+  urgentText: { color: '#F59E0B', fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
+
+  midRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  amount:      { fontSize: 24, fontWeight: '800' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7 },
+  statusDot:   { width: 7, height: 7, borderRadius: 4 },
+  statusText:  { fontSize: 15, fontWeight: '700' },
+  time:        { fontSize: 15 },
+  actionBtn:   { height: 42, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  actionText:  { fontSize: 16, fontWeight: '700' },
 });
