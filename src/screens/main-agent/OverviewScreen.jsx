@@ -19,7 +19,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
-// ─── Animated stat card ───────────────────────────────────────────────────────
 function StatCard({ stat, index, theme }) {
   const mountAnim = useRef(new Animated.Value(0)).current;
 
@@ -171,7 +170,6 @@ export default function OverviewScreen({ navigation }) {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      {/* Top bar */}
       <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={s.menuBtn}
@@ -213,7 +211,6 @@ export default function OverviewScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
-        {/* ── Hero gradient card ── */}
         <LinearGradient
           colors={[theme.gradPrimA, theme.gradPrimB]}
           start={{ x: 0, y: 0 }}
@@ -234,7 +231,6 @@ export default function OverviewScreen({ navigation }) {
           </View>
         </LinearGradient>
 
-        {/* ── Stat cards 2×2 ── */}
         <View style={s.statsGrid}>
           {loading
             ? [0,1,2,3].map(i => (
@@ -253,7 +249,6 @@ export default function OverviewScreen({ navigation }) {
           }
         </View>
 
-        {/* ── Monthly activity ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>Monthly Activity</Text>
@@ -283,7 +278,6 @@ export default function OverviewScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── Recent requests ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
@@ -447,7 +441,7 @@ const s = StyleSheet.create({
   reqDot:       { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 4 },
   reqInfo:      { flex: 1, gap: 2 },
   reqAgent:     { fontSize: 18, fontFamily: fonts.bodyBold },
-  reqMeta:      { fontSize: 15, fontFamily: 'monospace' },
+  reqMeta:      { fontSize: 15, fontFamily: fonts.mono },  // ← FIXED: was 'monospace'
   reqTime:      { fontSize: 14, fontFamily: fonts.body },
   reqRight:     { alignItems: 'flex-end', gap: spacing.xs },
   reqAmount:    { fontSize: 18, fontFamily: fonts.bodyBold },
