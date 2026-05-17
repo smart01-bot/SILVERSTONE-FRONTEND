@@ -75,7 +75,7 @@ export default function QueueScreen() {
   const FILTERS = ['All', 'Urgent', 'Pending', 'Approved'];
   const FILTER_LABELS = {
     All:      tr('queue'),
-    Urgent:   tr('markUrgent').split(' ')[1] ?? 'Urgent',
+    Urgent:   tr('markUrgent'),
     Pending:  tr('statusPending'),
     Approved: tr('statusApproved'),
   };

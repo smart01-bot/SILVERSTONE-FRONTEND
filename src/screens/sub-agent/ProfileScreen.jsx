@@ -229,3 +229,89 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
+const s = StyleSheet.create({
+  safe:   { flex: 1 },
+  scroll: { paddingBottom: 110 },
+
+  header: {
+    backgroundColor:         '#C8102E',
+    paddingHorizontal:       spacing.md + 2,
+    paddingTop:              spacing.md - 4,
+    paddingBottom:           spacing.md + 2,
+    borderBottomLeftRadius:  radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+  },
+  headerTitle: { fontSize: 28, fontFamily: fonts.display, color: '#fff' },
+
+  avatarSection: { alignItems: 'center', paddingTop: spacing.lg + 4, paddingBottom: spacing.md + 2 },
+  avatar: {
+    width: 88, height: 88, borderRadius: 44,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md - 2,
+  },
+  avatarText: { fontSize: 34, fontFamily: fonts.display },
+  name:       { fontSize: 24, fontFamily: fonts.heading },
+  email:      { fontSize: 17, fontFamily: fonts.body, marginTop: spacing.xs + 1 },
+  chips: {
+    flexDirection: 'row', gap: spacing.sm - 1, marginTop: spacing.md - 2,
+    flexWrap: 'wrap', justifyContent: 'center',
+  },
+  chip:     { paddingHorizontal: 13, paddingVertical: spacing.xs + 1, borderRadius: radius.sm, borderWidth: 1 },
+  chipText: { fontSize: 15, fontFamily: fonts.bodySemi },
+
+  section: {
+    marginHorizontal: spacing.md,
+    marginBottom:     spacing.md - 2,
+    borderRadius:     radius.xl - 2,
+    borderWidth:      1,
+    overflow:         'hidden',
+  },
+  sectionTitle: {
+    fontSize:          14,
+    fontFamily:        fonts.bodyBold,
+    letterSpacing:     0.8,
+    paddingHorizontal: spacing.md + 2,
+    paddingTop:        spacing.md,
+    paddingBottom:     spacing.sm + 2,
+  },
+
+  editRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical:   spacing.md - 2,
+    borderBottomWidth: 1,
+  },
+  editRowLeft: { flex: 1, marginRight: spacing.md - 2 },
+  editLabel:   { fontSize: 15, fontFamily: fonts.body },
+  editValue:   { fontSize: 19, fontFamily: fonts.bodyMed, marginTop: 3 },
+  editInput:   { fontSize: 19, fontFamily: fonts.bodyMed, marginTop: 3 },
+  saveBtn:     { fontSize: 17, fontFamily: fonts.bodyBold },
+
+  menuItem: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               spacing.md - 2,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical:   spacing.md,
+    borderBottomWidth: 1,
+  },
+  menuIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  menuLabel: { flex: 1, fontSize: 19, fontFamily: fonts.bodyMed },
+
+  pillRow:  { flexDirection: 'row', gap: spacing.xs + 1 },
+  pill: {
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical:   spacing.xs + 2,
+    borderRadius:      radius.md - 2,
+    borderWidth:       1.5,
+    minWidth:          48,
+    alignItems:        'center',
+  },
+  pillText: { fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
+
+  version: { textAlign: 'center', fontSize: 15, fontFamily: fonts.body, paddingTop: spacing.sm + 2, paddingBottom: spacing.md + 2 },
+});
