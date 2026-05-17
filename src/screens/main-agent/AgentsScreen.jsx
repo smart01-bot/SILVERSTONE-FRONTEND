@@ -43,7 +43,7 @@ function SkeletonAgentCard({ theme }) {
 }
 
 export default function AgentsScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [agents,     setAgents]     = useState([]);
   const [search,     setSearch]     = useState('');
@@ -59,6 +59,10 @@ export default function AgentsScreen() {
       ),
       snap => {
         setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('AgentsScreen snapshot error:', err);
         setLoading(false);
       }
     );
@@ -97,8 +101,8 @@ export default function AgentsScreen() {
         style={s.header}
       >
         <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>Agents</Text>
-        <Text style={s.headerSub}>{loading ? '—' : agents.length} active</Text>
+        <Text style={s.headerTitle}>{tr('agents')}</Text>
+        <Text style={s.headerSub}>{loading ? '—' : agents.length} {tr('active').toLowerCase()}</Text>
       </LinearGradient>
 
       {/* ── Search ── */}
@@ -109,7 +113,7 @@ export default function AgentsScreen() {
             style={[s.searchInput, { color: theme.text }]}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search agents..."
+            placeholder={tr('searchAgents')}
             placeholderTextColor={theme.muted}
           />
           {search.length > 0 && (
@@ -134,8 +138,8 @@ export default function AgentsScreen() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="people-outline"
-            title={search ? 'No results found' : 'No agents yet'}
-            subtitle={search ? `No agents match "${search}"` : 'Approved agents will appear here'}
+            title={search ? tr('noResults') : tr('noAgents')}
+            subtitle={search ? `No agents match "${search}"` : tr('noAgentsDesc')}
           />
         ) : (
           filtered.map(agent => (
@@ -156,7 +160,7 @@ export default function AgentsScreen() {
                   </Text>
                 </View>
                 <View style={[s.activeBadge, { backgroundColor: '#16A34A20' }]}>
-                  <Text style={s.activeText}>Active</Text>
+                  <Text style={s.activeText}>{tr('active')}</Text>
                 </View>
               </View>
 
@@ -173,12 +177,12 @@ export default function AgentsScreen() {
               <View style={[s.statsRow, { borderTopColor: theme.border }]}>
                 <View style={s.stat}>
                   <Text style={[s.statValue, { color: theme.text }]}>{agent.requestCount ?? 0}</Text>
-                  <Text style={[s.statLabel, { color: theme.textDim }]}>Requests</Text>
+                  <Text style={[s.statLabel, { color: theme.textDim }]}>{tr('totalRequests')}</Text>
                 </View>
                 <View style={[s.statDivider, { backgroundColor: theme.border }]} />
                 <View style={s.stat}>
                   <Text style={[s.statValue, { color: theme.text }]}>{agent.businessLocation ?? '—'}</Text>
-                  <Text style={[s.statLabel, { color: theme.textDim }]}>Location</Text>
+                  <Text style={[s.statLabel, { color: theme.textDim }]}>{tr('location')}</Text>
                 </View>
               </View>
             </PressableScale>

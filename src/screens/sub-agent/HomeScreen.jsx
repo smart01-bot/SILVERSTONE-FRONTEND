@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Animated,
+  RefreshControl, Animated, Platform,
 } from 'react-native';
 import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ const NETWORKS = {
 export default function HomeScreen({ navigation }) {
   const { profile, user } = useAuth();
   const { theme, isDark, tr } = useTheme();
+  const STATUS_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
   const [requests,     setRequests]     = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -44,7 +45,7 @@ export default function HomeScreen({ navigation }) {
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) { setLoading(false); return; }
     const q = query(
       collection(db, 'requests'),
       where('agentId', '==', user.uid),
@@ -70,6 +71,9 @@ export default function HomeScreen({ navigation }) {
         Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.spring(cardY,       { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
       ]).start();
+    }, (err) => {
+      console.warn('HomeScreen snapshot error:', err);
+      setLoading(false);
     });
     return unsub;
   }, [user?.uid]);
@@ -115,7 +119,7 @@ export default function HomeScreen({ navigation }) {
   const QUICK_ACTIONS = [
     { label: tr('myRequests'), icon: 'list-outline',   onPress: () => navigation.navigate('MyRequests') },
     { label: tr('history'),    icon: 'time-outline',   onPress: () => navigation.navigate('MyRequests') },
-    { label: 'Networks',       icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
+    { label: tr('networks'),   icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
     { label: tr('profile'),    icon: 'person-outline', onPress: () => navigation.navigate('Profile')    },
   ];
 
@@ -123,11 +127,12 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.bg}
+        backgroundColor="transparent"
+        translucent
       />
 
       {/* Top bar */}
-      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border, paddingTop: STATUS_TOP + spacing.md - 3 }]}>
         <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.openDrawer()}>
           <View style={[s.avatarCircle, { backgroundColor: theme.primary }]}>
             <Text style={s.avatarText}>{initials}</Text>
@@ -242,9 +247,9 @@ export default function HomeScreen({ navigation }) {
         ) : networkBreakdown.length > 0 ? (
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: theme.text }]}>Networks</Text>
+              <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('networks')}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Networks')}>
-                <Text style={[s.sectionAction, { color: theme.primary }]}>Manage</Text>
+                <Text style={[s.sectionAction, { color: theme.primary }]}>{tr('manage')}</Text>
               </TouchableOpacity>
             </View>
             <View style={[s.networkCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
@@ -430,7 +435,7 @@ const s = StyleSheet.create({
   reqNetDot:    { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 2 },
   reqInfo:      { flex: 1 },
   reqRoute:     { fontSize: 18, fontFamily: fonts.bodyBold },
-  reqMeta:      { fontSize: 14, marginTop: 3, fontFamily: 'monospace' },
+  reqMeta:      { fontSize: 14, marginTop: 3, fontFamily: fonts.mono },
   reqRight:     { alignItems: 'flex-end', gap: spacing.xs + 1 },
   reqAmount:    { fontSize: 17, fontFamily: fonts.bodyXBold },
   statusPill:   { paddingHorizontal: spacing.sm + 1, paddingVertical: spacing.xs, borderRadius: radius.sm - 2 },

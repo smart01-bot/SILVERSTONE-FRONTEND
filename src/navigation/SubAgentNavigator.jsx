@@ -167,7 +167,7 @@ export default function SubAgentNavigator() {
     { label: tr('home'),       icon: 'home-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Home'       } }) },
     { label: tr('newRequest'), icon: 'add-circle-outline', onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'NewRequest' } }) },
     { label: tr('history'),    icon: 'time-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'MyRequests' } }) },
-    { label: 'Networks',       icon: 'wifi-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
+    { label: tr('networks'),    icon: 'wifi-outline',       onPress: nav => nav.navigate('MainStack', { screen: 'Networks' }) },
     { label: tr('profile'),    icon: 'person-outline',     onPress: nav => nav.navigate('MainStack', { screen: 'Tabs', params: { screen: 'Profile'    } }) },
   ];
 

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Animated,
+  RefreshControl, Animated, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
+// ─── Animated stat card ───────────────────────────────────────────────────────
 function StatCard({ stat, index, theme }) {
   const mountAnim = useRef(new Animated.Value(0)).current;
 
@@ -55,6 +56,7 @@ function StatCard({ stat, index, theme }) {
 export default function OverviewScreen({ navigation }) {
   const { profile } = useAuth();
   const { theme, isDark, tr } = useTheme();
+  const STATUS_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
   const [loading,         setLoading]         = useState(true);
   const [refreshing,      setRefreshing]       = useState(false);
@@ -114,6 +116,10 @@ export default function OverviewScreen({ navigation }) {
         setCompletedToday(compToday);
         setTotalVolume(volume);
         setLoading(false);
+      },
+      (err) => {
+        console.warn('OverviewScreen requests snapshot error:', err);
+        setLoading(false);
       }
     );
 
@@ -123,7 +129,8 @@ export default function OverviewScreen({ navigation }) {
         where('status', '==', 'approved'),
         where('role',   '==', 'sub-agent')
       ),
-      snap => setActiveAgents(snap.size)
+      snap => setActiveAgents(snap.size),
+      (err) => console.warn('OverviewScreen agents snapshot error:', err)
     );
 
     return () => { reqUnsub(); agentUnsub(); };
@@ -152,14 +159,14 @@ export default function OverviewScreen({ navigation }) {
     {
       label:    tr('activeAgents'),
       value:    activeAgents,
-      sub:      'registered',
+      sub:      tr('registered'),
       subColor: theme.textDim,
       icon:     'people-outline',
     },
     {
       label:    tr('totalVolume'),
       value:    fmt(totalVolume),
-      sub:      'moved',
+      sub:      tr('moved'),
       subColor: '#16A34A',
       icon:     'cash-outline',
       isText:   true,
@@ -168,9 +175,10 @@ export default function OverviewScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+      {/* Top bar */}
+      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border, paddingTop: STATUS_TOP + spacing.md - 3 }]}>
         <TouchableOpacity
           style={s.menuBtn}
           onPress={() => navigation.openDrawer()}
@@ -183,7 +191,7 @@ export default function OverviewScreen({ navigation }) {
 
         <View style={s.brandWrap}>
           <Text style={[s.brandName, { color: theme.primary }]}>Silverstone</Text>
-          <Text style={[s.brandTag,  { color: theme.textDim }]}>· admin</Text>
+          <Text style={[s.brandSub,  { color: theme.textDim }]}>{tr('adminDashboard')}</Text>
         </View>
 
         <View style={s.topRight}>
@@ -211,6 +219,7 @@ export default function OverviewScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />
         }
       >
+        {/* ── Hero gradient card ── */}
         <LinearGradient
           colors={[theme.gradPrimA, theme.gradPrimB]}
           start={{ x: 0, y: 0 }}
@@ -227,10 +236,11 @@ export default function OverviewScreen({ navigation }) {
           )}
           <View style={s.heroSubRow}>
             <Ionicons name="trending-up-outline" size={14} color="rgba(255,255,255,0.8)" />
-            <Text style={s.heroSub}>+{fmt(totalVolume * 0.124)} vs last month</Text>
+            <Text style={s.heroSub}>+{fmt(totalVolume * 0.124)} {tr('vsLastMonth')}</Text>
           </View>
         </LinearGradient>
 
+        {/* ── Stat cards 2×2 ── */}
         <View style={s.statsGrid}>
           {loading
             ? [0,1,2,3].map(i => (
@@ -249,9 +259,10 @@ export default function OverviewScreen({ navigation }) {
           }
         </View>
 
+        {/* ── Monthly activity ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: theme.text }]}>Monthly Activity</Text>
+            <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('monthlyActivity')}</Text>
             <View style={s.legendRow}>
               <View style={s.legendItem}>
                 <View style={[s.legendDot, { backgroundColor: '#C8102E' }]} />
@@ -265,7 +276,7 @@ export default function OverviewScreen({ navigation }) {
           </View>
           <View style={[s.chartCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             <Text style={[s.chartLabel, { color: theme.textDim }]}>
-              Requests vs Transactions · {totalRequests} total
+              {tr('totalRequests')} vs {tr('totalTx')} · {totalRequests} {tr('totalTx').toLowerCase()}
             </Text>
             <View style={s.chartBars}>
               {[0.4, 0.7, 0.5, 0.9, 0.6, 0.8, 1.0].map((h, i) => (
@@ -278,6 +289,7 @@ export default function OverviewScreen({ navigation }) {
           </View>
         </View>
 
+        {/* ── Recent requests ── */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
@@ -321,7 +333,7 @@ export default function OverviewScreen({ navigation }) {
                       </Text>
                       <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
                         <Text style={[s.statusText, { color: statusColor(req.status) }]}>
-                          {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
+                          {tr('status' + (req.status ? req.status.charAt(0).toUpperCase() + req.status.slice(1) : 'Pending'))}
                         </Text>
                       </View>
                     </View>
@@ -353,9 +365,9 @@ const s = StyleSheet.create({
   },
   menuBtn:   { gap: spacing.xs + 1, padding: spacing.xs },
   menuLine:  { width: 24, height: 2, borderRadius: 2 },
-  brandWrap: { flexDirection: 'row', alignItems: 'center' },
-  brandName: { fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.4 },
-  brandTag:  { fontSize: 17, fontFamily: fonts.body, marginLeft: 2 },
+  brandWrap: { alignItems: 'center' },
+  brandName: { fontSize: 22, fontFamily: fonts.display, letterSpacing: -0.4 },
+  brandSub:  { fontSize: 13, fontFamily: fonts.body, marginTop: 1 },
   topRight:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   livePill: {
     flexDirection:     'row',
@@ -441,7 +453,7 @@ const s = StyleSheet.create({
   reqDot:       { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 4 },
   reqInfo:      { flex: 1, gap: 2 },
   reqAgent:     { fontSize: 18, fontFamily: fonts.bodyBold },
-  reqMeta:      { fontSize: 15, fontFamily: fonts.mono },  // ← FIXED: was 'monospace'
+  reqMeta:      { fontSize: 15, fontFamily: fonts.mono },
   reqTime:      { fontSize: 14, fontFamily: fonts.body },
   reqRight:     { alignItems: 'flex-end', gap: spacing.xs },
   reqAmount:    { fontSize: 18, fontFamily: fonts.bodyBold },
