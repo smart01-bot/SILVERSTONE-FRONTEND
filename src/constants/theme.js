@@ -76,7 +76,7 @@ export const DARK = {
 };
 
 // ─── TYPOGRAPHY ───────────────────────────────────────────────────────────────
-export const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+export const mono = 'RobotoMono_400Regular';
 
 export const typography = {
   display:   { fontSize: 48, fontWeight: '800', letterSpacing: -1.2 },
@@ -122,4 +122,6 @@ export const fonts = {
   bodySemi:  'Inter_600SemiBold',
   bodyBold:  'Inter_700Bold',
   bodyXBold: 'Inter_800ExtraBold',
+  mono:      'RobotoMono_400Regular',
+  monoBold:  'RobotoMono_700Bold',
 };
