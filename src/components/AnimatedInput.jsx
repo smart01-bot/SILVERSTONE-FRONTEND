@@ -11,7 +11,7 @@ import { fonts }    from '../constants/theme';
  *   - Label colour follows focus state
  *   - Optional prefix text (e.g. "TZS")
  *
- * Props match TextInput + label, prefix, wrapStyle.
+ * Props match TextInput + label, prefix, wrapStyle, containerStyle, mono.
  */
 export default function AnimatedInput({
   label,
@@ -22,7 +22,9 @@ export default function AnimatedInput({
   secureTextEntry = false,
   prefix,
   wrapStyle,
+  containerStyle,
   inputStyle,
+  mono = false,
   height = 56,
   ...props
 }) {
@@ -57,7 +59,7 @@ export default function AnimatedInput({
   });
 
   return (
-    <Animated.View style={[s.wrap, wrapStyle, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[s.wrap, wrapStyle, containerStyle, { transform: [{ scale: scaleAnim }] }]}>
       {label ? (
         <Text style={[s.label, { color: focused ? theme.primary : theme.textDim }]}>
           {label}
@@ -81,7 +83,7 @@ export default function AnimatedInput({
           placeholderTextColor={theme.muted}
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry}
-          style={[s.input, { color: theme.text }, inputStyle]}
+          style={[s.input, { color: theme.text }, mono && { fontFamily: 'RobotoMono_400Regular' }, inputStyle]}
           {...props}
         />
       </Animated.View>

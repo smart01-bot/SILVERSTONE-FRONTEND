@@ -10,9 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
 import { fonts, spacing, radius } from '../../constants/theme';
-import { SkeletonCard } from '../../components/SkeletonLoader';
-import EmptyState       from '../../components/EmptyState';
-import PressableScale   from '../../components/PressableScale';
+import { SkeletonCard }        from '../../components/SkeletonLoader';
+import EmptyState              from '../../components/EmptyState';
+import PressableScale          from '../../components/PressableScale';
+import RequestDetailModal      from '../../components/RequestDetailModal';
 import {
   collection, query, where, orderBy,
   onSnapshot, doc, updateDoc,
@@ -30,10 +31,12 @@ export default function MyRequestsScreen({ navigation }) {
   const { user }              = useAuth();
   const { theme, isDark, tr } = useTheme();
 
-  const [requests,   setRequests]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [filter,     setFilter]     = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  const [requests,         setRequests]         = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [filter,           setFilter]           = useState('all');
+  const [refreshing,       setRefreshing]       = useState(false);
+  const [selectedRequest,  setSelectedRequest]  = useState(null);
+  const [modalVisible,     setModalVisible]     = useState(false);
 
   const FILTERS = [
     { key: 'all',       label: 'All'                 },
@@ -66,6 +69,16 @@ export default function MyRequestsScreen({ navigation }) {
       if (!a.urgent && b.urgent) return 1;
       return 0;
     });
+
+  const openModal = (req) => {
+    setSelectedRequest(req);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedRequest(null);
+  };
 
   const handleCancel = (req) => {
     Alert.alert(tr('cancel'), 'Je, una uhakika unataka kufuta ombi hili?', [
@@ -190,6 +203,7 @@ export default function MyRequestsScreen({ navigation }) {
           filtered.map(req => (
             <PressableScale
               key={req.id}
+              onPress={() => openModal(req)}
               style={[s.card, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
@@ -248,6 +262,14 @@ export default function MyRequestsScreen({ navigation }) {
           ))
         )}
       </ScrollView>
+
+      <RequestDetailModal
+        visible={modalVisible}
+        request={selectedRequest}
+        onClose={closeModal}
+        onCancel={(req) => { closeModal(); handleCancel(req); }}
+        onRetry={(req) => { closeModal(); handleRetry(req); }}
+      />
     </SafeAreaView>
   );
 }

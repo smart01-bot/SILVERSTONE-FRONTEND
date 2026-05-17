@@ -18,7 +18,13 @@ import {
 import {
   Manrope_700Bold,
   Manrope_800ExtraBold,
+    RobotoMono_400Regular,
+    RobotoMono_700Bold,
 } from '@expo-google-fonts/manrope';
+import {
+  RobotoMono_400Regular,
+  RobotoMono_700Bold,
+} from '@expo-google-fonts/roboto-mono';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -29,6 +35,8 @@ export default function App() {
     Inter_800ExtraBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
+    RobotoMono_400Regular,
+    RobotoMono_700Bold,
   });
 
   if (!fontsLoaded) {
