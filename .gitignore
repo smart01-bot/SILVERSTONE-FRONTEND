@@ -5,3 +5,12 @@ web-build/
 .env
 *.orig.*
 serviceAccountKey.json
+
+
+# Firebase / Google credentials — NEVER commit these
+serviceAccountKey.json
+google-services.json
+*.pem
+*.p12
+.env
+.env.localserviceAccountKey.json
