@@ -36,7 +36,7 @@ function SpringItem({ onPress, style, children }) {
 }
 
 export default function DrawerContent({ navigation, items }) {
-  const { theme, lang, setLang, tr } = useTheme();
+  const { theme, isDark, setTheme, lang, setLang, tr } = useTheme();
   const { profile, logout }          = useAuth();
 
   const name     = profile?.name  || 'Agent';
@@ -105,6 +105,38 @@ export default function DrawerContent({ navigation, items }) {
             activeOpacity={0.8}
           >
             <Text style={[s.langPillText, { color: isSw ? '#fff' : theme.textDim }]}>SW</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={s.divider} />
+      <View style={s.langSection}>
+        <View style={s.langHeader}>
+          <View style={s.itemIcon}>
+            <Ionicons name="contrast-outline" size={22} color={theme.primary} />
+          </View>
+          <Text style={s.label}>{tr('darkMode')}</Text>
+        </View>
+        <View style={s.langPillRow}>
+          <TouchableOpacity
+            onPress={() => setTheme('light')}
+            style={[s.langPill, !isDark
+              ? { backgroundColor: theme.primary,    borderColor: theme.primary }
+              : { backgroundColor: theme.surfaceAlt, borderColor: theme.border }
+            ]}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.langPillText, { color: !isDark ? '#fff' : theme.textDim }]}>{tr('light')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setTheme('dark')}
+            style={[s.langPill, isDark
+              ? { backgroundColor: theme.primary,    borderColor: theme.primary }
+              : { backgroundColor: theme.surfaceAlt, borderColor: theme.border }
+            ]}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.langPillText, { color: isDark ? '#fff' : theme.textDim }]}>{tr('dark')}</Text>
           </TouchableOpacity>
         </View>
       </View>

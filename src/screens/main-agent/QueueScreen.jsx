@@ -64,7 +64,7 @@ function SkeletonQueueCard({ theme }) {
 }
 
 export default function QueueScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [requests,   setRequests]   = useState([]);
   const [filter,     setFilter]     = useState('All');
@@ -73,6 +73,12 @@ export default function QueueScreen() {
   const [actionLoad, setActionLoad] = useState(null);
 
   const FILTERS = ['All', 'Urgent', 'Pending', 'Approved'];
+  const FILTER_LABELS = {
+    All:      tr('queue'),
+    Urgent:   tr('markUrgent').split(' ')[1] ?? 'Urgent',
+    Pending:  tr('statusPending'),
+    Approved: tr('statusApproved'),
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -155,10 +161,10 @@ export default function QueueScreen() {
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
   const emptyMessages = {
-    All:      { title: 'Queue is clear',         subtitle: 'All requests have been processed' },
-    Urgent:   { title: 'No urgent requests',     subtitle: 'Urgent requests will appear here' },
-    Pending:  { title: 'No pending requests',    subtitle: 'Pending requests will appear here' },
-    Approved: { title: 'No approved requests',   subtitle: 'Approved requests will appear here' },
+    All:      { title: tr('queueClear'),                                subtitle: tr('queueEmptyDesc') },
+    Urgent:   { title: `${tr('statusPending')} — ${tr('markUrgent')}`,  subtitle: tr('noPendingDesc') },
+    Pending:  { title: tr('statusPending'),                             subtitle: tr('noPendingDesc') },
+    Approved: { title: tr('statusApproved'),                            subtitle: tr('queueEmptyDesc') },
   };
 
   return (
@@ -201,7 +207,7 @@ export default function QueueScreen() {
                 activeOpacity={0.75}
               >
                 <Text style={[s.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>
-                  {f}
+                  {FILTER_LABELS[f] ?? f}
                   {f === 'Urgent'  && urgentCount  > 0 ? ` ${urgentCount}`  : ''}
                   {f === 'Pending' && pendingCount  > 0 ? ` ${pendingCount}` : ''}
                 </Text>

@@ -37,7 +37,7 @@ function SkeletonTransferRow({ theme, last }) {
 }
 
 export default function TransfersScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [transfers,  setTransfers]  = useState([]);
   const [filter,     setFilter]     = useState('All');
@@ -109,6 +109,7 @@ export default function TransfersScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
+      {/* ── Gradient header ── */}
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
         start={{ x: 0, y: 0 }}
@@ -116,10 +117,11 @@ export default function TransfersScreen() {
         style={s.header}
       >
         <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>Transfers</Text>
-        <Text style={s.headerSub}>{loading ? '—' : filtered.length} completed</Text>
+        <Text style={s.headerTitle}>{tr('transfers')}</Text>
+        <Text style={s.headerSub}>{loading ? '—' : filtered.length} {tr('completed').toLowerCase()}</Text>
       </LinearGradient>
 
+      {/* ── Search ── */}
       <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
         <View style={[s.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <Ionicons name="search-outline" size={18} color={theme.textDim} />
@@ -138,6 +140,7 @@ export default function TransfersScreen() {
         </View>
       </View>
 
+      {/* ── Date filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={s.filterRow}>
@@ -163,9 +166,9 @@ export default function TransfersScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
-        {/* ── Volume summary card — FIXED: removed undefined gradSurfA/gradSurfB ── */}
+        {/* ── Volume summary card ── */}
         <LinearGradient
-          colors={[theme.surfaceAlt, theme.surface]}
+          colors={isDark ? [theme.surfaceAlt, theme.surface] : [theme.gradSurfA, theme.gradSurfB]}
           style={[s.volumeCard, { borderColor: theme.border }]}
         >
           <Text style={[s.volumeLabel,  { color: theme.textDim }]}>TOTAL VOLUME</Text>
@@ -176,6 +179,7 @@ export default function TransfersScreen() {
           <Text style={[s.volumeSub, { color: theme.textDim }]}>{loading ? '—' : filtered.length} transactions</Text>
         </LinearGradient>
 
+        {/* ── Transfer list ── */}
         {loading ? (
           <View style={[s.listCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             {[0,1,2,3,4].map((i, _, arr) => (

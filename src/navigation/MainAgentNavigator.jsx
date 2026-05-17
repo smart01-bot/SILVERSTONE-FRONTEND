@@ -17,14 +17,6 @@ import ApprovalsScreen from '../screens/main-agent/ApprovalsScreen';
 const Tab    = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-const DRAWER_ITEMS = [
-  { label: 'Overview',  icon: 'bar-chart-outline',        onPress: nav => nav.navigate('MainTabs', { screen: 'Overview'  }) },
-  { label: 'Queue',     icon: 'list-outline',             onPress: nav => nav.navigate('MainTabs', { screen: 'Queue'     }) },
-  { label: 'Transfers', icon: 'swap-horizontal-outline',  onPress: nav => nav.navigate('MainTabs', { screen: 'Transfers' }) },
-  { label: 'Agents',    icon: 'people-outline',           onPress: nav => nav.navigate('MainTabs', { screen: 'Agents'    }) },
-  { label: 'Approvals', icon: 'checkmark-circle-outline', onPress: nav => nav.navigate('MainTabs', { screen: 'Approvals' }) },
-];
-
 // ─── Animated tab icon — matches SubAgentNavigator pattern exactly ────────────
 // CRASH-SAFE: native driver (scale) and non-native (glow) in separate useEffects
 function TabIcon({ name, focused, color, badge }) {
@@ -78,7 +70,7 @@ function TabIcon({ name, focused, color, badge }) {
 }
 
 function MainTabs() {
-  const { theme } = useTheme();
+  const { theme, tr } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -110,7 +102,7 @@ function MainTabs() {
         name="Overview"
         component={OverviewScreen}
         options={{
-          tabBarLabel: 'Overview',
+          tabBarLabel: tr('overview'),
           tabBarIcon:  ({ focused, color }) => <TabIcon name="bar-chart"       focused={focused} color={color} />,
         }}
       />
@@ -118,7 +110,7 @@ function MainTabs() {
         name="Queue"
         component={QueueScreen}
         options={{
-          tabBarLabel: 'Queue',
+          tabBarLabel: tr('queue'),
           tabBarIcon:  ({ focused, color }) => <TabIcon name="list"            focused={focused} color={color} />,
         }}
       />
@@ -126,7 +118,7 @@ function MainTabs() {
         name="Transfers"
         component={TransfersScreen}
         options={{
-          tabBarLabel: 'Transfers',
+          tabBarLabel: tr('transfers'),
           tabBarIcon:  ({ focused, color }) => <TabIcon name="swap-horizontal" focused={focused} color={color} />,
         }}
       />
@@ -134,7 +126,7 @@ function MainTabs() {
         name="Agents"
         component={AgentsScreen}
         options={{
-          tabBarLabel: 'Agents',
+          tabBarLabel: tr('agents'),
           tabBarIcon:  ({ focused, color }) => <TabIcon name="people"         focused={focused} color={color} />,
         }}
       />
@@ -142,7 +134,7 @@ function MainTabs() {
         name="Approvals"
         component={ApprovalsScreen}
         options={{
-          tabBarLabel: 'Approvals',
+          tabBarLabel: tr('approvals'),
           tabBarIcon:  ({ focused, color }) => <TabIcon name="checkmark-circle" focused={focused} color={color} />,
         }}
       />
@@ -151,7 +143,15 @@ function MainTabs() {
 }
 
 export default function MainAgentNavigator() {
-  const { theme } = useTheme();
+  const { theme, tr } = useTheme();
+
+  const DRAWER_ITEMS = [
+    { label: tr('overview'),  icon: 'bar-chart-outline',        onPress: nav => nav.navigate('MainTabs', { screen: 'Overview'  }) },
+    { label: tr('queue'),     icon: 'list-outline',             onPress: nav => nav.navigate('MainTabs', { screen: 'Queue'     }) },
+    { label: tr('transfers'), icon: 'swap-horizontal-outline',  onPress: nav => nav.navigate('MainTabs', { screen: 'Transfers' }) },
+    { label: tr('agents'),    icon: 'people-outline',           onPress: nav => nav.navigate('MainTabs', { screen: 'Agents'    }) },
+    { label: tr('approvals'), icon: 'checkmark-circle-outline', onPress: nav => nav.navigate('MainTabs', { screen: 'Approvals' }) },
+  ];
   return (
     <Drawer.Navigator
       screenOptions={{
