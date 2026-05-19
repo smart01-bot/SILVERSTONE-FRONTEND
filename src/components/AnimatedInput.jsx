@@ -26,6 +26,7 @@ export default function AnimatedInput({
   inputStyle,
   mono = false,
   height = 56,
+  error,
   ...props
 }) {
   const { theme } = useTheme();
@@ -53,22 +54,24 @@ export default function AnimatedInput({
   const onFocus = () => { setFocused(true);  animate(true);  };
   const onBlur  = () => { setFocused(false); animate(false); };
 
-  const borderColor = borderAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [theme.border, theme.primary],
-  });
+  const borderColor = error
+    ? '#E01535'
+    : borderAnim.interpolate({
+        inputRange:  [0, 1],
+        outputRange: [theme.border, theme.primary],
+      });
 
   return (
     <Animated.View style={[s.wrap, wrapStyle, containerStyle, { transform: [{ scale: scaleAnim }] }]}>
       {label ? (
-        <Text style={[s.label, { color: focused ? theme.primary : theme.textDim }]}>
+        <Text style={[s.label, { color: error ? '#E01535' : focused ? theme.primary : theme.textDim }]}>
           {label}
         </Text>
       ) : null}
       <Animated.View style={[s.box, {
         backgroundColor: theme.surfaceAlt,
         borderColor,
-        borderWidth: focused ? 2 : 1.5,
+        borderWidth: focused || error ? 2 : 1.5,
         height,
       }]}>
         {prefix ? (
@@ -87,6 +90,9 @@ export default function AnimatedInput({
           {...props}
         />
       </Animated.View>
+      {error ? (
+        <Text style={s.errorText}>{error}</Text>
+      ) : null}
     </Animated.View>
   );
 }
@@ -103,4 +109,11 @@ const s = StyleSheet.create({
   },
   prefix: { fontSize: 19, marginRight: 10, fontFamily: fonts.bodyMed },
   input:  { flex: 1, fontSize: 19, fontFamily: fonts.body },
+  errorText: {
+    marginTop: 5,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    color: '#E01535',
+    paddingHorizontal: 2,
+  },
 });

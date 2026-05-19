@@ -24,9 +24,18 @@ import PendingScreen      from '../screens/auth/PendingScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function AuthNavigator() {
+export default function AuthNavigator({ initialRoute } = {}) {
+  const initial = initialRoute === 'pending'
+    ? 'PendingScreen'
+    : initialRoute === 'rejected'
+      ? 'Rejected'
+      : 'Splash';
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName={initial}
+      screenOptions={{ headerShown: false }}
+    >
       <Stack.Screen name="Splash"         component={SplashScreen} />
       <Stack.Screen name="RoleSelect"     component={RoleSelectScreen} />
       <Stack.Screen name="Login"          component={LoginScreen} />

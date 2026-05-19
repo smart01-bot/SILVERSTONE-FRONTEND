@@ -128,7 +128,7 @@ export default function LoginScreen({ navigation, route }) {
               <View style={[s.dividerLine, { backgroundColor: theme.border }]} />
             </View>
 
-            <TouchableOpacity onPress={() => navigation.navigate('Register')} style={s.registerWrap}>
+            <TouchableOpacity onPress={() => navigation.navigate('Step1Phone')} style={s.registerWrap}>
               <Text style={[s.registerText, { color: theme.textDim }]}>
                 Don't have an account?{' '}
                 <Text style={{ color: theme.primary, fontFamily: fonts.bodyBold }}>Register</Text>

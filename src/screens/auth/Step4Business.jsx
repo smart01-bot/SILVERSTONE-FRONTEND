@@ -13,10 +13,10 @@ const TOTAL_STEPS = 6;
 const STEP = 4;
 
 const NETWORKS = [
-  { id: 'mpesa',   label: 'M-Pesa',   color: '#00A651' },
-  { id: 'airtel',  label: 'Airtel',   color: '#E20020' },
-  { id: 'yas',     label: 'Yas Mixx', color: '#0057A8' },
-  { id: 'halotel', label: 'Halotel',  color: '#F68B1F' },
+  { id: 'Voda',    label: 'M-Pesa',   color: '#00A651' },
+  { id: 'Airtel',  label: 'Airtel',   color: '#E20020' },
+  { id: 'Yas',     label: 'Yas Mixx', color: '#0057A8' },
+  { id: 'Halotel', label: 'Halotel',  color: '#F68B1F' },
 ];
 
 const FLOAT_STEPS  = [100, 250, 500, 1000, 2500, 5000, 10000]; // ×1000 TSh

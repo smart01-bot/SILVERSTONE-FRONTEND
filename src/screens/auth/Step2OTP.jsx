@@ -25,8 +25,8 @@ import {
   ScrollView,
   TextInput,
   Animated,
-  Clipboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,7 +113,7 @@ export default function Step2OTP({ navigation, route }) {
   // ─── Paste ──────────────────────────────────────────────────────────────────
   async function handlePaste(index) {
     try {
-      const text = await Clipboard.getString();
+      const text = await Clipboard.getStringAsync();
       const digits = text.replace(/\D/g, '').slice(0, OTP_LENGTH);
       if (digits.length > 0) {
         haptics.selection();
@@ -350,8 +350,11 @@ const OtpBox = React.forwardRef(function OtpBox(
   );
 });
 
+// ─── OTP Box styles (created once per theme reference, not per render) ────────
+const otpStylesCache = new WeakMap();
 function otpStyles(theme) {
-  return StyleSheet.create({
+  if (otpStylesCache.has(theme)) return otpStylesCache.get(theme);
+  const s = StyleSheet.create({
     box: {
       width: 46,
       height: 56,
@@ -373,6 +376,8 @@ function otpStyles(theme) {
       textAlignVertical: 'center',
     },
   });
+  otpStylesCache.set(theme, s);
+  return s;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────

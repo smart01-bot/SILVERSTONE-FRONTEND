@@ -4,6 +4,7 @@ import {
   Platform, Animated, TouchableOpacity, StatusBar, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import AnimatedInput from '../../components/AnimatedInput';
@@ -118,10 +119,15 @@ export default function Step3Personal({ navigation, route }) {
   const [name, setName]   = useState('');
   const [email, setEmail] = useState('');
   const [nida, setNida]   = useState('');
+  const [password,        setPassword]        = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPwd,         setShowPwd]         = useState(false);
+  const [showCPwd,        setShowCPwd]        = useState(false);
 
   const [nameErr, setNameErr]   = useState('');
   const [emailErr, setEmailErr] = useState('');
   const [nidaErr, setNidaErr]   = useState('');
+  const [pwdErr,  setPwdErr]    = useState('');
 
   // ── Animated values ────────────────────────────────────────────────────────
   const progressAnim = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
@@ -129,6 +135,8 @@ export default function Step3Personal({ navigation, route }) {
   const f2 = useRef(new Animated.Value(0)).current; // email
   const f3 = useRef(new Animated.Value(0)).current; // nida
   const f4 = useRef(new Animated.Value(0)).current; // shield
+  const f5 = useRef(new Animated.Value(0)).current; // password
+  const f6 = useRef(new Animated.Value(0)).current; // confirm password
 
   // useNativeDriver: false — width animation
   useEffect(() => {
@@ -142,6 +150,8 @@ export default function Step3Personal({ navigation, route }) {
     Animated.stagger(80, [
       Animated.spring(f1, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
       Animated.spring(f2, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
+      Animated.spring(f5, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
+      Animated.spring(f6, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
       Animated.spring(f3, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
       Animated.spring(f4, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
     ]).start();
@@ -155,15 +165,23 @@ export default function Step3Personal({ navigation, route }) {
     if (digits.length === 20) haptics.success();
   };
 
+  const pwdStrength  = password.length === 0 ? -1 : password.length < 6 ? 0 : password.length < 10 ? 1 : 2;
+  const pwdColors    = ['#C8102E', '#F59E0B', '#16A34A'];
+  const pwdWidths    = ['33%', '66%', '100%'];
+
   const nidaComplete = nida.length === 20;
   const emailValid   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const nameValid    = name.trim().length >= 3;
-  const canProceed   = nameValid && emailValid && nidaComplete;
+  const pwdValid     = password.length >= 6;
+  const pwdMatch     = password === confirmPassword;
+  const canProceed   = nameValid && emailValid && nidaComplete && pwdValid && pwdMatch;
 
   const validate = () => {
     let ok = true;
     if (!nameValid)    { setNameErr('Enter your full name (at least 3 characters)'); ok = false; }
     if (!emailValid)   { setEmailErr('Enter a valid email address'); ok = false; }
+    if (!pwdValid)     { setPwdErr('Password must be at least 6 characters'); ok = false; }
+    else if (!pwdMatch){ setPwdErr('Passwords do not match'); ok = false; }
     if (!nidaComplete) { setNidaErr('NIDA number must be exactly 20 digits'); ok = false; }
     return ok;
   };
@@ -177,6 +195,7 @@ export default function Step3Personal({ navigation, route }) {
       name: name.trim(),
       email: email.trim(),
       nida,
+      password,
     });
   };
 
@@ -244,6 +263,58 @@ export default function Step3Personal({ navigation, route }) {
               autoCapitalize="none"
               returnKeyType="done"
             />
+          </Animated.View>
+
+          {/* Password */}
+          <Animated.View style={[{ marginTop: 16 }, slide(f5)]}>
+            <View style={s.pwdWrap}>
+              <AnimatedInput
+                label="Create Password"
+                value={password}
+                onChangeText={(t) => { setPassword(t); if (pwdErr) setPwdErr(''); }}
+                placeholder="Min 6 characters"
+                secureTextEntry={!showPwd}
+                autoCapitalize="none"
+                returnKeyType="next"
+                inputStyle={{ paddingRight: 44 }}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPwd(v => !v)}
+                style={s.eyeBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name={showPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9090A0" />
+              </TouchableOpacity>
+            </View>
+            {password.length > 0 && (
+              <View style={s.strengthBar}>
+                <View style={[s.strengthFill, { width: pwdWidths[pwdStrength], backgroundColor: pwdColors[pwdStrength] }]} />
+              </View>
+            )}
+          </Animated.View>
+
+          {/* Confirm Password */}
+          <Animated.View style={[{ marginTop: 16 }, slide(f6)]}>
+            <View style={s.pwdWrap}>
+              <AnimatedInput
+                label="Confirm Password"
+                value={confirmPassword}
+                onChangeText={(t) => { setConfirmPassword(t); if (pwdErr) setPwdErr(''); }}
+                placeholder="Repeat password"
+                secureTextEntry={!showCPwd}
+                autoCapitalize="none"
+                returnKeyType="done"
+                inputStyle={{ paddingRight: 44 }}
+              />
+              <TouchableOpacity
+                onPress={() => setShowCPwd(v => !v)}
+                style={s.eyeBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name={showCPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9090A0" />
+              </TouchableOpacity>
+            </View>
+            {pwdErr ? <Text style={s.errText}>{pwdErr}</Text> : null}
           </Animated.View>
 
           {/* NIDA — segmented boxes */}
@@ -353,4 +424,9 @@ const styles = (theme, insets) => StyleSheet.create({
   },
   ctaText:  { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
   ctaArrow: { color: '#fff', fontSize: 18 },
+
+  pwdWrap:      { position: 'relative' },
+  eyeBtn:       { position: 'absolute', right: 16, bottom: 17 },
+  strengthBar:  { height: 3, backgroundColor: '#ECECEE', borderRadius: 2, marginTop: 8, overflow: 'hidden' },
+  strengthFill: { height: '100%', borderRadius: 2 },
 });
