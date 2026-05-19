@@ -9,16 +9,16 @@ import { useTheme } from '../../context/ThemeContext';
 import { useHaptics } from '../../hooks/useHaptics';
 import { db } from '../../config/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const TOTAL_STEPS = 6;
 const STEP = 6;
 
 const NETWORKS = {
-  mpesa:   { label: 'M-Pesa',   color: '#00A651' },
-  airtel:  { label: 'Airtel',   color: '#E20020' },
-  yas:     { label: 'Yas Mixx', color: '#0057A8' },
-  halotel: { label: 'Halotel',  color: '#F68B1F' },
+  Voda:    { label: 'M-Pesa',   color: '#00A651' },
+  Airtel:  { label: 'Airtel',   color: '#E20020' },
+  Yas:     { label: 'Yas Mixx', color: '#0057A8' },
+  Halotel: { label: 'Halotel',  color: '#F68B1F' },
 };
 
 const PARTICLE_COLORS = ['#E01535','#C8102E','#FF6B6B','#FF9F43','#FECA57','#48DBFB','#fff'];
@@ -187,10 +187,16 @@ export default function Step6Review({ navigation, route }) {
 
     try {
       const auth = getAuth();
-      const uid  = auth.currentUser?.uid;
-      if (!uid) throw new Error('Not authenticated');
 
+      // Step 1 — create the Firebase Auth account
+      // (no account exists yet; the wizard never called createUserWithEmailAndPassword)
+      if (!p.email || !p.password) throw new Error('Missing credentials');
+      const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
+      const uid  = cred.user.uid;
+
+      // Step 2 — write the agent document
       await setDoc(doc(db, 'agents', uid), {
+        uid,
         name:                  p.name ?? '',
         phone:                 p.phone ?? '',
         email:                 p.email ?? '',
@@ -205,16 +211,25 @@ export default function Step6Review({ navigation, route }) {
         tinCertificateUrl:     p.tinCertificateUrl ?? null,
         licenceCertificateUrl: p.licenceCertificateUrl ?? null,
         selfieVerified:        p.selfieVerified ?? false,
-        role:   'sub-agent',
-        status: 'pending',
-        createdAt: serverTimestamp(),
+        role:              'sub-agent',
+        status:            'pending',
+        pinSet:            false,
+        agentPhoneNumbers: {},
+        createdAt:         serverTimestamp(),
       });
 
       haptics.success();
       navigation.reset({ index: 0, routes: [{ name: 'PendingScreen' }] });
     } catch (e) {
       haptics.error();
-      setError('Something went wrong. Please try again.');
+      const msg = e?.message ?? '';
+      if (msg.includes('email-already-in-use')) {
+        setError('An account with this email already exists. Try logging in instead.');
+      } else if (msg.includes('Missing credentials')) {
+        setError('Registration data is incomplete. Please go back and check your details.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
       setLoading(false);
     }
   };

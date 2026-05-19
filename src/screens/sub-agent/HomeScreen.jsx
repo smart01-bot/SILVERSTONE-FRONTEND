@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Animated, Platform,
+  RefreshControl, Animated,
 } from 'react-native';
 import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ import {
   collection, query, where, orderBy, limit, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { USE_MOCK } from '../../config/dev';
 
 const NETWORKS = {
   Voda:    { color: '#E40000', short: 'VOD' },
@@ -24,10 +25,18 @@ const NETWORKS = {
   Halotel: { color: '#D4A017', short: 'HAL' },
 };
 
+// ─── Mock data (USE_MOCK = true in dev.js) ────────────────────────────────────
+const MOCK_REQUESTS = [
+  { id: 'r1', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },
+  { id: 'r2', sourceNetwork: 'Airtel',  destNetwork: 'Yas',     amount: 75000,  status: 'pending',   createdAt: { toDate: () => new Date(Date.now() - 900_000)   } },
+  { id: 'r3', sourceNetwork: 'Yas',     destNetwork: 'Halotel', amount: 300000, status: 'rejected',  createdAt: { toDate: () => new Date(Date.now() - 86_400_000) } },
+  { id: 'r4', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 500000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 7_200_000)  } },
+  { id: 'r5', sourceNetwork: 'Voda',    destNetwork: 'Yas',     amount: 200000, status: 'approved',  createdAt: { toDate: () => new Date(Date.now() - 1_800_000)  } },
+];
+
 export default function HomeScreen({ navigation }) {
   const { profile, user } = useAuth();
   const { theme, isDark, tr } = useTheme();
-  const STATUS_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
   const [requests,     setRequests]     = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -45,7 +54,32 @@ export default function HomeScreen({ navigation }) {
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   useEffect(() => {
-    if (!user?.uid) { setLoading(false); return; }
+    if (!user?.uid) return;
+
+    // ── Mock mode: skip Firestore entirely ───────────────────────────────────
+    if (USE_MOCK) {
+      const docs = MOCK_REQUESTS;
+      setRequests(docs);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let total = 0, todayV = 0, pending = 0;
+      docs.forEach(r => {
+        const amt = Number(r.amount) || 0;
+        total += amt;
+        if (r.status === 'pending') pending++;
+        if (r.createdAt?.toDate?.() >= today) todayV += amt;
+      });
+      setTotalVolume(total);
+      setTodayVolume(todayV);
+      setPendingCount(pending);
+      setLoading(false);
+      Animated.parallel([
+        Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(cardY,       { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+      ]).start();
+      return;
+    }
+
+    // ── Live Firestore ────────────────────────────────────────────────────────
     const q = query(
       collection(db, 'requests'),
       where('agentId', '==', user.uid),
@@ -71,10 +105,7 @@ export default function HomeScreen({ navigation }) {
         Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.spring(cardY,       { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
       ]).start();
-    }, (err) => {
-      console.warn('HomeScreen snapshot error:', err);
-      setLoading(false);
-    });
+    }, () => setLoading(false));
     return unsub;
   }, [user?.uid]);
 
@@ -119,7 +150,7 @@ export default function HomeScreen({ navigation }) {
   const QUICK_ACTIONS = [
     { label: tr('myRequests'), icon: 'list-outline',   onPress: () => navigation.navigate('MyRequests') },
     { label: tr('history'),    icon: 'time-outline',   onPress: () => navigation.navigate('MyRequests') },
-    { label: tr('networks'),   icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
+    { label: 'Networks',       icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
     { label: tr('profile'),    icon: 'person-outline', onPress: () => navigation.navigate('Profile')    },
   ];
 
@@ -127,12 +158,11 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
+        backgroundColor={theme.bg}
       />
 
       {/* Top bar */}
-      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border, paddingTop: STATUS_TOP + spacing.md - 3 }]}>
+      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
         <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.openDrawer()}>
           <View style={[s.avatarCircle, { backgroundColor: theme.primary }]}>
             <Text style={s.avatarText}>{initials}</Text>
@@ -247,9 +277,9 @@ export default function HomeScreen({ navigation }) {
         ) : networkBreakdown.length > 0 ? (
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('networks')}</Text>
+              <Text style={[s.sectionTitle, { color: theme.text }]}>Networks</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Networks')}>
-                <Text style={[s.sectionAction, { color: theme.primary }]}>{tr('manage')}</Text>
+                <Text style={[s.sectionAction, { color: theme.primary }]}>Manage</Text>
               </TouchableOpacity>
             </View>
             <View style={[s.networkCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
@@ -435,7 +465,7 @@ const s = StyleSheet.create({
   reqNetDot:    { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 2 },
   reqInfo:      { flex: 1 },
   reqRoute:     { fontSize: 18, fontFamily: fonts.bodyBold },
-  reqMeta:      { fontSize: 14, marginTop: 3, fontFamily: fonts.mono },
+  reqMeta:      { fontSize: 14, marginTop: 3, fontFamily: 'monospace' },
   reqRight:     { alignItems: 'flex-end', gap: spacing.xs + 1 },
   reqAmount:    { fontSize: 17, fontFamily: fonts.bodyXBold },
   statusPill:   { paddingHorizontal: spacing.sm + 1, paddingVertical: spacing.xs, borderRadius: radius.sm - 2 },
