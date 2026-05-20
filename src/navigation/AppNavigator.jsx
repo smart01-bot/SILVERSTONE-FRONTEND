@@ -79,7 +79,7 @@ export default function AppNavigator() {
   // No user
   if (!user) {
     return (
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer key="auth" theme={navTheme}>
         <AuthNavigator />
       </NavigationContainer>
     );
@@ -97,7 +97,7 @@ export default function AppNavigator() {
   // Pending or rejected
   if (profile.status === 'pending' || profile.status === 'rejected') {
     return (
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer key="pending" theme={navTheme}>
         <AuthNavigator initialRoute={profile.status} />
       </NavigationContainer>
     );
@@ -175,7 +175,7 @@ export default function AppNavigator() {
   // Fully authenticated
   return (
     <View style={styles.root}>
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer key="app" theme={navTheme}>
         {profile.role === 'main-agent'
           ? <MainAgentNavigator />
           : <SubAgentNavigator />}

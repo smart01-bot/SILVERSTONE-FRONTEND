@@ -29,6 +29,7 @@ export function AuthProvider({ children }) {
 
   const profileUnsubRef       = useRef(null);
   const hasInitializedSession = useRef(false);
+  const authInitialized       = useRef(false);
 
   // ── AppState: lock after >5 min background ────────────────
   useEffect(() => {
@@ -58,6 +59,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
+        authInitialized.current       = true;
         hasInitializedSession.current = false;
         setUser(fbUser);
 
@@ -81,6 +83,13 @@ export function AuthProvider({ children }) {
           () => setAuthLoading(false)
         );
       } else {
+        // Firebase JS SDK always emits null once on startup before checking
+        // AsyncStorage cache. Skip that first null so we don't flash the
+        // login screen on users who are already signed in.
+        if (!authInitialized.current) {
+          authInitialized.current = true;
+          return;
+        }
         if (profileUnsubRef.current) profileUnsubRef.current();
         setUser(null);
         setProfile(null);
