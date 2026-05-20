@@ -136,14 +136,14 @@ export default function Step4Business({ navigation, route }) {
     bizName.trim().length >= 3 &&
     location.length > 0 &&
     networks.length >= 1 &&
-    tin.replace(/\D/g, '').length >= 9 &&
+    tin.replace(/\D/g, '').length >= 8 &&
     licence.length >= 3;
 
   const validate = () => {
     let ok = true;
     if (bizName.trim().length < 3)          { setBizNameErr('Business name must be at least 3 characters'); ok = false; }
     if (networks.length < 1)                 { setNetErr('Select at least one network'); ok = false; }
-    if (tin.replace(/\D/g, '').length < 9)  { setTinErr('Enter a valid TIN number'); ok = false; }
+    if (tin.replace(/\D/g, '').length < 8)  { setTinErr('Enter a valid TIN number'); ok = false; }
     if (licence.length < 3)                  { setLicenceErr('Enter your business licence number'); ok = false; }
     return ok;
   };
@@ -362,7 +362,7 @@ export default function Step4Business({ navigation, route }) {
           </TouchableOpacity>
 
           {/* CTA */}
-          <TouchableOpacity onPress={handleNext} disabled={!canProceed} activeOpacity={0.85} style={{ marginTop: 32 }}>
+          <TouchableOpacity onPress={handleNext} activeOpacity={0.85} style={{ marginTop: 32 }}>
             <LinearGradient
               colors={canProceed ? [theme.gradPrimA, theme.gradPrimB] : ['#555', '#444']}
               style={s.cta}
