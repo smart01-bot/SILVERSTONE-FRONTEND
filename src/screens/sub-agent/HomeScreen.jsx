@@ -17,7 +17,9 @@ import {
 import { db } from '../../config/firebase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_H = 210;
+const CARD_H       = 210;
+const SLIDE_INTERVAL = 3500;
+const TRANSITION_MS  = 640; // must match scrollTo animation duration
 
 const NETWORKS = {
   Voda:    { color: '#E40000', short: 'VOD' },
@@ -39,41 +41,132 @@ const FILLER_NETWORKS = [
   { name: 'Yas',     color: '#0070B8', volume:  80000 },
 ];
 
-const SLIDE_COUNT = 3;
-const SLIDE_INTERVAL = 3500;
-
-// ─── Banner carousel ──────────────────────────────────────────────────────────
+// ─── Infinite carousel banner ─────────────────────────────────────────────────
+// Renders [S1, S2, S3, S1, S2, S3] — always advances forward.
+// When the duplicate set is reached it silently resets to position 0
+// after the transition completes, making it imperceptibly infinite.
 function BannerCard({
   loading, theme, tr,
   totalVolume, todayVolume, todayCount,
-  latestCompleted, fmt, timeAgo,
-  navigation,
+  latestCompleted, fmt, timeAgo, navigation,
 }) {
-  const scrollRef  = useRef(null);
-  const slideIndex = useRef(0);
-  const [active, setActive] = useState(0);
+  const scrollRef   = useRef(null);
+  const slideIndex  = useRef(0);  // raw index into the 6-slide looped array
+  const isResetting = useRef(false);
+  const [activeDot, setActiveDot] = useState(0); // 0-2, real slide position
 
-  // Auto-advance slides
+  const REAL_COUNT = 3;
+
+  // Build slide data so looped array can be constructed at render
+  const makeSlides = () => [
+    { key: 'float'  },
+    { key: 'last'   },
+    { key: 'today'  },
+    { key: 'float2' },
+    { key: 'last2'  },
+    { key: 'today2' },
+  ];
+
   useEffect(() => {
     if (loading) return;
-    const id = setInterval(() => {
-      const next = (slideIndex.current + 1) % SLIDE_COUNT;
+
+    const advance = () => {
+      if (isResetting.current) return;
+
+      const next = slideIndex.current + 1;
       slideIndex.current = next;
-      setActive(next);
+      setActiveDot(next % REAL_COUNT);
       scrollRef.current?.scrollTo({ x: next * SCREEN_WIDTH, animated: true });
-    }, SLIDE_INTERVAL);
+
+      // When we land on the duplicate set (index 3), silently reset to 0
+      // after the scroll animation completes
+      if (next === REAL_COUNT) {
+        isResetting.current = true;
+        setTimeout(() => {
+          slideIndex.current = 0;
+          scrollRef.current?.scrollTo({ x: 0, animated: false });
+          isResetting.current = false;
+        }, TRANSITION_MS + 80);
+      }
+    };
+
+    const id = setInterval(advance, SLIDE_INTERVAL);
     return () => clearInterval(id);
   }, [loading]);
 
   const onScroll = (e) => {
+    if (isResetting.current) return;
     const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    if (idx !== slideIndex.current) {
-      slideIndex.current = idx;
-      setActive(idx);
-    }
+    slideIndex.current = idx;
+    setActiveDot(idx % REAL_COUNT);
   };
 
   const cardPad = spacing.lg - 2;
+
+  const renderSlide = (key, width) => {
+    const baseKey = key.replace('2', '');
+
+    if (baseKey === 'float') return (
+      <View key={key} style={[s.slide, { width, padding: cardPad }]}>
+        <Text style={s.slideEyebrow}>TOTAL FLOAT MOVED</Text>
+        <Text style={s.slideAmount}>{fmt(totalVolume)}</Text>
+        <Text style={s.slideSub}>+{fmt(todayVolume)} today · {todayCount} transfers</Text>
+        <View style={s.pillRow}>
+          <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
+            <Text style={s.pillWhiteText}>{tr('newRequest')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
+            <Text style={s.pillOutlineText}>{tr('myRequests')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+
+    if (baseKey === 'last') return (
+      <View key={key} style={[s.slide, { width, padding: cardPad, justifyContent: 'center' }]}>
+        <Text style={s.slideEyebrow}>LAST COMPLETED TRANSFER</Text>
+        {latestCompleted ? (
+          <>
+            <View style={s.routeRow}>
+              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.sourceNetwork]?.color ?? '#fff' }]}>
+                <Text style={s.netBadgeText}>{NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
+              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
+                <Text style={s.netBadgeText}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
+              </View>
+              <Text style={s.routeAmount}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
+            </View>
+            <Text style={s.slideSub}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
+            <View style={s.completedPill}>
+              <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+              <Text style={s.completedText}>Completed</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={s.slideAmount}>No transfers yet</Text>
+        )}
+      </View>
+    );
+
+    if (baseKey === 'today') return (
+      <View key={key} style={[s.slide, { width, padding: cardPad }]}>
+        <Text style={s.slideEyebrow}>TODAY'S ACTIVITY</Text>
+        <Text style={s.slideAmount}>{fmt(todayVolume)}</Text>
+        <Text style={s.slideSub}>{todayCount} transfer{todayCount !== 1 ? 's' : ''} completed today</Text>
+        <View style={s.pillRow}>
+          <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
+            <Text style={s.pillWhiteText}>View History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
+            <Text style={s.pillOutlineText}>New Request</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+
+    return null;
+  };
 
   return (
     <LinearGradient
@@ -82,24 +175,21 @@ function BannerCard({
       end={{ x: 1, y: 1 }}
       style={[s.bannerCard, { height: CARD_H }]}
     >
-      {/* Decor */}
       <View style={s.decorCircle}  pointerEvents="none" />
       <View style={s.decorCircle2} pointerEvents="none" />
 
       {loading ? (
-        /* Skeleton state */
         <View style={[s.slide, { padding: cardPad }]}>
-          <SkeletonBox width={110} height={13} borderRadius={5} style={sk.row} />
-          <SkeletonBox width={190} height={42} borderRadius={8} style={sk.big} />
-          <SkeletonBox width={150} height={15} borderRadius={5} style={sk.row} />
-          <View style={sk.pills}>
+          <SkeletonBox width={120} height={12} borderRadius={5} style={{ opacity: 0.35 }} />
+          <SkeletonBox width={190} height={42} borderRadius={8} style={{ marginTop: 10, opacity: 0.35 }} />
+          <SkeletonBox width={150} height={14} borderRadius={5} style={{ marginTop: 10, opacity: 0.35 }} />
+          <View style={{ flexDirection: 'row', gap: spacing.sm + 2, marginTop: spacing.md }}>
             <SkeletonBox width="47%" height={42} borderRadius={radius.md} style={{ opacity: 0.25 }} />
             <SkeletonBox width="47%" height={42} borderRadius={radius.md} style={{ opacity: 0.25 }} />
           </View>
         </View>
       ) : (
         <>
-          {/* Slide pages */}
           <ScrollView
             ref={scrollRef}
             horizontal
@@ -107,102 +197,22 @@ function BannerCard({
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
             onMomentumScrollEnd={onScroll}
+            scrollEnabled={false}
             style={{ flex: 1 }}
           >
-            {/* ── Slide 1: Total float moved ── */}
-            <View style={[s.slide, { padding: cardPad, width: SCREEN_WIDTH }]}>
-              <Text style={s.slideLabel}>TOTAL FLOAT MOVED</Text>
-              <Text style={s.slideAmount}>{fmt(totalVolume)}</Text>
-              <Text style={s.slideSub}>
-                +{fmt(todayVolume)} today · {todayCount} transfers
-              </Text>
-              <View style={s.pillRow}>
-                <TouchableOpacity
-                  style={s.pillWhite}
-                  onPress={() => navigation.navigate('NewRequest')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.pillWhiteText}>{tr('newRequest')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.pillOutline}
-                  onPress={() => navigation.navigate('MyRequests')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.pillOutlineText}>{tr('myRequests')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* ── Slide 2: Latest completed request ── */}
-            <View style={[s.slide, { padding: cardPad, width: SCREEN_WIDTH, justifyContent: 'center' }]}>
-              <Text style={s.slideLabel}>LAST COMPLETED TRANSFER</Text>
-              {latestCompleted ? (
-                <>
-                  <View style={s.routeRow}>
-                    <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.sourceNetwork]?.color ?? '#fff' }]}>
-                      <Text style={s.netBadgeText}>
-                        {NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}
-                      </Text>
-                    </View>
-                    <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.7)" />
-                    <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
-                      <Text style={s.netBadgeText}>
-                        {NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}
-                      </Text>
-                    </View>
-                    <Text style={s.routeAmount}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
-                  </View>
-                  <Text style={s.slideSub}>
-                    {latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}
-                  </Text>
-                  <View style={s.completedPill}>
-                    <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-                    <Text style={s.completedText}>Completed</Text>
-                  </View>
-                </>
-              ) : (
-                <Text style={s.slideAmount}>No transfers yet</Text>
-              )}
-            </View>
-
-            {/* ── Slide 3: Today's activity ── */}
-            <View style={[s.slide, { padding: cardPad, width: SCREEN_WIDTH }]}>
-              <Text style={s.slideLabel}>TODAY'S ACTIVITY</Text>
-              <Text style={s.slideAmount}>{fmt(todayVolume)}</Text>
-              <Text style={s.slideSub}>
-                {todayCount} transfer{todayCount !== 1 ? 's' : ''} completed today
-              </Text>
-              <View style={s.pillRow}>
-                <TouchableOpacity
-                  style={s.pillWhite}
-                  onPress={() => navigation.navigate('MyRequests')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.pillWhiteText}>View History</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.pillOutline}
-                  onPress={() => navigation.navigate('NewRequest')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.pillOutlineText}>New Request</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            {['float', 'last', 'today', 'float2', 'last2', 'today2'].map(k =>
+              renderSlide(k, SCREEN_WIDTH)
+            )}
           </ScrollView>
 
-          {/* Dot indicators */}
+          {/* Dots */}
           <View style={s.dots}>
-            {Array.from({ length: SLIDE_COUNT }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  s.dot,
-                  { backgroundColor: i === active ? '#fff' : 'rgba(255,255,255,0.35)' },
-                  i === active && s.dotActive,
-                ]}
-              />
+            {[0, 1, 2].map(i => (
+              <View key={i} style={[
+                s.dot,
+                { backgroundColor: i === activeDot ? '#fff' : 'rgba(255,255,255,0.35)' },
+                i === activeDot && s.dotActive,
+              ]} />
             ))}
           </View>
         </>
@@ -300,8 +310,7 @@ export default function HomeScreen({ navigation }) {
     ? requests.find(r => r.status === 'completed') ?? null
     : FILLER_REQUESTS.find(r => r.status === 'completed');
 
-  const reqId = (id) =>
-    `REQ-${id?.startsWith('filler') ? id.slice(-3) : id?.slice(-3) ?? '000'}`.toUpperCase();
+  const reqId = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
 
   const QUICK_ACTIONS = [
     { label: tr('myRequests'), icon: 'list-outline',   onPress: () => navigation.navigate('MyRequests') },
@@ -314,7 +323,6 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
 
-      {/* Top bar */}
       <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
         <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.openDrawer()}>
           <View style={[s.avatarCircle, { backgroundColor: theme.primary }]}>
@@ -326,9 +334,7 @@ export default function HomeScreen({ navigation }) {
             </View>
           )}
         </TouchableOpacity>
-
         <Text style={[s.brandName, { color: theme.primary }]}>Silverstone</Text>
-
         <TouchableOpacity style={[s.notifBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <Ionicons name="notifications-outline" size={22} color={theme.text} />
           {pendingCount > 0 && <View style={s.notifDot} />}
@@ -342,13 +348,11 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
         }
       >
-        {/* Greeting */}
         <View style={s.greetRow}>
           <Text style={[s.greetSub,  { color: theme.textDim }]}>Karibu</Text>
           <Text style={[s.greetName, { color: theme.text }]}>{firstName}</Text>
         </View>
 
-        {/* Banner carousel */}
         <BannerCard
           loading={loading}
           theme={theme}
@@ -362,7 +366,6 @@ export default function HomeScreen({ navigation }) {
           navigation={navigation}
         />
 
-        {/* Quick actions */}
         <View style={s.quickGrid}>
           {QUICK_ACTIONS.map(action => (
             <TouchableOpacity
@@ -379,7 +382,6 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Network breakdown */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>Networks</Text>
@@ -391,12 +393,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <View style={[s.networkCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             {loading ? (
-              <>
-                <SkeletonNetRow />
-                <SkeletonNetRow />
-                <SkeletonNetRow />
-                <SkeletonNetRow />
-              </>
+              <><SkeletonNetRow /><SkeletonNetRow /><SkeletonNetRow /><SkeletonNetRow /></>
             ) : (
               displayNetworks.map((net, i) => (
                 <View key={net.name} style={[
@@ -409,10 +406,7 @@ export default function HomeScreen({ navigation }) {
                   </View>
                   <View style={s.netBarWrap}>
                     <View style={[s.netBarBg, { backgroundColor: theme.border }]}>
-                      <View style={[s.netBarFill, {
-                        backgroundColor: net.color,
-                        width: `${(net.volume / maxVolume) * 100}%`,
-                      }]} />
+                      <View style={[s.netBarFill, { backgroundColor: net.color, width: `${(net.volume / maxVolume) * 100}%` }]} />
                     </View>
                   </View>
                   <Text style={[s.netAmount, { color: theme.text }]}>{fmt(net.volume)}</Text>
@@ -422,7 +416,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Recent requests */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
@@ -430,13 +423,8 @@ export default function HomeScreen({ navigation }) {
               <Text style={[s.sectionAction, { color: theme.primary }]}>{tr('seeAll')} →</Text>
             </TouchableOpacity>
           </View>
-
           {loading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
+            <><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : (
             <View style={[s.requestsCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
               {displayRequests.map((req, i) => (
@@ -444,17 +432,11 @@ export default function HomeScreen({ navigation }) {
                   <View style={s.reqRow}>
                     <View style={[s.reqNetDot, { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted }]} />
                     <View style={s.reqInfo}>
-                      <Text style={[s.reqRoute, { color: theme.text }]}>
-                        {req.sourceNetwork} → {req.destNetwork}
-                      </Text>
-                      <Text style={[s.reqMeta, { color: theme.textDim }]}>
-                        {reqId(req.id)} · {timeAgo(req.createdAt)}
-                      </Text>
+                      <Text style={[s.reqRoute, { color: theme.text }]}>{req.sourceNetwork} → {req.destNetwork}</Text>
+                      <Text style={[s.reqMeta, { color: theme.textDim }]}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
                     </View>
                     <View style={s.reqRight}>
-                      <Text style={[s.reqAmount, { color: theme.primary }]}>
-                        {fmt(Number(req.amount) || 0)}
-                      </Text>
+                      <Text style={[s.reqAmount, { color: theme.primary }]}>{fmt(Number(req.amount) || 0)}</Text>
                       <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
                         <Text style={[s.statusText, { color: statusColor(req.status) }]}>
                           {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
@@ -462,9 +444,7 @@ export default function HomeScreen({ navigation }) {
                       </View>
                     </View>
                   </View>
-                  {i < displayRequests.length - 1 && (
-                    <View style={[s.divider, { backgroundColor: theme.border }]} />
-                  )}
+                  {i < displayRequests.length - 1 && <View style={[s.divider, { backgroundColor: theme.border }]} />}
                 </View>
               ))}
             </View>
@@ -474,12 +454,6 @@ export default function HomeScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const sk = StyleSheet.create({
-  row:   { opacity: 0.35 },
-  big:   { marginTop: 10, opacity: 0.35 },
-  pills: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
-});
 
 const s = StyleSheet.create({
   safe:   { flex: 1 },
@@ -491,11 +465,8 @@ const s = StyleSheet.create({
   },
   brandName: { fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.5 },
   avatarBtn: { position: 'relative' },
-  avatarCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText:      { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 17 },
+  avatarCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarText:   { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 17 },
   avatarBadge: {
     position: 'absolute', top: -2, right: -2, backgroundColor: '#C8102E',
     borderRadius: radius.full, minWidth: 18, height: 18,
@@ -506,39 +477,27 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: radius.md + 1, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  notifDot: {
-    position: 'absolute', top: 9, right: 9,
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8102E',
-  },
+  notifDot: { position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8102E' },
 
   greetRow:  { paddingHorizontal: spacing.md + 2, paddingTop: spacing.md + 2, paddingBottom: spacing.sm },
   greetSub:  { fontSize: 17, fontFamily: fonts.body, marginBottom: 2 },
   greetName: { fontSize: 28, fontFamily: fonts.display },
 
-  // Banner card
   bannerCard: {
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     borderRadius: radius.xxl - 4, overflow: 'hidden',
   },
-  decorCircle: {
-    position: 'absolute', width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -50,
-  },
-  decorCircle2: {
-    position: 'absolute', width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: 20,
-  },
-  slide:      { flex: 1, justifyContent: 'space-between' },
-  slideLabel: { fontSize: 13, fontFamily: fonts.bodySemi, letterSpacing: 1.4, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' },
-  slideAmount:{ fontSize: 36, fontFamily: fonts.display, letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm },
-  slideSub:   { fontSize: 15, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: spacing.xs },
+  decorCircle:  { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -50 },
+  decorCircle2: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: 20 },
+
+  slide:       { flex: 1, justifyContent: 'space-between' },
+  slideEyebrow:{ fontSize: 11, fontFamily: fonts.bodySemi, letterSpacing: 1.6, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' },
+  slideAmount: { fontSize: 36, fontFamily: fonts.display, letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm },
+  slideSub:    { fontSize: 14, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: spacing.xs },
 
   pillRow: { flexDirection: 'row', gap: spacing.sm + 2, marginTop: spacing.md },
-  pillWhite: {
-    flex: 1, height: 44, borderRadius: radius.md,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-  },
-  pillWhiteText:  { color: '#C8102E', fontFamily: fonts.bodyBold, fontSize: 15 },
+  pillWhite: { flex: 1, height: 44, borderRadius: radius.md, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  pillWhiteText:   { color: '#C8102E', fontFamily: fonts.bodyBold, fontSize: 15 },
   pillOutline: {
     flex: 1, height: 44, borderRadius: radius.md, borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)',
@@ -546,30 +505,26 @@ const s = StyleSheet.create({
   },
   pillOutlineText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 15 },
 
-  // Slide 2 — route
-  routeRow:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  netBadge:    { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm, opacity: 0.9 },
-  netBadgeText:{ color: '#fff', fontFamily: fonts.bodyBold, fontSize: 14, letterSpacing: 0.3 },
-  routeAmount: { marginLeft: spacing.sm, fontSize: 22, fontFamily: fonts.display, color: '#fff' },
+  routeRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  netBadge:     { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm, opacity: 0.9 },
+  netBadgeText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 13, letterSpacing: 0.3 },
+  routeAmount:  { marginLeft: spacing.sm, fontSize: 22, fontFamily: fonts.display, color: '#fff' },
   completedPill: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    marginTop: spacing.sm, backgroundColor: 'rgba(22,163,74,0.25)',
-    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm,
+    backgroundColor: 'rgba(22,163,74,0.25)', alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm,
   },
   completedText: { color: '#16A34A', fontFamily: fonts.bodySemi, fontSize: 13 },
 
-  // Dot indicators
   dots:      { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: spacing.md - 4 },
-  dot:       { width: 6, height: 6, borderRadius: 3 },
+  dot:       { width: 6, height: 4, borderRadius: 2 },
   dotActive: { width: 18 },
 
-  // Quick actions
   quickGrid: { flexDirection: 'row', gap: spacing.sm + 2, paddingHorizontal: spacing.md, marginTop: spacing.md + 2 },
   quickItem: { flex: 1, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md - 2, alignItems: 'center', gap: spacing.sm },
   quickIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  quickLabel: { fontSize: 14, fontFamily: fonts.bodyBold, textAlign: 'center' },
+  quickLabel:{ fontSize: 14, fontFamily: fonts.bodyBold, textAlign: 'center' },
 
-  // Sections
   section:       { paddingHorizontal: spacing.md, marginTop: spacing.lg - 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md - 4 },
   sectionTitle:  { fontSize: 21, fontFamily: fonts.heading },
