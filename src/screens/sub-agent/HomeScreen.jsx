@@ -45,99 +45,126 @@ const FILLER_NETWORKS = [
 // Renders [S1, S2, S3, S1, S2, S3] — always advances forward.
 // When the duplicate set is reached it silently resets to position 0
 // after the transition completes, making it imperceptibly infinite.
+// Manual swiping is enabled — touch pauses auto-advance, release resumes.
 function BannerCard({
   loading, theme, tr,
   totalVolume, todayVolume, todayCount,
   latestCompleted, fmt, timeAgo, navigation,
 }) {
-  const scrollRef   = useRef(null);
-  const slideIndex  = useRef(0);  // raw index into the 6-slide looped array
-  const isResetting = useRef(false);
-  const [activeDot, setActiveDot] = useState(0); // 0-2, real slide position
+  const scrollRef    = useRef(null);
+  const slideIndex   = useRef(0);
+  const isResetting  = useRef(false);
+  const isTouching   = useRef(false);
+  const timerRef     = useRef(null);
+  const resetTimerRef = useRef(null);
+  const [activeDot, setActiveDot] = useState(0);
 
-  const REAL_COUNT = 3;
+  const REAL_COUNT  = 3;
+  // Banner is inset by spacing.md on each side
+  const SLIDE_WIDTH = SCREEN_WIDTH - spacing.md * 2;
 
-  // Build slide data so looped array can be constructed at render
-  const makeSlides = () => [
-    { key: 'float'  },
-    { key: 'last'   },
-    { key: 'today'  },
-    { key: 'float2' },
-    { key: 'last2'  },
-    { key: 'today2' },
-  ];
-
-  useEffect(() => {
-    if (loading) return;
-
-    const advance = () => {
-      if (isResetting.current) return;
+  // ── Auto-advance timer management ──────────────────────
+  const startTimer = () => {
+    stopTimer();
+    timerRef.current = setInterval(() => {
+      if (isResetting.current || isTouching.current) return;
 
       const next = slideIndex.current + 1;
       slideIndex.current = next;
       setActiveDot(next % REAL_COUNT);
-      scrollRef.current?.scrollTo({ x: next * SCREEN_WIDTH, animated: true });
+      scrollRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
 
-      // When we land on the duplicate set (index 3), silently reset to 0
-      // after the scroll animation completes
-      if (next === REAL_COUNT) {
+      if (next >= REAL_COUNT) {
         isResetting.current = true;
-        setTimeout(() => {
+        resetTimerRef.current = setTimeout(() => {
           slideIndex.current = 0;
           scrollRef.current?.scrollTo({ x: 0, animated: false });
           isResetting.current = false;
-        }, TRANSITION_MS + 80);
+        }, TRANSITION_MS + 200);
       }
-    };
+    }, SLIDE_INTERVAL);
+  };
 
-    const id = setInterval(advance, SLIDE_INTERVAL);
-    return () => clearInterval(id);
+  const stopTimer = () => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (loading) return;
+    startTimer();
+    return () => {
+      stopTimer();
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
   }, [loading]);
 
-  const onScroll = (e) => {
+  // ── Touch handlers — pause auto-advance while swiping ──
+  const onTouchStart = () => {
+    isTouching.current = true;
+    stopTimer();
+  };
+
+  const onTouchEnd = () => {
+    isTouching.current = false;
+    startTimer();
+  };
+
+  // ── Scroll end — sync slideIndex after manual swipe ────
+  const onScrollEnd = (e) => {
     if (isResetting.current) return;
-    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH);
     slideIndex.current = idx;
     setActiveDot(idx % REAL_COUNT);
+
+    // If user swiped into the duplicate set, silently reset
+    if (idx >= REAL_COUNT) {
+      isResetting.current = true;
+      const realIdx = idx % REAL_COUNT;
+      resetTimerRef.current = setTimeout(() => {
+        slideIndex.current = realIdx;
+        scrollRef.current?.scrollTo({ x: realIdx * SLIDE_WIDTH, animated: false });
+        isResetting.current = false;
+      }, 50);
+    }
   };
 
   const cardPad = spacing.lg - 2;
 
-  const renderSlide = (key, width) => {
+  const renderSlide = (key) => {
     const baseKey = key.replace('2', '');
 
     if (baseKey === 'float') return (
-      <View key={key} style={[s.slide, { width, padding: cardPad }]}>
-        <Text style={s.slideEyebrow}>TOTAL FLOAT MOVED</Text>
-        <Text style={s.slideAmount}>{fmt(totalVolume)}</Text>
-        <Text style={s.slideSub}>+{fmt(todayVolume)} today · {todayCount} transfers</Text>
+      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad }]}>
+        <Text style={s.slideEyebrow} numberOfLines={1}>TOTAL FLOAT MOVED</Text>
+        <Text style={s.slideAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(totalVolume)}</Text>
+        <Text style={s.slideSub} numberOfLines={1}>+{fmt(todayVolume)} today · {todayCount} transfers</Text>
         <View style={s.pillRow}>
           <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
-            <Text style={s.pillWhiteText}>{tr('newRequest')}</Text>
+            <Text style={s.pillWhiteText} numberOfLines={1}>{tr('newRequest')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
-            <Text style={s.pillOutlineText}>{tr('myRequests')}</Text>
+            <Text style={s.pillOutlineText} numberOfLines={1}>{tr('myRequests')}</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
 
     if (baseKey === 'last') return (
-      <View key={key} style={[s.slide, { width, padding: cardPad, justifyContent: 'center' }]}>
-        <Text style={s.slideEyebrow}>LAST COMPLETED TRANSFER</Text>
+      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad, justifyContent: 'center' }]}>
+        <Text style={s.slideEyebrow} numberOfLines={1}>LAST COMPLETED TRANSFER</Text>
         {latestCompleted ? (
           <>
             <View style={s.routeRow}>
               <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.sourceNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText}>{NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}</Text>
+                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}</Text>
               </View>
               <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
               <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
+                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
               </View>
-              <Text style={s.routeAmount}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
+              <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
             </View>
-            <Text style={s.slideSub}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
+            <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
             <View style={s.completedPill}>
               <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
               <Text style={s.completedText}>Completed</Text>
@@ -150,16 +177,16 @@ function BannerCard({
     );
 
     if (baseKey === 'today') return (
-      <View key={key} style={[s.slide, { width, padding: cardPad }]}>
-        <Text style={s.slideEyebrow}>TODAY'S ACTIVITY</Text>
-        <Text style={s.slideAmount}>{fmt(todayVolume)}</Text>
-        <Text style={s.slideSub}>{todayCount} transfer{todayCount !== 1 ? 's' : ''} completed today</Text>
+      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad }]}>
+        <Text style={s.slideEyebrow} numberOfLines={1}>TODAY'S ACTIVITY</Text>
+        <Text style={s.slideAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(todayVolume)}</Text>
+        <Text style={s.slideSub} numberOfLines={1}>{todayCount} transfer{todayCount !== 1 ? 's' : ''} completed today</Text>
         <View style={s.pillRow}>
           <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
-            <Text style={s.pillWhiteText}>View History</Text>
+            <Text style={s.pillWhiteText} numberOfLines={1}>View History</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
-            <Text style={s.pillOutlineText}>New Request</Text>
+            <Text style={s.pillOutlineText} numberOfLines={1}>New Request</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -196,12 +223,15 @@ function BannerCard({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
-            onMomentumScrollEnd={onScroll}
-            scrollEnabled={false}
+            onMomentumScrollEnd={onScrollEnd}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchEnd}
+            scrollEnabled={true}
             style={{ flex: 1 }}
           >
             {['float', 'last', 'today', 'float2', 'last2', 'today2'].map(k =>
-              renderSlide(k, SCREEN_WIDTH)
+              renderSlide(k)
             )}
           </ScrollView>
 
@@ -350,7 +380,7 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={s.greetRow}>
           <Text style={[s.greetSub,  { color: theme.textDim }]}>Karibu</Text>
-          <Text style={[s.greetName, { color: theme.text }]}>{firstName}</Text>
+          <Text style={[s.greetName, { color: theme.text }]} numberOfLines={1}>{firstName}</Text>
         </View>
 
         <BannerCard
@@ -409,7 +439,7 @@ export default function HomeScreen({ navigation }) {
                       <View style={[s.netBarFill, { backgroundColor: net.color, width: `${(net.volume / maxVolume) * 100}%` }]} />
                     </View>
                   </View>
-                  <Text style={[s.netAmount, { color: theme.text }]}>{fmt(net.volume)}</Text>
+                  <Text style={[s.netAmount, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(net.volume)}</Text>
                 </View>
               ))
             )}
@@ -432,11 +462,11 @@ export default function HomeScreen({ navigation }) {
                   <View style={s.reqRow}>
                     <View style={[s.reqNetDot, { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted }]} />
                     <View style={s.reqInfo}>
-                      <Text style={[s.reqRoute, { color: theme.text }]}>{req.sourceNetwork} → {req.destNetwork}</Text>
-                      <Text style={[s.reqMeta, { color: theme.textDim }]}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
+                      <Text style={[s.reqRoute, { color: theme.text }]} numberOfLines={1}>{req.sourceNetwork} → {req.destNetwork}</Text>
+                      <Text style={[s.reqMeta, { color: theme.textDim }]} numberOfLines={1}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
                     </View>
                     <View style={s.reqRight}>
-                      <Text style={[s.reqAmount, { color: theme.primary }]}>{fmt(Number(req.amount) || 0)}</Text>
+                      <Text style={[s.reqAmount, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(Number(req.amount) || 0)}</Text>
                       <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
                         <Text style={[s.statusText, { color: statusColor(req.status) }]}>
                           {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
