@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth }  from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
 import { getAuth } from 'firebase/auth';
 
@@ -68,6 +69,7 @@ const orbitStyles = StyleSheet.create({
 
 export default function PendingScreen({ navigation }) {
   const { theme } = useTheme();
+  const { logout } = useAuth();
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
@@ -228,6 +230,15 @@ export default function PendingScreen({ navigation }) {
           >
             <Text style={s.demoBtnText}>Simulate approval (demo) →</Text>
           </TouchableOpacity>
+
+          {/* Sign out */}
+          <TouchableOpacity
+            style={s.signOutBtn}
+            onPress={() => { haptics.light(); logout(); }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={s.signOutText}>Sign out</Text>
+          </TouchableOpacity>
         </View>
       </Animated.View>
     </View>
@@ -343,4 +354,6 @@ const styles = (theme, insets) => StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: theme.border, borderStyle: 'dashed',
   },
   demoBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: theme.muted },
+  signOutBtn:  { marginTop: 16 },
+  signOutText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: theme.textDim, textDecorationLine: 'underline' },
 });
