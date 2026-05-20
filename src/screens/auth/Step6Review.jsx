@@ -219,7 +219,9 @@ export default function Step6Review({ navigation, route }) {
       });
 
       haptics.success();
-      navigation.reset({ index: 0, routes: [{ name: 'PendingScreen' }] });
+      // Registration complete — AppNavigator detects profile.status === 'pending'
+      // automatically and routes to PendingScreen via the auth cascade.
+      // Do not call navigation.reset here; the NavigationContainer will remount.
     } catch (e) {
       haptics.error();
       const msg = e?.message ?? '';
