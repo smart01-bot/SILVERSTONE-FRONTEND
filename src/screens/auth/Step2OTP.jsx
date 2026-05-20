@@ -26,6 +26,7 @@ import {
   TextInput,
   Animated,
 } from 'react-native';
+// Note: Animated kept for shakeAnim on the otpRow — that stays native-only (translateX).
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -294,43 +295,19 @@ export default function Step2OTP({ navigation, route }) {
   );
 }
 
-// ─── OTP Box ─────────────────────────────────────────────────────────────────
+// ─── OTP Box — no Animated API, plain useState for focus/fill state ───────────
 const OtpBox = React.forwardRef(function OtpBox(
   { value, onChangeText, onKeyPress, onFocus, onLongPress, theme, filled },
   ref
 ) {
-  const borderAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim  = useRef(new Animated.Value(1)).current;
   const [isFocused, setIsFocused] = useState(false);
-  const prevFilled = useRef(false);
-
-  useEffect(() => {
-    Animated.timing(borderAnim, {
-      toValue: isFocused ? 1 : 0,
-      duration: 150,
-      useNativeDriver: false,
-    }).start();
-  }, [isFocused]);
-
-  useEffect(() => {
-    if (filled && !prevFilled.current) {
-      Animated.sequence([
-        Animated.spring(scaleAnim, { toValue: 1.13, useNativeDriver: true, speed: 40 }),
-        Animated.spring(scaleAnim, { toValue: 1,    useNativeDriver: true, speed: 24 }),
-      ]).start();
-    }
-    prevFilled.current = filled;
-  }, [filled]);
-
-  const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [theme.border, theme.primary],
-  });
-
   const s = otpStyles(theme);
 
+  const borderColor = isFocused ? theme.primary : filled ? theme.primary : theme.border;
+  const borderWidth = isFocused || filled ? 2 : 1.5;
+
   return (
-    <Animated.View style={[s.box, { borderColor, transform: [{ scale: scaleAnim }] }, filled && s.boxFilled]}>
+    <View style={[s.box, { borderColor, borderWidth }, filled && s.boxFilled]}>
       <TextInput
         ref={ref}
         style={s.digit}
@@ -346,7 +323,7 @@ const OtpBox = React.forwardRef(function OtpBox(
         selectTextOnFocus
         caretHidden
       />
-    </Animated.View>
+    </View>
   );
 });
 
@@ -359,7 +336,6 @@ function otpStyles(theme) {
       width: 46,
       height: 56,
       borderRadius: radius.md,
-      borderWidth: 1.5,
       backgroundColor: theme.surfaceAlt,
       alignItems: 'center',
       justifyContent: 'center',
