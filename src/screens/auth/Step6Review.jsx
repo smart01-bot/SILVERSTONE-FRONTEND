@@ -36,10 +36,9 @@ function fmtFloat(n) {
 }
 
 // ── Particle system ──────────────────────────────────────────────────────────
-// Rule: opacity (useNativeDriver:false) and transform (useNativeDriver:true)
-// MUST be on separate Animated.View nodes — never on the same view.
-// Outer view: opacity only (JS driver).
-// Inner view: transform only (native driver).
+// Fix: opacity (useNativeDriver:false) and transform (useNativeDriver:true)
+// MUST live on separate Animated.View nodes — never the same view.
+// Outer view owns opacity (JS driver), inner view owns transform (native driver).
 function Particles({ trigger }) {
   const particles = useRef(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
@@ -60,7 +59,7 @@ function Particles({ trigger }) {
     });
     const rad = (deg) => deg * (Math.PI / 180);
 
-    // Native driver — translate only, separate from opacity
+    // Native driver — translate only
     const translateAnims = particles.map(p => {
       const tx = Math.cos(rad(p.angle)) * p.dist;
       const ty = Math.sin(rad(p.angle)) * p.dist - 40;
@@ -70,7 +69,7 @@ function Particles({ trigger }) {
       ]);
     });
 
-    // JS driver — opacity only, separate from transform
+    // JS driver — opacity only
     const opacityAnims = particles.map(p =>
       Animated.sequence([
         Animated.timing(p.op, { toValue: 1, duration: 100, useNativeDriver: false }),
@@ -88,14 +87,12 @@ function Particles({ trigger }) {
   return (
     <View style={particleStyles.wrap} pointerEvents="none">
       {particles.map((p, i) => (
-        // Outer Animated.View: opacity only — JS driver (useNativeDriver: false)
+        // Outer: opacity only — JS driver
         <Animated.View key={i} style={[particleStyles.opacityLayer, { opacity: p.op }]}>
-          {/* Inner Animated.View: transform only — native driver (useNativeDriver: true) */}
+          {/* Inner: transform only — native driver */}
           <Animated.View
             style={[particleStyles.dot, {
-              width: p.size,
-              height: p.size,
-              borderRadius: p.size / 2,
+              width: p.size, height: p.size, borderRadius: p.size / 2,
               backgroundColor: p.color,
               transform: [{ translateX: p.x }, { translateY: p.y }],
             }]}
@@ -113,14 +110,8 @@ const particleStyles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     zIndex: 10,
   },
-  // Outer layer owns only opacity — no transform here
-  opacityLayer: {
-    position: 'absolute',
-  },
-  // Inner layer owns only transform — no opacity here
-  dot: {
-    position: 'absolute',
-  },
+  opacityLayer: { position: 'absolute' },
+  dot:          { position: 'absolute' },
 });
 
 function FieldRow({ label, value, mono }) {
@@ -154,20 +145,19 @@ export default function Step6Review({ navigation, route }) {
   const [burst, setBurst]     = useState(false);
 
   // Guard: AppNavigator tears down this component the moment Firebase auth
-  // state fires (profile.status === 'pending' → PendingScreen). Without this,
-  // the async handleSubmit continues running after unmount and crashes.
+  // state fires. Without this, handleSubmit continues running after unmount.
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
   const p = route.params ?? {};
 
   // ── Animations ────────────────────────────────────────────────────────────
-  const progressAnim  = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
-  const heroAnim      = useRef(new Animated.Value(0)).current;
-  const card1Anim     = useRef(new Animated.Value(0)).current;
-  const card2Anim     = useRef(new Animated.Value(0)).current;
-  const termsAnim     = useRef(new Animated.Value(0)).current;
-  const checkAnim     = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
+  const heroAnim     = useRef(new Animated.Value(0)).current;
+  const card1Anim    = useRef(new Animated.Value(0)).current;
+  const card2Anim    = useRef(new Animated.Value(0)).current;
+  const termsAnim    = useRef(new Animated.Value(0)).current;
+  const checkAnim    = useRef(new Animated.Value(0)).current;
 
   // useNativeDriver: false — width
   useEffect(() => {
@@ -190,7 +180,6 @@ export default function Step6Review({ navigation, route }) {
     haptics.selection();
     const next = !agreed;
     setAgreed(next);
-    // useNativeDriver: true — scale
     Animated.spring(checkAnim, {
       toValue: next ? 1 : 0, tension: 80, friction: 7, useNativeDriver: true,
     }).start();
@@ -212,6 +201,7 @@ export default function Step6Review({ navigation, route }) {
       if (!p.email || !p.password) throw new Error('Missing credentials');
       const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
 
+      // Component may have unmounted while awaiting — bail silently
       if (!isMounted.current) return;
 
       const uid = cred.user.uid;
@@ -240,6 +230,8 @@ export default function Step6Review({ navigation, route }) {
       });
 
       if (isMounted.current) haptics.success();
+      // AppNavigator detects profile.status === 'pending' and routes to
+      // PendingScreen automatically. Do not call navigation.reset here.
     } catch (e) {
       if (!isMounted.current) return;
       haptics.error();
@@ -294,7 +286,6 @@ export default function Step6Review({ navigation, route }) {
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero card */}
         <Animated.View style={[s.heroCard, reveal(heroAnim)]}>
           <View style={s.heroMap}>
             <Text style={s.heroMapIcon}>📍</Text>
@@ -308,7 +299,6 @@ export default function Step6Review({ navigation, route }) {
           </View>
         </Animated.View>
 
-        {/* Network chips */}
         {p.networks && p.networks.length > 0 && (
           <Animated.View style={[s.netChips, reveal(heroAnim)]}>
             {p.networks.map(id => {
@@ -323,7 +313,6 @@ export default function Step6Review({ navigation, route }) {
           </Animated.View>
         )}
 
-        {/* Personal */}
         <Animated.View style={reveal(card1Anim)}>
           <Text style={s.sectionTitle}>Personal</Text>
           <View style={s.card}>
@@ -334,7 +323,6 @@ export default function Step6Review({ navigation, route }) {
           </View>
         </Animated.View>
 
-        {/* Business */}
         <Animated.View style={reveal(card2Anim)}>
           <Text style={s.sectionTitle}>Business</Text>
           <View style={s.card}>
@@ -349,7 +337,6 @@ export default function Step6Review({ navigation, route }) {
           </View>
         </Animated.View>
 
-        {/* Terms */}
         <Animated.View style={[reveal(termsAnim), { marginTop: 4 }]}>
           <TouchableOpacity style={s.termsRow} onPress={toggleAgree} activeOpacity={0.8}>
             <Animated.View style={[s.checkbox, agreed && s.checkboxActive, { transform: [{ scale: checkScale }] }]}>
@@ -365,7 +352,6 @@ export default function Step6Review({ navigation, route }) {
 
         {error ? <Text style={s.errText}>{error}</Text> : null}
 
-        {/* Submit — particle burst source */}
         <View style={{ marginTop: 24 }}>
           <Particles trigger={burst} />
           <TouchableOpacity onPress={handleSubmit} disabled={!agreed || loading} activeOpacity={0.85}>
@@ -386,27 +372,24 @@ export default function Step6Review({ navigation, route }) {
 
 const styles = (theme, insets) => StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
-
   header: {
     paddingTop: insets.top + 12, paddingBottom: 28,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
-  navRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  navRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backBtn:  { marginRight: 12, padding: 4 },
   backArrow:{ fontSize: 22, color: '#fff' },
   progressTrack: {
     flex: 1, height: 3, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
-  stepCounter: { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   eyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
   title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
   subtitle:{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-
-  scroll: { flex: 1 },
+  scroll:        { flex: 1 },
   scrollContent: { padding: 20 },
-
   heroCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: theme.surfaceAlt, borderRadius: 16,
@@ -418,15 +401,12 @@ const styles = (theme, insets) => StyleSheet.create({
   heroName:   { fontSize: 17, fontFamily: 'Manrope_700Bold', color: theme.text },
   heroArea:   { fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, marginTop: 2 },
   heroCoords: { fontSize: 11, fontFamily: 'RobotoMono_400Regular', color: theme.muted, marginTop: 3 },
-
   netChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   netChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, gap: 6, backgroundColor: theme.surfaceAlt },
   netDot:   { width: 7, height: 7, borderRadius: 4 },
   netLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-
   sectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: theme.muted, letterSpacing: 1.2, marginBottom: 8, marginTop: 4 },
   card: { backgroundColor: theme.surfaceAlt, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, marginBottom: 20 },
-
   termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   checkbox: {
     width: 24, height: 24, borderRadius: 6,
@@ -438,9 +418,7 @@ const styles = (theme, insets) => StyleSheet.create({
   checkMark:      { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   termsText:      { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, lineHeight: 20 },
   termsLink:      { color: theme.primary, fontFamily: 'Inter_600SemiBold' },
-
   errText: { marginTop: 12, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.primary, textAlign: 'center' },
-
   cta: {
     height: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#C8102E', shadowOffset: { width: 0, height: 4 },

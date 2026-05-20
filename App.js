@@ -20,7 +20,6 @@ import {
 } from '@expo-google-fonts/manrope';
 import {
   RobotoMono_400Regular,
-  RobotoMono_700Bold,
 } from '@expo-google-fonts/roboto-mono';
 
 export default function App() {
@@ -33,7 +32,6 @@ export default function App() {
     Manrope_700Bold,
     Manrope_800ExtraBold,
     RobotoMono_400Regular,
-    RobotoMono_700Bold,
   });
 
   if (!fontsLoaded) {
