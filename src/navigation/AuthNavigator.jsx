@@ -29,7 +29,9 @@ export default function AuthNavigator({ initialRoute } = {}) {
     ? 'PendingScreen'
     : initialRoute === 'rejected'
       ? 'Rejected'
-      : 'Splash';
+      : initialRoute === 'RoleSelect'
+        ? 'RoleSelect'
+        : 'Splash';
 
   return (
     <Stack.Navigator

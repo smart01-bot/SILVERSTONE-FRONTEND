@@ -76,11 +76,14 @@ export default function AppNavigator() {
     );
   }
 
-  // No user
+  // No user — show auth flow.
+  // Pass initialRoute="RoleSelect" so that on logout the user lands on
+  // RoleSelect directly instead of re-playing the splash timer (which may
+  // have already fired and won't re-fire on NavigationContainer remount).
   if (!user) {
     return (
       <NavigationContainer key="auth" theme={navTheme}>
-        <AuthNavigator />
+        <AuthNavigator initialRoute="RoleSelect" />
       </NavigationContainer>
     );
   }

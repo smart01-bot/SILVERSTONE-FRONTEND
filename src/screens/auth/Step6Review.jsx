@@ -137,6 +137,12 @@ export default function Step6Review({ navigation, route }) {
   const [error, setError]     = useState('');
   const [burst, setBurst]     = useState(false);
 
+  // Guard: AppNavigator tears down this component the moment Firebase auth
+  // state fires (profile.status === 'pending' → PendingScreen). Without this,
+  // the async handleSubmit continues running after unmount and crashes.
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
+
   const p = route.params ?? {};
 
   // ── Animations ────────────────────────────────────────────────────────────
@@ -192,6 +198,12 @@ export default function Step6Review({ navigation, route }) {
       // (no account exists yet; the wizard never called createUserWithEmailAndPassword)
       if (!p.email || !p.password) throw new Error('Missing credentials');
       const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
+
+      // After createUser, onAuthStateChanged fires immediately. AppNavigator
+      // will detect the new user, read profile.status === 'pending', and tear
+      // down this component. If that already happened, bail silently.
+      if (!isMounted.current) return;
+
       const uid  = cred.user.uid;
 
       // Step 2 — write the agent document
@@ -218,11 +230,13 @@ export default function Step6Review({ navigation, route }) {
         createdAt:         serverTimestamp(),
       });
 
-      haptics.success();
-      // Registration complete — AppNavigator detects profile.status === 'pending'
-      // automatically and routes to PendingScreen via the auth cascade.
-      // Do not call navigation.reset here; the NavigationContainer will remount.
+      // Don't touch state or navigate — AppNavigator handles the cascade.
+      // If we're still mounted for some reason, just mark success.
+      if (isMounted.current) haptics.success();
     } catch (e) {
+      // Component may have unmounted between the await and the catch
+      if (!isMounted.current) return;
+
       haptics.error();
       const msg = e?.message ?? '';
       if (msg.includes('email-already-in-use')) {

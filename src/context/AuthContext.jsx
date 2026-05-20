@@ -56,8 +56,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Firebase auth state ───────────────────────────────────
+  const nullTimeoutRef = useRef(null);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
+      // Clear any pending null-fallback timer
+      if (nullTimeoutRef.current) {
+        clearTimeout(nullTimeoutRef.current);
+        nullTimeoutRef.current = null;
+      }
+
       if (fbUser) {
         authInitialized.current       = true;
         hasInitializedSession.current = false;
@@ -83,11 +91,21 @@ export function AuthProvider({ children }) {
           () => setAuthLoading(false)
         );
       } else {
-        // Firebase JS SDK always emits null once on startup before checking
-        // AsyncStorage cache. Skip that first null so we don't flash the
-        // login screen on users who are already signed in.
         if (!authInitialized.current) {
+          // Firebase JS SDK always emits null once on startup before checking
+          // the AsyncStorage cache. Wait briefly — if a real user arrives
+          // within 1.5s this timer gets cancelled above. If not (fresh
+          // install / genuinely signed out), commit the null so the app
+          // exits the loading state and shows the auth flow.
           authInitialized.current = true;
+          nullTimeoutRef.current = setTimeout(() => {
+            if (profileUnsubRef.current) profileUnsubRef.current();
+            setUser(null);
+            setProfile(null);
+            setSessionLocked(false);
+            hasInitializedSession.current = false;
+            setAuthLoading(false);
+          }, 1500);
           return;
         }
         if (profileUnsubRef.current) profileUnsubRef.current();
@@ -98,7 +116,10 @@ export function AuthProvider({ children }) {
         setAuthLoading(false);
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+      if (nullTimeoutRef.current) clearTimeout(nullTimeoutRef.current);
+    };
   }, []);
 
   // ── Registration ──────────────────────────────────────────
@@ -169,15 +190,30 @@ export function AuthProvider({ children }) {
   // ── Logout ────────────────────────────────────────────────
   const logout = async () => {
     hasInitializedSession.current = false;
+
+    // Unsubscribe from Firestore first to prevent snapshot callbacks
+    // from firing during teardown
+    if (profileUnsubRef.current) {
+      profileUnsubRef.current();
+      profileUnsubRef.current = null;
+    }
+
     try {
       if (user?.uid) await SecureStore.deleteItemAsync(pinKey(user.uid));
       await AsyncStorage.removeItem(LAST_ACTIVE_KEY);
     } catch {}
-    if (profileUnsubRef.current) profileUnsubRef.current();
+
+    // Sign out from Firebase FIRST — this triggers onAuthStateChanged(null),
+    // which is what AppNavigator watches. Only then clear local state.
+    // Previous order (setUser(null) → signOut) caused the auth navigator
+    // to render before Firebase had fully torn down, leading to stale state.
+    await signOut(auth);
+
+    // onAuthStateChanged will handle setting user/profile/sessionLocked to null,
+    // but set them here too for immediate UI response
     setUser(null);
     setProfile(null);
     setSessionLocked(false);
-    await signOut(auth);
   };
 
   const resetPassword = async (email) => {
