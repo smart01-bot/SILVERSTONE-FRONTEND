@@ -36,16 +36,20 @@ function fmtFloat(n) {
 }
 
 // ── Particle system ──────────────────────────────────────────────────────────
+// Rule: opacity (useNativeDriver:false) and transform (useNativeDriver:true)
+// MUST be on separate Animated.View nodes — never on the same view.
+// Outer view: opacity only (JS driver).
+// Inner view: transform only (native driver).
 function Particles({ trigger }) {
   const particles = useRef(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      x: new Animated.Value(0),
-      y: new Animated.Value(0),
-      op: new Animated.Value(0),
+      x:     new Animated.Value(0),
+      y:     new Animated.Value(0),
+      op:    new Animated.Value(0),
       color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-      size: 6 + Math.random() * 6,
+      size:  6 + Math.random() * 6,
       angle: (360 / PARTICLE_COUNT) * i + (Math.random() * 20 - 10),
-      dist: 80 + Math.random() * 80,
+      dist:  80 + Math.random() * 80,
     }))
   ).current;
 
@@ -54,8 +58,9 @@ function Particles({ trigger }) {
     particles.forEach(p => {
       p.x.setValue(0); p.y.setValue(0); p.op.setValue(0);
     });
-    const rad  = (deg) => deg * (Math.PI / 180);
-    // Split by driver — NEVER mix in Animated.parallel (design system rule)
+    const rad = (deg) => deg * (Math.PI / 180);
+
+    // Native driver — translate only, separate from opacity
     const translateAnims = particles.map(p => {
       const tx = Math.cos(rad(p.angle)) * p.dist;
       const ty = Math.sin(rad(p.angle)) * p.dist - 40;
@@ -65,6 +70,7 @@ function Particles({ trigger }) {
       ]);
     });
 
+    // JS driver — opacity only, separate from transform
     const opacityAnims = particles.map(p =>
       Animated.sequence([
         Animated.timing(p.op, { toValue: 1, duration: 100, useNativeDriver: false }),
@@ -73,7 +79,6 @@ function Particles({ trigger }) {
       ])
     );
 
-    // Fire both groups independently — matching stagger keeps visual sync
     Animated.stagger(18, translateAnims).start();
     Animated.stagger(18, opacityAnims).start();
   }, [trigger]);
@@ -83,19 +88,24 @@ function Particles({ trigger }) {
   return (
     <View style={particleStyles.wrap} pointerEvents="none">
       {particles.map((p, i) => (
-        <Animated.View
-          key={i}
-          style={[particleStyles.dot, {
-            width: p.size, height: p.size, borderRadius: p.size / 2,
-            backgroundColor: p.color,
-            opacity: p.op,
-            transform: [{ translateX: p.x }, { translateY: p.y }],
-          }]}
-        />
+        // Outer Animated.View: opacity only — JS driver (useNativeDriver: false)
+        <Animated.View key={i} style={[particleStyles.opacityLayer, { opacity: p.op }]}>
+          {/* Inner Animated.View: transform only — native driver (useNativeDriver: true) */}
+          <Animated.View
+            style={[particleStyles.dot, {
+              width: p.size,
+              height: p.size,
+              borderRadius: p.size / 2,
+              backgroundColor: p.color,
+              transform: [{ translateX: p.x }, { translateY: p.y }],
+            }]}
+          />
+        </Animated.View>
       ))}
     </View>
   );
 }
+
 const particleStyles = StyleSheet.create({
   wrap: {
     position: 'absolute',
@@ -103,9 +113,15 @@ const particleStyles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     zIndex: 10,
   },
-  dot: { position: 'absolute' },
+  // Outer layer owns only opacity — no transform here
+  opacityLayer: {
+    position: 'absolute',
+  },
+  // Inner layer owns only transform — no opacity here
+  dot: {
+    position: 'absolute',
+  },
 });
-// ─────────────────────────────────────────────────────────────────────────────
 
 function FieldRow({ label, value, mono }) {
   const { theme } = useTheme();
@@ -184,7 +200,6 @@ export default function Step6Review({ navigation, route }) {
     if (!agreed) { haptics.error(); setError('Please accept the terms to continue.'); return; }
     haptics.medium();
 
-    // Particle burst
     setBurst(false);
     setTimeout(() => setBurst(true), 10);
 
@@ -194,19 +209,13 @@ export default function Step6Review({ navigation, route }) {
     try {
       const auth = getAuth();
 
-      // Step 1 — create the Firebase Auth account
-      // (no account exists yet; the wizard never called createUserWithEmailAndPassword)
       if (!p.email || !p.password) throw new Error('Missing credentials');
       const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
 
-      // After createUser, onAuthStateChanged fires immediately. AppNavigator
-      // will detect the new user, read profile.status === 'pending', and tear
-      // down this component. If that already happened, bail silently.
       if (!isMounted.current) return;
 
-      const uid  = cred.user.uid;
+      const uid = cred.user.uid;
 
-      // Step 2 — write the agent document
       await setDoc(doc(db, 'agents', uid), {
         uid,
         name:                  p.name ?? '',
@@ -230,13 +239,9 @@ export default function Step6Review({ navigation, route }) {
         createdAt:         serverTimestamp(),
       });
 
-      // Don't touch state or navigate — AppNavigator handles the cascade.
-      // If we're still mounted for some reason, just mark success.
       if (isMounted.current) haptics.success();
     } catch (e) {
-      // Component may have unmounted between the await and the catch
       if (!isMounted.current) return;
-
       haptics.error();
       const msg = e?.message ?? '';
       if (msg.includes('email-already-in-use')) {
