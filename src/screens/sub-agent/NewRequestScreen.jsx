@@ -4,7 +4,7 @@ import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
   ScrollView, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { useTheme }       from '../../context/ThemeContext';
 import { fonts, spacing, radius } from '../../constants/theme';
 import AnimatedInput  from '../../components/AnimatedInput';
 import PressableScale from '../../components/PressableScale';
+import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -27,6 +28,7 @@ const NETWORK_COLORS = {
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { theme, tr }     = useTheme();
+  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.uid, profile?.name);
 
   const prefill = route?.params?.prefill;
 
@@ -72,16 +74,34 @@ export default function NewRequestScreen({ navigation, route }) {
     if (err) { setError(err); return; }
     setError('');
     setLoading(true);
+
+    const requestData = {
+      agentId:       user.uid,
+      agentName:     profile?.name ?? 'Agent',
+      sourceNetwork, destNetwork, sourcePhone, destPhone,
+      amount:        Number(amount.replace(/,/g, '')),
+      urgent,
+    };
+
     try {
+      if (!isOnline) {
+        // Offline — persist to AsyncStorage queue; sync fires automatically on reconnect
+        await enqueue(requestData);
+        navigation.replace('RequestSuccess', {
+          queuePosition: null,
+          sourceNetwork, destNetwork,
+          amount: requestData.amount,
+          queued: true,
+        });
+        return;
+      }
+
+      // Online — write directly to Firestore
       const q    = query(collection(db, 'requests'), where('status', '==', 'pending'));
       const snap = await getDocs(q);
       const pos  = snap.size + 1;
       await addDoc(collection(db, 'requests'), {
-        agentId:       user.uid,
-        agentName:     profile?.name ?? 'Agent',
-        sourceNetwork, destNetwork, sourcePhone, destPhone,
-        amount:        Number(amount.replace(/,/g, '')),
-        urgent,
+        ...requestData,
         status:        'pending',
         queuePosition: pos,
         createdAt:     Timestamp.now(),
@@ -89,7 +109,8 @@ export default function NewRequestScreen({ navigation, route }) {
       navigation.replace('RequestSuccess', {
         queuePosition: pos,
         sourceNetwork, destNetwork,
-        amount: Number(amount.replace(/,/g, '')),
+        amount: requestData.amount,
+        queued: false,
       });
     } catch (e) {
       setError(tr('error'));
@@ -152,6 +173,26 @@ export default function NewRequestScreen({ navigation, route }) {
           contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Offline banner */}
+          {!isOnline && (
+            <View style={[s.offlineBanner, { backgroundColor: '#F59E0B18', borderColor: '#F59E0B' }]}>
+              <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
+              <Text style={[s.offlineBannerText, { color: '#F59E0B' }]}>
+                You're offline — request will be saved and submitted when you reconnect.
+              </Text>
+            </View>
+          )}
+
+          {/* Sync success toast — auto-clears after 4s via hook */}
+          {syncedCount > 0 && (
+            <View style={[s.syncToast, { backgroundColor: theme.primary }]}>
+              <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
+              <Text style={s.syncToastText}>
+                {syncedCount} request{syncedCount > 1 ? 's' : ''} synced
+              </Text>
+            </View>
+          )}
+
           <NetworkPicker label={tr('sourceNetwork')} selected={sourceNetwork} onSelect={setSourceNetwork} />
           <NetworkPicker label={tr('destNetwork')}   selected={destNetwork}   onSelect={setDestNetwork}   />
 
@@ -271,6 +312,19 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
   headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    padding: spacing.sm + 2, borderRadius: radius.md, borderWidth: 1,
+    marginTop: spacing.md,
+  },
+  offlineBannerText: { flex: 1, fontSize: 14, fontFamily: fonts.body, lineHeight: 20 },
+
+  syncToast: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    padding: spacing.sm + 2, borderRadius: radius.md, marginTop: spacing.md,
+  },
+  syncToastText: { color: '#fff', fontFamily: fonts.bodySemi, fontSize: 15 },
 
   pickerWrap:  { marginTop: spacing.md + 2 },
   label:       { fontSize: 16, fontFamily: fonts.bodySemi, marginBottom: spacing.sm + 2, letterSpacing: 0.1 },

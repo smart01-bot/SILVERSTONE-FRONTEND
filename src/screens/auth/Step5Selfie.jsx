@@ -15,54 +15,49 @@ const OVAL_W = W * 0.62;
 const OVAL_H = OVAL_W * 1.28;
 const BRACKET_SIZE = 28;
 
-// Corner bracket positions
 const BRACKETS = [
-  { top: -4, left: -4,   borderTopWidth: 3, borderLeftWidth: 3,  borderBottomWidth: 0, borderRightWidth: 0 },
-  { top: -4, right: -4,  borderTopWidth: 3, borderRightWidth: 3, borderBottomWidth: 0, borderLeftWidth: 0  },
-  { bottom: -4, left: -4,  borderBottomWidth: 3, borderLeftWidth: 3,  borderTopWidth: 0, borderRightWidth: 0 },
-  { bottom: -4, right: -4, borderBottomWidth: 3, borderRightWidth: 3, borderTopWidth: 0, borderLeftWidth: 0  },
+  { top: -4,    left: -4,  borderTopWidth: 3,    borderLeftWidth: 3,  borderBottomWidth: 0, borderRightWidth: 0 },
+  { top: -4,    right: -4, borderTopWidth: 3,    borderRightWidth: 3, borderBottomWidth: 0, borderLeftWidth: 0  },
+  { bottom: -4, left: -4,  borderBottomWidth: 3, borderLeftWidth: 3,  borderTopWidth: 0,    borderRightWidth: 0 },
+  { bottom: -4, right: -4, borderBottomWidth: 3, borderRightWidth: 3, borderTopWidth: 0,    borderLeftWidth: 0  },
 ];
 
 export default function Step5Selfie({ navigation, route }) {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const insets  = useSafeAreaInsets();
   const haptics = useHaptics();
 
-  const [phase, setPhase]   = useState('idle');
+  const [phase,   setPhase]   = useState('idle');
   const [scanPct, setScanPct] = useState(0);
 
-  const progressAnim  = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
-  const scanProgress  = useRef(new Animated.Value(0)).current;
-  const frameGlow     = useRef(new Animated.Value(0)).current;
-  const checkAnim     = useRef(new Animated.Value(0)).current;
-  const scanLineAnim  = useRef(new Animated.Value(0)).current;
-  const pulseAnim     = useRef(new Animated.Value(1)).current;
-  const silhouetteAnim= useRef(new Animated.Value(1)).current;
+  const progressAnim   = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
+  const scanProgress   = useRef(new Animated.Value(0)).current;
+  const frameGlow      = useRef(new Animated.Value(0)).current;
+  const checkAnim      = useRef(new Animated.Value(0)).current;
+  const scanLineAnim   = useRef(new Animated.Value(0)).current;
+  const pulseAnim      = useRef(new Animated.Value(1)).current;
+  const silhouetteAnim = useRef(new Animated.Value(1)).current;
 
-  // Per-bracket contraction anims (useNativeDriver: true — translate)
+  // Per-bracket translate anims — native driver only
   const bracketAnims = useRef(BRACKETS.map(() => new Animated.Value(0))).current;
 
-  // Progress bar fill (useNativeDriver: false — width)
+  // useNativeDriver: false — progress bar width
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: STEP / TOTAL_STEPS, duration: 600, useNativeDriver: false,
     }).start();
   }, []);
 
-  // Scan line loop + bracket contraction + silhouette fade (useNativeDriver: true)
   useEffect(() => {
     if (phase === 'scanning') {
-      // Brackets contract inward
       Animated.stagger(40, bracketAnims.map(a =>
         Animated.spring(a, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true })
       )).start();
 
-      // Silhouette fade out
       Animated.timing(silhouetteAnim, {
         toValue: 0, duration: 400, useNativeDriver: true,
       }).start();
 
-      // Scan line loop
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(scanLineAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
@@ -74,13 +69,11 @@ export default function Step5Selfie({ navigation, route }) {
     }
 
     if (phase === 'idle') {
-      // Brackets back out
       bracketAnims.forEach(a => a.setValue(0));
       silhouetteAnim.setValue(1);
     }
   }, [phase]);
 
-  // Idle pulse (useNativeDriver: true — scale)
   useEffect(() => {
     if (phase === 'idle') {
       const loop = Animated.loop(
@@ -109,10 +102,10 @@ export default function Step5Selfie({ navigation, route }) {
       haptics.success();
       setPhase('done');
 
-      // Frame green — useNativeDriver: false (color)
+      // JS driver — color interpolation
       Animated.timing(frameGlow, { toValue: 1, duration: 400, useNativeDriver: false }).start();
 
-      // Checkmark — useNativeDriver: true (scale)
+      // Native driver — scale only, separate view from frameGlow
       Animated.spring(checkAnim, { toValue: 1, tension: 80, friction: 7, useNativeDriver: true }).start();
     });
   };
@@ -131,8 +124,9 @@ export default function Step5Selfie({ navigation, route }) {
     inputRange: [0, 1], outputRange: [0, OVAL_H],
   });
 
+  // frameColor is JS driver — applied only to ovalBorder (separate view from oval's transform)
   const frameColor = frameGlow.interpolate({
-    inputRange: [0, 1],
+    inputRange:  [0, 1],
     outputRange: ['rgba(255,255,255,0.6)', 'rgba(34,197,94,1)'],
   });
 
@@ -140,21 +134,21 @@ export default function Step5Selfie({ navigation, route }) {
     inputRange: [0, 0.6, 1], outputRange: [0, 1.2, 1],
   });
 
-  // Bracket contract: push each corner 8px toward center
+  // Bracket translate — native driver, applied only to transform (no borderColor on same view)
   const bracketTranslate = (i) => {
-    const directions = [
-      { translateX: bracketAnims[0].interpolate({ inputRange: [0,1], outputRange: [0, 8] }),
-        translateY: bracketAnims[0].interpolate({ inputRange: [0,1], outputRange: [0, 8] }) },
-      { translateX: bracketAnims[1].interpolate({ inputRange: [0,1], outputRange: [0,-8] }),
-        translateY: bracketAnims[1].interpolate({ inputRange: [0,1], outputRange: [0, 8] }) },
-      { translateX: bracketAnims[2].interpolate({ inputRange: [0,1], outputRange: [0, 8] }),
-        translateY: bracketAnims[2].interpolate({ inputRange: [0,1], outputRange: [0,-8] }) },
-      { translateX: bracketAnims[3].interpolate({ inputRange: [0,1], outputRange: [0,-8] }),
-        translateY: bracketAnims[3].interpolate({ inputRange: [0,1], outputRange: [0,-8] }) },
+    const dirs = [
+      { x: [0,  8], y: [0,  8] },
+      { x: [0, -8], y: [0,  8] },
+      { x: [0,  8], y: [0, -8] },
+      { x: [0, -8], y: [0, -8] },
     ];
-    return [{ translateX: directions[i].translateX }, { translateY: directions[i].translateY }];
+    return [
+      { translateX: bracketAnims[i].interpolate({ inputRange: [0,1], outputRange: dirs[i].x }) },
+      { translateY: bracketAnims[i].interpolate({ inputRange: [0,1], outputRange: dirs[i].y }) },
+    ];
   };
 
+  // bracketColor is a plain JS string — not animated, so no driver conflict
   const bracketColor = phase === 'done' ? '#22C55E' : '#fff';
 
   const s = styles(theme, insets);
@@ -165,7 +159,6 @@ export default function Step5Selfie({ navigation, route }) {
 
       <LinearGradient colors={['#0A0A12', '#1A0508', '#0A0A12']} style={StyleSheet.absoluteFillObject} />
 
-      {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={s.navRow}>
           <TouchableOpacity onPress={() => { haptics.light(); navigation.goBack(); }} style={s.backBtn}>
@@ -183,15 +176,15 @@ export default function Step5Selfie({ navigation, route }) {
         </Text>
       </View>
 
-      {/* Oval frame */}
       <View style={s.ovalWrap}>
+        {/* Oval outer: transform (native driver) — no color/opacity props here */}
         <Animated.View style={[s.oval, {
           transform: phase === 'idle' ? [{ scale: pulseAnim }] : [],
         }]}>
-          {/* Dashed border */}
+          {/* ovalBorder: borderColor (JS driver) — separate child view, no transform */}
           <Animated.View style={[s.ovalBorder, { borderColor: frameColor }]} />
 
-          {/* Corner brackets — each with contraction animation */}
+          {/* Brackets: transform (native driver) — borderColor is a plain string, not animated */}
           {BRACKETS.map((pos, i) => (
             <Animated.View
               key={i}
@@ -203,10 +196,9 @@ export default function Step5Selfie({ navigation, route }) {
             />
           ))}
 
-          {/* Silhouette — fades out when scanning */}
+          {/* Silhouette: opacity (native driver — same value as silhouetteAnim which is native) */}
           <Animated.Text style={[s.silhouette, { opacity: silhouetteAnim }]}>👤</Animated.Text>
 
-          {/* Scan line */}
           {phase === 'scanning' && (
             <Animated.View style={[s.scanLine, { transform: [{ translateY: scanLineY }] }]}>
               <LinearGradient
@@ -216,8 +208,8 @@ export default function Step5Selfie({ navigation, route }) {
             </Animated.View>
           )}
 
-          {/* Done checkmark */}
           {phase === 'done' && (
+            /* checkAnim is native driver — scale only on this view, no opacity/color */
             <Animated.View style={[s.checkWrap, { transform: [{ scale: checkScale }] }]}>
               <View style={s.checkCircle}>
                 <Text style={s.checkIcon}>✓</Text>
@@ -227,7 +219,6 @@ export default function Step5Selfie({ navigation, route }) {
         </Animated.View>
       </View>
 
-      {/* Helper chips */}
       <View style={s.chips}>
         {['Eyes open', 'No hat', 'Good light'].map(c => (
           <View key={c} style={s.chip}>
@@ -236,7 +227,6 @@ export default function Step5Selfie({ navigation, route }) {
         ))}
       </View>
 
-      {/* Progress bar */}
       {phase === 'scanning' && (
         <View style={s.progressWrap}>
           <View style={s.progressBg}>
@@ -250,7 +240,6 @@ export default function Step5Selfie({ navigation, route }) {
         </View>
       )}
 
-      {/* Done badge */}
       {phase === 'done' && (
         <View style={s.doneBadge}>
           <View style={s.doneDot} />
@@ -258,7 +247,6 @@ export default function Step5Selfie({ navigation, route }) {
         </View>
       )}
 
-      {/* Bottom */}
       <View style={[s.bottom, { paddingBottom: insets.bottom + 16 }]}>
         {phase === 'idle' && (
           <TouchableOpacity onPress={startScan} activeOpacity={0.85}>
@@ -287,11 +275,10 @@ export default function Step5Selfie({ navigation, route }) {
 
 const styles = (theme, insets) => StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A12' },
-
-  header: { paddingHorizontal: 20, paddingBottom: 24, zIndex: 2 },
-  navRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  backBtn:  { marginRight: 12, padding: 4 },
-  backArrow:{ fontSize: 22, color: '#fff' },
+  header:    { paddingHorizontal: 20, paddingBottom: 24, zIndex: 2 },
+  navRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  backBtn:   { marginRight: 12, padding: 4 },
+  backArrow: { fontSize: 22, color: '#fff' },
   progressTrack: {
     flex: 1, height: 3,
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -302,7 +289,6 @@ const styles = (theme, insets) => StyleSheet.create({
   eyebrow: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
   title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
   subtitle:{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-
   ovalWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   oval: {
     width: OVAL_W, height: OVAL_H,
@@ -316,17 +302,10 @@ const styles = (theme, insets) => StyleSheet.create({
     borderRadius: OVAL_W / 2,
     borderWidth: 2, borderStyle: 'dashed',
   },
-
-  bracket: {
-    position: 'absolute',
-    width: BRACKET_SIZE, height: BRACKET_SIZE,
-  },
-
+  bracket:    { position: 'absolute', width: BRACKET_SIZE, height: BRACKET_SIZE },
   silhouette: { fontSize: OVAL_W * 0.45, opacity: 0.15 },
-
-  scanLine: { position: 'absolute', left: 0, right: 0, height: 3, top: 0 },
-
-  checkWrap:   { alignItems: 'center', justifyContent: 'center' },
+  scanLine:   { position: 'absolute', left: 0, right: 0, height: 3, top: 0 },
+  checkWrap:  { alignItems: 'center', justifyContent: 'center' },
   checkCircle: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: '#22C55E',
@@ -335,7 +314,6 @@ const styles = (theme, insets) => StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 8,
   },
   checkIcon: { color: '#fff', fontSize: 36, fontFamily: 'Inter_700Bold' },
-
   chips: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 20 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 7,
@@ -343,23 +321,20 @@ const styles = (theme, insets) => StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  chipText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)' },
-
-  progressWrap: { paddingHorizontal: 32, marginBottom: 16, alignItems: 'center', gap: 8 },
-  progressBg: {
+  chipText:    { fontSize: 12, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)' },
+  progressWrap:{ paddingHorizontal: 32, marginBottom: 16, alignItems: 'center', gap: 8 },
+  progressBg:  {
     width: '100%', height: 4,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2, overflow: 'hidden',
   },
   progressScan: { height: '100%', backgroundColor: '#E01535', borderRadius: 2 },
-  progressPct: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'RobotoMono_400Regular' },
-  progressNum: { color: '#fff' },
-
+  progressPct:  { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'RobotoMono_400Regular' },
+  progressNum:  { color: '#fff' },
   doneBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
   doneDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
   doneText:  { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#22C55E' },
-
-  bottom: { paddingHorizontal: 20, paddingTop: 8, gap: 12 },
+  bottom:    { paddingHorizontal: 20, paddingTop: 8, gap: 12 },
   cta: {
     height: 54, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',

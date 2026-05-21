@@ -11,7 +11,8 @@ import {
   doc, setDoc, updateDoc,
   onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../config/firebase';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -21,6 +22,16 @@ const LAST_ACTIVE_KEY = 'silverstone_last_active';
 const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
+// Uploads a local file URI to Firebase Storage and returns the download URL.
+// path: e.g. 'agents/uid/tin-certificate.pdf'
+const uploadFile = async (uri, path) => {
+  const response = await fetch(uri);
+  const blob     = await response.blob();
+  const fileRef  = ref(storage, path);
+  await uploadBytes(fileRef, blob);
+  return getDownloadURL(fileRef);
+};
+
 export function AuthProvider({ children }) {
   const [user,          setUser]          = useState(null);
   const [profile,       setProfile]       = useState(null);
@@ -29,7 +40,6 @@ export function AuthProvider({ children }) {
 
   const profileUnsubRef       = useRef(null);
   const hasInitializedSession = useRef(false);
-  const authInitialized       = useRef(false);
 
   // ── AppState: lock after >5 min background ────────────────
   useEffect(() => {
@@ -38,7 +48,6 @@ export function AuthProvider({ children }) {
         const saved   = await AsyncStorage.getItem(LAST_ACTIVE_KEY);
         const elapsed = saved ? Date.now() - parseInt(saved, 10) : 0;
         if (elapsed > SESSION_TIMEOUT) {
-          // Read current state via nested setState to avoid stale closure
           setUser(prev => {
             setProfile(prof => {
               if (prev && prof?.pinSet) setSessionLocked(true);
@@ -56,18 +65,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Firebase auth state ───────────────────────────────────
-  const nullTimeoutRef = useRef(null);
-
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
-      // Clear any pending null-fallback timer
-      if (nullTimeoutRef.current) {
-        clearTimeout(nullTimeoutRef.current);
-        nullTimeoutRef.current = null;
-      }
-
       if (fbUser) {
-        authInitialized.current       = true;
         hasInitializedSession.current = false;
         setUser(fbUser);
 
@@ -80,7 +80,6 @@ export function AuthProvider({ children }) {
               const data = snap.data();
               setProfile({ id: snap.id, ...data });
 
-              // Lock session only on first profile load per auth session
               if (!hasInitializedSession.current) {
                 hasInitializedSession.current = true;
                 if (data.pinSet === true) setSessionLocked(true);
@@ -91,23 +90,6 @@ export function AuthProvider({ children }) {
           () => setAuthLoading(false)
         );
       } else {
-        if (!authInitialized.current) {
-          // Firebase JS SDK always emits null once on startup before checking
-          // the AsyncStorage cache. Wait briefly — if a real user arrives
-          // within 1.5s this timer gets cancelled above. If not (fresh
-          // install / genuinely signed out), commit the null so the app
-          // exits the loading state and shows the auth flow.
-          authInitialized.current = true;
-          nullTimeoutRef.current = setTimeout(() => {
-            if (profileUnsubRef.current) profileUnsubRef.current();
-            setUser(null);
-            setProfile(null);
-            setSessionLocked(false);
-            hasInitializedSession.current = false;
-            setAuthLoading(false);
-          }, 1500);
-          return;
-        }
         if (profileUnsubRef.current) profileUnsubRef.current();
         setUser(null);
         setProfile(null);
@@ -116,19 +98,51 @@ export function AuthProvider({ children }) {
         setAuthLoading(false);
       }
     });
-    return () => {
-      unsub();
-      if (nullTimeoutRef.current) clearTimeout(nullTimeoutRef.current);
-    };
+    return unsub;
   }, []);
 
   // ── Registration ──────────────────────────────────────────
-  const register = async ({ name, phone, email, password, businessName, businessLocation, regNo, tin, nida }) => {
+  // tinCertUri and licenceUri are local file URIs from expo-document-picker.
+  // They are uploaded to Firebase Storage after the auth user is created,
+  // so we have a UID to use as the storage path.
+  const register = async ({
+    name, phone, email, password,
+    businessName, businessLocation, regNo,
+    tin, nida,
+    tinCertUri, licenceUri,
+  }) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const uid  = cred.user.uid;
+
+    // Upload documents if provided — failures are non-fatal (URLs default to null)
+    let tinCertificateUrl   = null;
+    let licenceCertificateUrl = null;
+    try {
+      if (tinCertUri) {
+        tinCertificateUrl = await uploadFile(
+          tinCertUri,
+          `agents/${uid}/tin-certificate`
+        );
+      }
+    } catch (e) {
+      console.warn('TIN cert upload failed:', e);
+    }
+    try {
+      if (licenceUri) {
+        licenceCertificateUrl = await uploadFile(
+          licenceUri,
+          `agents/${uid}/licence-certificate`
+        );
+      }
+    } catch (e) {
+      console.warn('Licence upload failed:', e);
+    }
+
     const agentDoc = {
       uid, name, phone, email,
       businessName, businessLocation, regNo, tin, nida,
+      tinCertificateUrl,
+      licenceCertificateUrl,
       role:              'sub-agent',
       status:            'pending',
       pinSet:            false,
@@ -175,7 +189,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Clears PIN without signing out
   const resetPin = async () => {
     if (!user) return;
     try {
@@ -190,30 +203,15 @@ export function AuthProvider({ children }) {
   // ── Logout ────────────────────────────────────────────────
   const logout = async () => {
     hasInitializedSession.current = false;
-
-    // Unsubscribe from Firestore first to prevent snapshot callbacks
-    // from firing during teardown
-    if (profileUnsubRef.current) {
-      profileUnsubRef.current();
-      profileUnsubRef.current = null;
-    }
-
     try {
       if (user?.uid) await SecureStore.deleteItemAsync(pinKey(user.uid));
       await AsyncStorage.removeItem(LAST_ACTIVE_KEY);
     } catch {}
-
-    // Sign out from Firebase FIRST — this triggers onAuthStateChanged(null),
-    // which is what AppNavigator watches. Only then clear local state.
-    // Previous order (setUser(null) → signOut) caused the auth navigator
-    // to render before Firebase had fully torn down, leading to stale state.
-    await signOut(auth);
-
-    // onAuthStateChanged will handle setting user/profile/sessionLocked to null,
-    // but set them here too for immediate UI response
+    if (profileUnsubRef.current) profileUnsubRef.current();
     setUser(null);
     setProfile(null);
     setSessionLocked(false);
+    await signOut(auth);
   };
 
   const resetPassword = async (email) => {

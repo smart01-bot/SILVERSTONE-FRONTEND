@@ -1,13 +1,14 @@
 // src/screens/auth/RegisterScreen.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
   ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Image,
+  Platform, ScrollView, Image, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons }       from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
@@ -16,18 +17,28 @@ import AnimatedInput      from '../../components/AnimatedInput';
 const STEPS       = 3;
 const STEP_LABELS = ['Personal', 'Business', 'Identity'];
 
-// ── Simple static step bar — no Animated API ─────────────────────────────────
+// Accepted MIME types for document upload
+const DOC_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+// ── Animated step indicator ───────────────────────────────────────────────────
 function StepBar({ step, theme }) {
+  const progress = useRef(new Animated.Value((step - 1) / (STEPS - 1))).current;
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: (step - 1) / (STEPS - 1),
+      tension: 120, friction: 12, useNativeDriver: false,
+    }).start();
+  }, [step]);
+
   return (
     <View style={sb.container}>
-      {/* Track with a plain filled segment */}
       <View style={[sb.track, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
-        <View style={[sb.fill, {
-          width: `${((step - 1) / (STEPS - 1)) * 100}%`,
+        <Animated.View style={[sb.fill, {
+          width: progress.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] }),
           backgroundColor: '#fff',
         }]} />
       </View>
-      {/* Labels */}
       <View style={sb.labels}>
         {STEP_LABELS.map((label, i) => (
           <Text key={label} style={[
@@ -50,8 +61,54 @@ const sb = StyleSheet.create({
   label:     { fontSize: 14, fontFamily: fonts.bodySemi },
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Document picker row ───────────────────────────────────────────────────────
+function DocPickerRow({ label, file, onPick, theme }) {
+  return (
+    <View style={[dp.wrap, { borderColor: file ? theme.primary : theme.border, backgroundColor: theme.surfaceAlt }]}>
+      <View style={dp.left}>
+        <Ionicons
+          name={file ? 'document-text' : 'document-text-outline'}
+          size={22}
+          color={file ? theme.primary : theme.textDim}
+        />
+        <View style={dp.textCol}>
+          <Text style={[dp.label, { color: theme.textDim }]}>{label}</Text>
+          <Text
+            style={[dp.filename, { color: file ? theme.text : theme.textDim }]}
+            numberOfLines={1}
+          >
+            {file ? file.name : 'No file selected'}
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={onPick}
+        style={[dp.btn, { backgroundColor: theme.primary + '18', borderColor: theme.primary + '40' }]}
+        activeOpacity={0.75}
+      >
+        <Text style={[dp.btnText, { color: theme.primary }]}>
+          {file ? 'Change' : 'Browse'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
+const dp = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderWidth: 1.5, borderRadius: radius.md, padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  left:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  textCol:  { flex: 1 },
+  label:    { fontSize: 13, fontFamily: fonts.bodySemi, marginBottom: 2 },
+  filename: { fontSize: 15, fontFamily: fonts.body },
+  btn:      { borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm - 2 },
+  btnText:  { fontSize: 15, fontFamily: fonts.bodySemi },
+});
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
   const { theme, isDark } = useTheme();
@@ -63,6 +120,10 @@ export default function RegisterScreen({ navigation }) {
   const [showPwd,  setShowPwd]  = useState(false);
   const [showCPwd, setShowCPwd] = useState(false);
 
+  // Document files — stored as { uri, name, mimeType }
+  const [tinCertFile,   setTinCertFile]   = useState(null);
+  const [licenceFile,   setLicenceFile]   = useState(null);
+
   const [form, setForm] = useState({
     name: '', phone: '', password: '', confirmPassword: '',
     businessName: '', businessLocation: '', businessRegNo: '',
@@ -70,6 +131,22 @@ export default function RegisterScreen({ navigation }) {
   });
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
+
+  const pickDocument = async (setter) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: DOC_TYPES,
+        copyToCacheDirectory: true,
+      });
+      // expo-document-picker v11+ returns { canceled, assets }
+      if (!result.canceled && result.assets?.length > 0) {
+        const asset = result.assets[0];
+        setter({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
+      }
+    } catch (e) {
+      console.warn('Document pick error:', e);
+    }
+  };
 
   const validate = () => {
     if (step === 1) {
@@ -85,6 +162,8 @@ export default function RegisterScreen({ navigation }) {
       if (!form.businessName.trim())     return 'Business name is required.';
       if (!form.businessLocation.trim()) return 'Business location is required.';
       if (!form.businessRegNo.trim())    return 'Registration number is required.';
+      if (!tinCertFile)                  return 'Please upload your TIN certificate.';
+      if (!licenceFile)                  return 'Please upload your business licence.';
     }
     if (step === 3) {
       if (!form.tin.trim())  return 'TIN is required.';
@@ -113,6 +192,8 @@ export default function RegisterScreen({ navigation }) {
         regNo:            form.businessRegNo.trim(),
         tin:              form.tin.trim(),
         nida:             form.nida.trim(),
+        tinCertUri:       tinCertFile?.uri   ?? null,
+        licenceUri:       licenceFile?.uri   ?? null,
       });
     } catch (e) {
       setError(
@@ -162,8 +243,8 @@ export default function RegisterScreen({ navigation }) {
             <View style={s.form}>
               <Text style={[s.stepTitle, { color: theme.text }]}>Personal Details</Text>
 
-              <AnimatedInput label="Full Name"    value={form.name}  onChangeText={set('name')}  placeholder="e.g. Juma Hassan" />
-              <AnimatedInput label="Phone Number" value={form.phone} onChangeText={set('phone')} placeholder="07XX XXX XXX" keyboardType="phone-pad" />
+              <AnimatedInput label="Full Name"     value={form.name}     onChangeText={set('name')}     placeholder="e.g. Juma Hassan" />
+              <AnimatedInput label="Phone Number"  value={form.phone}    onChangeText={set('phone')}    placeholder="07XX XXX XXX"    keyboardType="phone-pad" />
 
               <View style={s.pwdWrap}>
                 <AnimatedInput
@@ -207,9 +288,28 @@ export default function RegisterScreen({ navigation }) {
           {step === 2 && (
             <View style={s.form}>
               <Text style={[s.stepTitle, { color: theme.text }]}>Business Details</Text>
+
               <AnimatedInput label="Business Name"      value={form.businessName}     onChangeText={set('businessName')}     placeholder="e.g. Hassan Mobile Money" />
               <AnimatedInput label="Business Location"  value={form.businessLocation}  onChangeText={set('businessLocation')}  placeholder="e.g. Kariakoo, Dar es Salaam" />
               <AnimatedInput label="Registration Number" value={form.businessRegNo}    onChangeText={set('businessRegNo')}    placeholder="e.g. BR-2024-XXXXX" />
+
+              <View style={[s.docSection, { borderColor: theme.border }]}>
+                <Text style={[s.docSectionTitle, { color: theme.textDim }]}>Supporting Documents</Text>
+                <Text style={[s.docSectionSub, { color: theme.textDim }]}>PDF, JPG, or PNG · Max 10MB each</Text>
+
+                <DocPickerRow
+                  label="TIN Certificate"
+                  file={tinCertFile}
+                  onPick={() => pickDocument(setTinCertFile)}
+                  theme={theme}
+                />
+                <DocPickerRow
+                  label="Business Licence"
+                  file={licenceFile}
+                  onPick={() => pickDocument(setLicenceFile)}
+                  theme={theme}
+                />
+              </View>
             </View>
           )}
 
@@ -318,6 +418,14 @@ const s = StyleSheet.create({
 
   strengthBar:  { height: 4, backgroundColor: '#ECECEE', borderRadius: 2, marginTop: spacing.sm - 2, overflow: 'hidden' },
   strengthFill: { height: '100%', borderRadius: 2 },
+
+  docSection: {
+    marginTop: spacing.lg,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+  },
+  docSectionTitle: { fontSize: 16, fontFamily: fonts.bodySemi, marginBottom: 2 },
+  docSectionSub:   { fontSize: 13, fontFamily: fonts.body },
 
   infoBox:  { borderRadius: radius.md, padding: spacing.md - 2, borderWidth: 1, marginBottom: spacing.sm, marginTop: spacing.xs },
   infoText: { fontSize: 16, fontFamily: fonts.body, lineHeight: 24 },

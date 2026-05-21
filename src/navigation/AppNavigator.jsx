@@ -1,5 +1,6 @@
 // src/navigation/AppNavigator.jsx
 import React, { useEffect, useState } from 'react';
+import { createNavigationContainerRef } from '@react-navigation/native';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -9,10 +10,13 @@ import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
 import MainAgentNavigator from './MainAgentNavigator';
 
-import SplashScreen from '../screens/auth/SplashScreen';
-import PinEntryScreen from '../screens/auth/PinEntryScreen';
-import PinSetupScreen from '../screens/auth/PinSetupScreen';
+import SplashScreen    from '../screens/auth/SplashScreen';
+import PinEntryScreen  from '../screens/auth/PinEntryScreen';
+import PinSetupScreen  from '../screens/auth/PinSetupScreen';
 import ForgotPinScreen from '../screens/auth/ForgotPinScreen';
+
+// Exported so useNotifications can drive navigation from outside the tree
+export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
   const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists } = useAuth();
@@ -76,14 +80,11 @@ export default function AppNavigator() {
     );
   }
 
-  // No user — show auth flow.
-  // Pass initialRoute="RoleSelect" so that on logout the user lands on
-  // RoleSelect directly instead of re-playing the splash timer (which may
-  // have already fired and won't re-fire on NavigationContainer remount).
+  // No user
   if (!user) {
     return (
-      <NavigationContainer key="auth" theme={navTheme}>
-        <AuthNavigator initialRoute="RoleSelect" />
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
+        <AuthNavigator />
       </NavigationContainer>
     );
   }
@@ -100,7 +101,7 @@ export default function AppNavigator() {
   // Pending or rejected
   if (profile.status === 'pending' || profile.status === 'rejected') {
     return (
-      <NavigationContainer key="pending" theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         <AuthNavigator initialRoute={profile.status} />
       </NavigationContainer>
     );
@@ -110,14 +111,14 @@ export default function AppNavigator() {
   if (profile.status === 'approved' && !pinExists) {
     return (
       <PinSetupScreen
-      onComplete={() => {
-        setShowForgot(false);
-        unlockSession();
-        checkPinExists().then(exists => {
-          setPinExists(exists);
-          setPinVerified(true);
-        });
-      }}
+        onComplete={() => {
+          setShowForgot(false);
+          unlockSession();
+          checkPinExists().then(exists => {
+            setPinExists(exists);
+            setPinVerified(true);
+          });
+        }}
       />
     );
   }
@@ -146,11 +147,11 @@ export default function AppNavigator() {
     );
   }
 
-  // Session locked
+  // Session locked — nav tree renders behind PIN overlay so ref is always mounted
   if (sessionLocked) {
     return (
       <View style={styles.root}>
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
           {profile.role === 'main-agent'
             ? <MainAgentNavigator />
             : <SubAgentNavigator />}
@@ -178,7 +179,7 @@ export default function AppNavigator() {
   // Fully authenticated
   return (
     <View style={styles.root}>
-      <NavigationContainer key="app" theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         {profile.role === 'main-agent'
           ? <MainAgentNavigator />
           : <SubAgentNavigator />}
