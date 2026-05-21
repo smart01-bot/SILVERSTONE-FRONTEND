@@ -125,7 +125,7 @@ export default function RoleSelectScreen({ navigation }) {
           Don't have an account?{' '}
           <Text
             style={{ color: theme.primary, fontFamily: fonts.bodySemi }}
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.navigate('Step1Phone')}
           >
             Register
           </Text>

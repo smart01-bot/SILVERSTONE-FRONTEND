@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
-
 import {
   useFonts,
   Inter_400Regular,
@@ -19,6 +18,9 @@ import {
   Manrope_700Bold,
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
+import {
+  RobotoMono_400Regular,
+} from '@expo-google-fonts/roboto-mono';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -29,6 +31,7 @@ export default function App() {
     Inter_800ExtraBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
+    RobotoMono_400Regular,
   });
 
   if (!fontsLoaded) {

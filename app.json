@@ -20,7 +20,10 @@
       "versionCode": 2
     },
     "ios": {
-      "bundleIdentifier": "com.silverstone.floatmanager"
+      "bundleIdentifier": "com.silverstone.floatmanager",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-font",
@@ -40,10 +43,10 @@
       "firebaseMessagingSenderId": "197875724216",
       "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d",
       "eas": {
-        "projectId": "7d3b5419-a868-4e12-8b61-06a83f3bfca5"
+        "projectId": "bde2a248-8bd8-4716-984f-41ca5a9a93e9"
       }
     },
-    "owner": "silverstone04s-organization"
+    "owner": "silverstone05s-organization"
   },
   "owner": "dev.05"
 }

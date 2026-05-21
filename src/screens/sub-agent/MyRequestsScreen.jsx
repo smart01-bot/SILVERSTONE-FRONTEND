@@ -10,14 +10,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
 import { fonts, spacing, radius } from '../../constants/theme';
-import { SkeletonCard } from '../../components/SkeletonLoader';
-import EmptyState       from '../../components/EmptyState';
-import PressableScale   from '../../components/PressableScale';
+import { SkeletonCard }        from '../../components/SkeletonLoader';
+import EmptyState              from '../../components/EmptyState';
+import PressableScale          from '../../components/PressableScale';
+import RequestDetailModal      from '../../components/RequestDetailModal';
 import {
   collection, query, where, orderBy,
   onSnapshot, doc, updateDoc,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { USE_MOCK } from '../../config/dev';
 
 const NETWORK_COLORS = {
   Voda:    '#E40000',
@@ -26,14 +28,25 @@ const NETWORK_COLORS = {
   Halotel: '#D4A017',
 };
 
+const MOCK_REQUESTS = [
+  { id: 'r1', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },
+  { id: 'r2', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Yas',     amount: 75000,  status: 'pending',   createdAt: { toDate: () => new Date(Date.now() - 900_000)   } },
+  { id: 'r3', agentId: 'mock', sourceNetwork: 'Yas',     destNetwork: 'Halotel', amount: 300000, status: 'rejected',  createdAt: { toDate: () => new Date(Date.now() - 86_400_000) } },
+  { id: 'r4', agentId: 'mock', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 500000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 7_200_000)  } },
+  { id: 'r5', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Yas',     amount: 200000, status: 'approved',  createdAt: { toDate: () => new Date(Date.now() - 1_800_000)  } },
+  { id: 'r6', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Voda',    amount: 90000,  status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 43_200_000) } },
+];
+
 export default function MyRequestsScreen({ navigation }) {
   const { user }              = useAuth();
   const { theme, isDark, tr } = useTheme();
 
-  const [requests,   setRequests]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [filter,     setFilter]     = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  const [requests,         setRequests]         = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [filter,           setFilter]           = useState('all');
+  const [refreshing,       setRefreshing]       = useState(false);
+  const [selectedRequest,  setSelectedRequest]  = useState(null);
+  const [modalVisible,     setModalVisible]     = useState(false);
 
   const FILTERS = [
     { key: 'all',       label: 'All'                 },
@@ -45,6 +58,15 @@ export default function MyRequestsScreen({ navigation }) {
 
   useEffect(() => {
     if (!user?.uid) return;
+
+    // ── Mock mode ────────────────────────────────────────────────────────────
+    if (USE_MOCK) {
+      setRequests(MOCK_REQUESTS);
+      setLoading(false);
+      return;
+    }
+
+    // ── Live Firestore ────────────────────────────────────────────────────────
     const unsub = onSnapshot(
       query(
         collection(db, 'requests'),
@@ -54,7 +76,8 @@ export default function MyRequestsScreen({ navigation }) {
       snap => {
         setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);
-      }
+      },
+      () => setLoading(false)
     );
     return unsub;
   }, [user?.uid]);
@@ -66,6 +89,16 @@ export default function MyRequestsScreen({ navigation }) {
       if (!a.urgent && b.urgent) return 1;
       return 0;
     });
+
+  const openModal = (req) => {
+    setSelectedRequest(req);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedRequest(null);
+  };
 
   const handleCancel = (req) => {
     Alert.alert(tr('cancel'), 'Je, una uhakika unataka kufuta ombi hili?', [
@@ -190,6 +223,7 @@ export default function MyRequestsScreen({ navigation }) {
           filtered.map(req => (
             <PressableScale
               key={req.id}
+              onPress={() => openModal(req)}
               style={[s.card, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
@@ -248,6 +282,14 @@ export default function MyRequestsScreen({ navigation }) {
           ))
         )}
       </ScrollView>
+
+      <RequestDetailModal
+        visible={modalVisible}
+        request={selectedRequest}
+        onClose={closeModal}
+        onCancel={(req) => { closeModal(); handleCancel(req); }}
+        onRetry={(req) => { closeModal(); handleRetry(req); }}
+      />
     </SafeAreaView>
   );
 }

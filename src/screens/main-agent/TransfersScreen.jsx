@@ -37,7 +37,7 @@ function SkeletonTransferRow({ theme, last }) {
 }
 
 export default function TransfersScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, tr } = useTheme();
 
   const [transfers,  setTransfers]  = useState([]);
   const [filter,     setFilter]     = useState('All');
@@ -117,8 +117,8 @@ export default function TransfersScreen() {
         style={s.header}
       >
         <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>Transfers</Text>
-        <Text style={s.headerSub}>{loading ? '—' : filtered.length} completed</Text>
+        <Text style={s.headerTitle}>{tr('transfers')}</Text>
+        <Text style={s.headerSub}>{loading ? '—' : filtered.length} {tr('completed').toLowerCase()}</Text>
       </LinearGradient>
 
       {/* ── Search ── */}

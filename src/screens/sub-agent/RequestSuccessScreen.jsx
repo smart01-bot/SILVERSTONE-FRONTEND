@@ -17,7 +17,7 @@ try {
 
 export default function RequestSuccessScreen({ navigation, route }) {
   const { theme, isDark, tr } = useTheme();
-  const { queuePosition, sourceNetwork, destNetwork, amount, requestId } =
+  const { queuePosition, sourceNetwork, destNetwork, amount, requestId, queued } =
     route?.params ?? {};
 
   const scale   = useRef(new Animated.Value(0)).current;
@@ -42,6 +42,15 @@ export default function RequestSuccessScreen({ navigation, route }) {
   const shortId = requestId?.slice(-8)?.toUpperCase() ?? '—';
   const copyId  = async () => { if (requestId) await Clipboard.setStringAsync(shortId); };
 
+  // Offline-queued state derives its own icon/colours/copy
+  const iconName  = queued ? 'cloud-upload-outline' : 'checkmark-circle';
+  const iconColor = queued ? theme.primary          : '#16A34A';
+  const iconBg    = queued ? theme.primary + '1A'   : '#16A34A1A';
+  const titleText = queued ? 'Saved Offline'        : tr('requestSent');
+  const subText   = queued
+    ? "You're offline. Your request has been saved and will submit automatically when you reconnect."
+    : tr('requestSentDesc');
+
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
@@ -49,14 +58,14 @@ export default function RequestSuccessScreen({ navigation, route }) {
       <Animated.View style={[s.inner, { opacity }]}>
 
         <Animated.View style={[s.iconWrap, { transform: [{ scale }] }]}>
-          <View style={[s.iconCircle, { backgroundColor: '#16A34A1A' }]}>
-            <Ionicons name="checkmark-circle" size={96} color="#16A34A" />
+          <View style={[s.iconCircle, { backgroundColor: iconBg }]}>
+            <Ionicons name={iconName} size={96} color={iconColor} />
           </View>
         </Animated.View>
 
         <Animated.View style={{ transform: [{ translateY: slideY }], alignItems: 'center', gap: spacing.sm + 2 }}>
-          <Text style={[s.title, { color: theme.text }]}>{tr('requestSent')}</Text>
-          <Text style={[s.sub,   { color: theme.textDim }]}>{tr('requestSentDesc')}</Text>
+          <Text style={[s.title, { color: theme.text }]}>{titleText}</Text>
+          <Text style={[s.sub,   { color: theme.textDim }]}>{subText}</Text>
         </Animated.View>
 
         <Animated.View style={[s.card, {
@@ -76,7 +85,10 @@ export default function RequestSuccessScreen({ navigation, route }) {
           <View style={[s.divider, { backgroundColor: theme.border }]} />
           <View style={s.cardRow}>
             <Text style={[s.cardLabel, { color: theme.textDim }]}>{tr('queuePos')}</Text>
-            <Text style={[s.cardValue, { color: theme.text }]}>#{queuePosition ?? '—'}</Text>
+            {/* Show "Pending sync" instead of a position when queued offline */}
+            <Text style={[s.cardValue, { color: queued ? theme.textDim : theme.text }]}>
+              {queued ? 'Pending sync' : `#${queuePosition ?? '—'}`}
+            </Text>
           </View>
           {requestId && (
             <>

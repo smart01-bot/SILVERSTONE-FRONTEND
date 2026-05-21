@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Alert, ActivityIndicator,
+  RefreshControl, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,6 +99,28 @@ export default function ApprovalsScreen() {
     }
   };
 
+  const handleViewDocs = (agent) => {
+    const urls = [
+      agent.selfieUrl,
+      agent.tinCertificateUrl,
+      agent.licenceCertificateUrl,
+    ].filter(Boolean);
+
+    if (urls.length === 0) {
+      Alert.alert('No documents', 'No documents have been uploaded for this agent yet.');
+      return;
+    }
+
+    // Show available docs as options
+    const options = [];
+    if (agent.selfieUrl)              options.push({ text: 'Selfie / ID photo',    onPress: () => Linking.openURL(agent.selfieUrl) });
+    if (agent.tinCertificateUrl)      options.push({ text: 'TIN Certificate',      onPress: () => Linking.openURL(agent.tinCertificateUrl) });
+    if (agent.licenceCertificateUrl)  options.push({ text: 'Business Licence',     onPress: () => Linking.openURL(agent.licenceCertificateUrl) });
+    options.push({ text: 'Cancel', style: 'cancel' });
+
+    Alert.alert('View Documents', 'Select a document to open:', options);
+  };
+
   const daysAgo = (ts) => {
     if (!ts?.toDate) return '';
     const days = Math.floor((Date.now() - ts.toDate().getTime()) / 86400000);
@@ -127,7 +149,6 @@ export default function ApprovalsScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ── Gradient header ── */}
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
         start={{ x: 0, y: 0 }}
@@ -144,7 +165,6 @@ export default function ApprovalsScreen() {
         )}
       </LinearGradient>
 
-      {/* ── Filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={s.filterRow}>
@@ -208,8 +228,8 @@ export default function ApprovalsScreen() {
                   { label: 'Phone',    value: agent.phone },
                   { label: 'Business', value: agent.businessName },
                   { label: 'Reg No',   value: agent.regNo },
-                  { label: 'TIN',      value: agent.tin },
-                  { label: 'NIDA',     value: agent.nida },
+                  { label: 'TIN',      value: agent.businessTIN },
+                  { label: 'NIDA',     value: agent.nida ? `••••••••••••••••${agent.nida.slice(-4)}` : '—' },
                 ].map(row => (
                   <View key={row.label} style={s.detailRow}>
                     <Text style={[s.detailLabel, { color: theme.textDim }]}>{row.label}</Text>
@@ -220,7 +240,12 @@ export default function ApprovalsScreen() {
 
               {agent.status === 'pending' && (
                 <View style={s.actions}>
-                  <TouchableOpacity style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
+                  <TouchableOpacity
+                    onPress={() => handleViewDocs(agent)}
+                    style={[s.btnOutline, { borderColor: theme.border }]}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="document-outline" size={15} color={theme.textDim} style={{ marginRight: 4 }} />
                     <Text style={[s.btnOutlineText, { color: theme.textDim }]}>View docs</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -319,7 +344,7 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md - 2, paddingTop: 0 },
   btnOutline: {
     flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
   },
   btnOutlineText: { fontSize: 16, fontFamily: fonts.bodySemi },
   btnFilled: {

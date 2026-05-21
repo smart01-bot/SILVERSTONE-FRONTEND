@@ -122,4 +122,5 @@ export const fonts = {
   bodySemi:  'Inter_600SemiBold',
   bodyBold:  'Inter_700Bold',
   bodyXBold: 'Inter_800ExtraBold',
+  mono:      mono,
 };

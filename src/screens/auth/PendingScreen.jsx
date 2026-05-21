@@ -1,168 +1,328 @@
-// src/screens/auth/PendingScreen.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, SafeAreaView, Image, Animated,
+  View, Text, StyleSheet, TouchableOpacity, Animated,
+  StatusBar, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth }  from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { spacing, radius, fonts } from '../../constants/theme';
+import { useAuth }  from '../../context/AuthContext';
+import { useHaptics } from '../../hooks/useHaptics';
+import { getAuth } from 'firebase/auth';
+
+const TARGET_PCT   = 60;
+const ANIMATE_FROM = 25;
+const RING_SIZE    = 168;
+const RING_BORDER  = 10;
 
 const STEPS = [
-  { label: 'Application Received',  done: true  },
-  { label: 'Identity Verification', done: false, active: true },
-  { label: 'Admin Review',          done: false },
-  { label: 'Account Activated',     done: false },
+  { label: 'Application submitted', sub: 'Just now',             done: true,  active: false },
+  { label: 'Identity check',        sub: 'Done',                 done: true,  active: false },
+  { label: 'Main-agent review',     sub: 'In progress',          done: false, active: true  },
+  { label: 'Account activated',     sub: 'Usually within 4 hrs', done: false, active: false },
 ];
 
-function StepRow({ step, index, theme }) {
-  const anim = useRef(new Animated.Value(0)).current;
+// ── Orbiting dot ─────────────────────────────────────────────────────────────
+function OrbitDot({ phase, color, size, speed }) {
+  const rotAnim = useRef(new Animated.Value(phase)).current;
 
   useEffect(() => {
-    Animated.spring(anim, {
-      toValue: 1, tension: 80, friction: 10,
-      delay: 300 + index * 100, useNativeDriver: true,
-    }).start();
+    const loop = Animated.loop(
+      Animated.timing(rotAnim, {
+        toValue: phase + 360,
+        duration: speed,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
+  const rotate = rotAnim.interpolate({
+    inputRange:  [phase, phase + 360],
+    outputRange: [`${phase}deg`, `${phase + 360}deg`],
+  });
+
   return (
-    <Animated.View style={[
-      s.stepRow,
-      { opacity: anim, transform: [{ translateX: anim.interpolate({ inputRange: [0,1], outputRange: [-20,0] }) }] },
-    ]}>
-      <View style={[
-        s.stepIcon,
-        {
-          backgroundColor: step.done ? '#16A34A14' : step.active ? theme.primaryLight : theme.surfaceAlt,
-          borderColor:     step.done ? '#16A34A'   : step.active ? theme.primary      : theme.border,
-          borderWidth: 1.5,
-        },
-      ]}>
-        {step.done   ? <Ionicons name="checkmark"        size={14} color="#16A34A" /> :
-         step.active ? <Ionicons name="radio-button-on"  size={14} color={theme.primary} /> :
-                       <Ionicons name="radio-button-off" size={14} color={theme.muted} />}
-      </View>
-      <Text style={[
-        s.stepLabel,
-        {
-          color:      step.done ? '#16A34A' : step.active ? theme.primary : theme.textDim,
-          fontFamily: step.active ? fonts.bodySemi : fonts.body,
-        },
-      ]}>
-        {step.label}
-      </Text>
+    <Animated.View
+      style={[
+        orbitStyles.container,
+        { width: RING_SIZE + 36, height: RING_SIZE + 36, transform: [{ rotate }] },
+      ]}
+    >
+      <View style={[orbitStyles.dot, { width: size, height: size, borderRadius: size / 2, backgroundColor: color }]} />
     </Animated.View>
   );
 }
 
-export default function PendingScreen() {
-  const { logout, profile } = useAuth();
-  const { theme, isDark }   = useTheme();
+const orbitStyles = StyleSheet.create({
+  container: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-start' },
+  dot: { marginTop: -4 },
+});
 
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
+export default function PendingScreen({ navigation }) {
+  const { theme } = useTheme();
+  const { logout } = useAuth();
+  const insets  = useSafeAreaInsets();
+  const haptics = useHaptics();
 
+  const [pctDisplay, setPctDisplay] = useState(ANIMATE_FROM);
+
+  const ringAnim    = useRef(new Animated.Value(ANIMATE_FROM)).current;
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim    = useRef(new Animated.Value(0)).current;
+
+  // stepsAnim drives translate only (native driver) — opacity handled separately
+  const stepsTranslate = useRef(STEPS.map(() => new Animated.Value(0))).current;
+  const stepsOpacity   = useRef(STEPS.map(() => new Animated.Value(0))).current;
+
+  const auth  = getAuth();
+  const phone = auth.currentUser?.phoneNumber ?? '+255 ••• ••• •••';
+  const maskedPhone = phone.replace(/(\+255\s?\d{3})\s?\d{3}\s?(\d{3})/, '$1 ••• $2');
+
+  // JS driver — width, opacity
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(ringAnim, {
+      toValue: TARGET_PCT, duration: 1800, delay: 400, useNativeDriver: false,
+    }).start();
+
+    ringAnim.addListener(({ value }) => setPctDisplay(Math.round(value)));
+
+    Animated.timing(contentAnim, { toValue: 1, duration: 600, useNativeDriver: false }).start();
+
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1,   duration: 1200, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0.2, duration: 1200, useNativeDriver: false }),
+      ])
+    );
+    glowLoop.start();
+
+    // Steps opacity — JS driver (separate from translate)
+    Animated.stagger(120,
+      stepsOpacity.map(a =>
+        Animated.timing(a, { toValue: 1, duration: 300, useNativeDriver: false })
+      )
+    ).start();
+
+    return () => { ringAnim.removeAllListeners(); glowLoop.stop(); };
   }, []);
 
-  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
+  // Steps translate — native driver (separate from opacity)
+  useEffect(() => {
+    Animated.stagger(120,
+      stepsTranslate.map(a =>
+        Animated.spring(a, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true })
+      )
+    ).start();
+  }, []);
+
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.55] });
+  // glowScale also from glowAnim (JS driver) — fine since it's the same value/driver
+  const glowScale   = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.12] });
+
+  const s = styles(theme, insets);
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <View style={s.bgTop} />
 
-      <Animated.View style={[s.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View style={[s.content, { opacity: contentAnim }]}>
 
-        {/* Logo */}
-        <View style={s.logoRow}>
-          <View style={s.logoTile}>
-            <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
+        <View style={[s.ringWrap, { paddingTop: insets.top + 32 }]}>
+
+          {/* Glow halo — opacity AND scale both from glowAnim (JS driver only, safe) */}
+          <Animated.View style={[s.glowHalo, {
+            opacity:   glowOpacity,
+            transform: [{ scale: glowScale }],
+          }]} />
+
+          <View style={s.orbitWrap}>
+            <OrbitDot phase={0}   color={theme.primary}       size={10} speed={5000} />
+            <OrbitDot phase={120} color="rgba(200,16,46,0.5)" size={7}  speed={7000} />
+            <OrbitDot phase={240} color="rgba(200,16,46,0.3)" size={5}  speed={9000} />
           </View>
-          <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
+
+          <View style={s.ringOuter}>
+            <View style={s.ringTrack} />
+            <View style={s.ringProgressWrap}>
+              <View style={[s.ringHalf, s.ringHalfLeft]}>
+                <Animated.View style={[s.ringFill, {
+                  transform: [{
+                    rotate: ringAnim.interpolate({
+                      inputRange:  [0, 50, 100],
+                      outputRange: ['-180deg', '0deg', '0deg'],
+                    }),
+                  }],
+                  backgroundColor: theme.gradPrimA,
+                }]} />
+              </View>
+              <View style={[s.ringHalf, s.ringHalfRight]}>
+                <Animated.View style={[s.ringFill, {
+                  transform: [{
+                    rotate: ringAnim.interpolate({
+                      inputRange:  [0, 50, 100],
+                      outputRange: ['-180deg', '-180deg', '0deg'],
+                    }),
+                  }],
+                  backgroundColor: theme.gradPrimA,
+                }]} />
+              </View>
+            </View>
+            <View style={s.ringCenter}>
+              <Text style={s.ringPct}>{pctDisplay}%</Text>
+              <Text style={s.ringLabel}>VERIFIED</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Gradient icon */}
-        <LinearGradient
-          colors={[theme.gradPrimA, theme.gradPrimB]}
-          style={s.iconTile}
-        >
-          <Ionicons name="time-outline" size={52} color="#fff" />
-        </LinearGradient>
+        <View style={s.textBlock}>
+          <Text style={s.headline}>You're under review.</Text>
+          <Text style={s.subtext}>
+            You can close the app — we'll send you an SMS the moment you're cleared to log in.
+          </Text>
+        </View>
 
-        <Text style={[s.heading, { color: theme.text }]}>Application Under Review</Text>
-        <Text style={[s.name,    { color: theme.primary }]}>{firstName}</Text>
-        <Text style={[s.desc,    { color: theme.textDim }]}>
-          Your application is being reviewed. This typically takes 24–48 hours.
-        </Text>
-
-        {/* Step tracker */}
-        <View style={[s.tracker, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        <View style={s.stepsList}>
           {STEPS.map((step, i) => (
-            <View key={step.label}>
-              <StepRow step={step} index={i} theme={theme} />
-              {i < STEPS.length - 1 && (
-                <View style={[s.connector, { backgroundColor: step.done ? '#16A34A' : theme.border }]} />
-              )}
-            </View>
+            // Outer: opacity only — JS driver
+            <Animated.View key={i} style={[s.stepRow, { opacity: stepsOpacity[i] }]}>
+              {/* Inner: transform only — native driver */}
+              <Animated.View style={[s.stepInner, {
+                transform: [{
+                  translateX: stepsTranslate[i].interpolate({ inputRange: [0,1], outputRange: [-20, 0] }),
+                }],
+              }]}>
+                <View style={[s.stepIcon, step.done && s.stepIconDone, step.active && s.stepIconActive]}>
+                  {step.done
+                    ? <Text style={s.stepIconText}>✓</Text>
+                    : step.active ? <View style={s.stepActiveDot} />
+                    : <View style={s.stepEmptyDot} />}
+                </View>
+                {i < STEPS.length - 1 && (
+                  <View style={[s.connector, step.done && s.connectorDone]} />
+                )}
+                <View style={s.stepText}>
+                  <Text style={[s.stepLabel, !step.done && !step.active && s.stepLabelDim]}>{step.label}</Text>
+                  <Text style={[s.stepSub, step.active && s.stepSubActive]}>{step.sub}</Text>
+                </View>
+              </Animated.View>
+            </Animated.View>
           ))}
         </View>
 
-        <Text style={[s.eta, { color: theme.textDim }]}>Estimated time: 24–48 hours</Text>
+        <View style={[s.footer, { paddingBottom: insets.bottom + 20 }]}>
+          <Text style={s.footerText}>SMS will be sent to</Text>
+          <Text style={s.footerPhone}>{maskedPhone}</Text>
 
-        <TouchableOpacity onPress={logout} style={s.signOutWrap} activeOpacity={0.75}>
-          <Text style={[s.signOut, { color: theme.primary }]}>Sign Out</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={s.demoBtn}
+            onPress={() => {
+              haptics.light();
+              navigation.reset({ index: 0, routes: [{ name: 'PinSetup' }] });
+            }}
+          >
+            <Text style={s.demoBtnText}>Simulate approval (demo) →</Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity
+            style={s.signOutBtn}
+            onPress={() => { haptics.light(); logout(); }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={s.signOutText}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const s = StyleSheet.create({
-  safe:  { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', padding: spacing.lg, paddingTop: spacing.md },
+const styles = (theme, insets) => StyleSheet.create({
+  root:   { flex: 1, backgroundColor: theme.bg },
+  bgTop: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    height: '45%', backgroundColor: theme.surfaceAlt,
+    borderBottomLeftRadius: 40, borderBottomRightRadius: 40,
+  },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
 
-  logoRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm + 2, marginBottom: spacing.xl,
+  ringWrap:    { alignItems: 'center', justifyContent: 'center', marginBottom: 28, paddingHorizontal: 40 },
+  glowHalo: {
+    position: 'absolute',
+    width: RING_SIZE + 48, height: RING_SIZE + 48,
+    borderRadius: (RING_SIZE + 48) / 2,
+    backgroundColor: theme.primary, zIndex: 0,
   },
-  logoTile: {
-    width: 36, height: 36, borderRadius: radius.sm + 1,
-    backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center', padding: spacing.sm - 2,
+  orbitWrap: {
+    position: 'absolute',
+    width: RING_SIZE + 36, height: RING_SIZE + 36,
+    alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
-  logoImg:  { width: '100%', height: '100%' },
-  logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
+  ringOuter: {
+    width: RING_SIZE, height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    alignItems: 'center', justifyContent: 'center', zIndex: 2,
+  },
+  ringTrack: {
+    position: 'absolute',
+    width: RING_SIZE, height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER, borderColor: theme.border,
+  },
+  ringProgressWrap: {
+    position: 'absolute',
+    width: RING_SIZE, height: RING_SIZE,
+    borderRadius: RING_SIZE / 2, overflow: 'hidden',
+  },
+  ringHalf:      { position: 'absolute', width: RING_SIZE / 2, height: RING_SIZE, overflow: 'hidden' },
+  ringHalfLeft:  { left: 0 },
+  ringHalfRight: { right: 0 },
+  ringFill: {
+    position: 'absolute',
+    width: RING_SIZE, height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER, borderColor: 'transparent',
+  },
+  ringCenter: { alignItems: 'center', zIndex: 2 },
+  ringPct:    { fontSize: 34, fontFamily: 'Manrope_800ExtraBold', color: theme.text, lineHeight: 40 },
+  ringLabel:  { fontSize: 10, fontFamily: 'Inter_700Bold', color: theme.primary, letterSpacing: 2, marginTop: 2 },
 
-  iconTile: {
-    width: 100, height: 100, borderRadius: radius.xl + 4,
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
-  },
+  textBlock: { paddingHorizontal: 32, alignItems: 'center', marginBottom: 32 },
+  headline:  { fontSize: 24, fontFamily: 'Manrope_800ExtraBold', color: theme.text, textAlign: 'center', marginBottom: 10 },
+  subtext:   { fontSize: 14, fontFamily: 'Inter_400Regular', color: theme.textDim, textAlign: 'center', lineHeight: 22 },
 
-  heading: { fontSize: 24, fontFamily: fonts.heading, letterSpacing: -0.4, textAlign: 'center' },
-  name:    { fontSize: 20, fontFamily: fonts.bodyBold, marginTop: spacing.xs },
-  desc:    {
-    fontSize: 17, fontFamily: fonts.body, textAlign: 'center',
-    lineHeight: 26, marginTop: spacing.sm + 2, marginBottom: spacing.lg,
-  },
-
-  tracker: {
-    width: '100%', borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
-  },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md - 4, paddingVertical: spacing.sm - 2 },
+  stepsList: { width: '100%', paddingHorizontal: 28 },
+  stepRow:   { paddingVertical: 4, minHeight: 52 },
+  stepInner: { flexDirection: 'row', alignItems: 'flex-start', position: 'relative' },
   stepIcon: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 28, height: 28, borderRadius: 14,
+    borderWidth: 2, borderColor: theme.border,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: theme.surface, marginRight: 14, marginTop: 2, zIndex: 2,
   },
-  stepLabel: { fontSize: 17, flex: 1 },
-  connector: { width: 2, height: spacing.sm, marginLeft: 14, backgroundColor: 'transparent' },
+  stepIconDone:   { borderColor: '#22C55E', backgroundColor: '#22C55E' },
+  stepIconActive: { borderColor: '#F59E0B', backgroundColor: '#FEF3C7' },
+  stepIconText:   { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  stepActiveDot:  { width: 10, height: 10, borderRadius: 5, backgroundColor: '#F59E0B' },
+  stepEmptyDot:   { width: 8,  height: 8,  borderRadius: 4, backgroundColor: theme.border },
+  connector:      { position: 'absolute', left: 13, top: 32, width: 2, height: 24, backgroundColor: theme.border, zIndex: 1 },
+  connectorDone:  { backgroundColor: '#22C55E' },
+  stepText:       { flex: 1 },
+  stepLabel:      { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: theme.text, lineHeight: 20 },
+  stepLabelDim:   { color: theme.muted },
+  stepSub:        { fontSize: 12, fontFamily: 'Inter_400Regular', color: theme.textDim, marginTop: 1 },
+  stepSubActive:  { color: '#F59E0B', fontFamily: 'Inter_600SemiBold' },
 
-  eta:         { fontSize: 16, fontFamily: fonts.body, marginTop: spacing.md },
-  signOutWrap: { marginTop: 'auto', padding: spacing.md },
-  signOut:     { fontSize: 18, fontFamily: fonts.bodySemi },
+  footer:      { alignItems: 'center', paddingTop: 24, paddingHorizontal: 24, width: '100%', gap: 4 },
+  footerText:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: theme.muted },
+  footerPhone: { fontSize: 14, fontFamily: 'RobotoMono_400Regular', color: theme.text },
+  demoBtn: {
+    marginTop: 20, paddingVertical: 10, paddingHorizontal: 20,
+    borderRadius: 10, borderWidth: 1, borderColor: theme.border, borderStyle: 'dashed',
+  },
+  demoBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: theme.muted },
+  signOutBtn:  { marginTop: 16 },
+  signOutText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: theme.textDim, textDecorationLine: 'underline' },
 });
