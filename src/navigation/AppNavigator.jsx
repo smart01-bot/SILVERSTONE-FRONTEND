@@ -1,10 +1,11 @@
 // src/navigation/AppNavigator.jsx
 import React, { useEffect, useState } from 'react';
 import { createNavigationContainerRef } from '@react-navigation/native';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { ScreenLoader } from '../components/Loader';
 
 import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
@@ -71,13 +72,9 @@ export default function AppNavigator() {
     return <SplashScreen onDone={() => setShowSplash(false)} />;
   }
 
-  // Loading
+  // Loading — auth resolving or profile fetching
   if (authLoading || (user && profile && checking)) {
-    return (
-      <View style={[styles.center, { backgroundColor: theme.bg }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <ScreenLoader />;
   }
 
   // No user
@@ -91,11 +88,7 @@ export default function AppNavigator() {
 
   // Profile loading
   if (!profile) {
-    return (
-      <View style={[styles.center, { backgroundColor: theme.bg }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <ScreenLoader />;
   }
 
   // Pending or rejected
