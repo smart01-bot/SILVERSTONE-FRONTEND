@@ -1,40 +1,72 @@
 // src/components/Loader.jsx
 // Two exports:
-//   <ScreenLoader />     — cold start only: fullscreen spinning S, no blur
+//   <ScreenLoader />     — cold start fullscreen: spinning S logo, no blur
 //   <ButtonDots color /> — inline 3-dot bounce for button loading states
 //
-// For the global blur overlay use LoaderContext: useLoader()
+// NOTE: This is a temporary pure-RN implementation. The final version
+// should use react-native-webview + spinnerHtml.js (exact HTML animation)
+// once a custom dev build is set up. See HANDOFF_SESSION4.md.
 
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { View, Image, Animated, StyleSheet, Easing } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { SPINNER_HTML } from './spinnerHtml';
 
-// ─── Screen Loader (cold start only) ───────────────────────────────────────
+const LOGO     = require('../../assets/images/SilverS.png');
+const DURATION = 2400;
+const SIZE     = 110;
+
+// ─── Screen Loader ─────────────────────────────────────────────────────────
 
 export function ScreenLoader() {
   const { theme, isDark } = useTheme();
-  const webRef = useRef(null);
+  const spinAnim  = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
 
-  const onLoad = () => {
-    webRef.current?.postMessage(isDark ? 'dark' : 'light');
-  };
+  useEffect(() => {
+    const spin = Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1, duration: DURATION,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      })
+    );
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1, duration: DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0, duration: DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    spin.start();
+    pulse.start();
+    return () => { spin.stop(); pulse.stop(); };
+  }, []);
+
+  const rotate  = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const opacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
+  const shadow  = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
+  const shadowO = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] });
 
   return (
     <View style={[s.root, { backgroundColor: theme.bg }]}>
-      <WebView
-        ref={webRef}
-        source={{ html: SPINNER_HTML }}
-        style={s.webview}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        backgroundColor="transparent"
-        onLoad={onLoad}
-      />
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <Animated.View style={{
+          opacity,
+          shadowColor:   isDark ? '#ffffff' : '#000000',
+          shadowOffset:  { width: 0, height: 0 },
+          shadowRadius:  shadow,
+          shadowOpacity: shadowO,
+        }}>
+          <Image source={LOGO} style={s.logo} resizeMode="contain" />
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }
@@ -61,16 +93,11 @@ export function ButtonDots({ color = '#fff', size = 6 }) {
   return (
     <View style={s.dotsRow}>
       {dots.map((dot, i) => (
-        <Animated.View
-          key={i}
-          style={{
-            width:           size,
-            height:          size,
-            borderRadius:    size / 2,
-            backgroundColor: color,
-            transform:       [{ translateY: dot }],
-          }}
-        />
+        <Animated.View key={i} style={{
+          width: size, height: size, borderRadius: size / 2,
+          backgroundColor: color,
+          transform: [{ translateY: dot }],
+        }} />
       ))}
     </View>
   );
@@ -78,6 +105,6 @@ export function ButtonDots({ color = '#fff', size = 6 }) {
 
 const s = StyleSheet.create({
   root:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  webview: { width: 220, height: 220, backgroundColor: 'transparent' },
+  logo:    { width: SIZE, height: SIZE },
   dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 20 },
 });
