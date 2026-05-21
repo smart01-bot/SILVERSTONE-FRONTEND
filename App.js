@@ -1,10 +1,11 @@
 // App.js
 import 'react-native-gesture-handler';
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { LoaderProvider } from './src/context/LoaderContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import {
   useFonts,
@@ -35,18 +36,16 @@ export default function App() {
   });
 
   if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color="#fff" size="large" />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
   }
 
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <AppNavigator />
+          <LoaderProvider>
+            <AppNavigator />
+          </LoaderProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

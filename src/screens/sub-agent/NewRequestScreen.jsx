@@ -4,12 +4,13 @@ import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
   ScrollView, KeyboardAvoidingView, Platform,
-  ActivityIndicator,
+
 } from 'react-native';
 import { Ionicons }       from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { fonts, spacing, radius } from '../../constants/theme';
 import AnimatedInput  from '../../components/AnimatedInput';
 import PressableScale from '../../components/PressableScale';
@@ -38,7 +39,6 @@ export default function NewRequestScreen({ navigation, route }) {
   const [destPhone,     setDestPhone]     = useState(prefill?.destPhone     ?? '');
   const [amount,        setAmount]        = useState(prefill?.amount ? String(prefill.amount) : '');
   const [urgent,        setUrgent]        = useState(false);
-  const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState('');
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function NewRequestScreen({ navigation, route }) {
     const err = validate();
     if (err) { setError(err); return; }
     setError('');
-    setLoading(true);
+    showLoader();
 
     const requestData = {
       agentId:       user.uid,
@@ -115,7 +115,7 @@ export default function NewRequestScreen({ navigation, route }) {
     } catch (e) {
       setError(tr('error'));
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -279,14 +279,10 @@ export default function NewRequestScreen({ navigation, route }) {
 
           <PressableScale
             onPress={handleSubmit}
-            disabled={loading}
             style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
             scaleDown={0.97}
           >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={s.submitText}>{tr('submitRequest')}</Text>
-            }
+            {<Text style={s.submitText}>{tr('submitRequest')}</Text>}
           </PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>

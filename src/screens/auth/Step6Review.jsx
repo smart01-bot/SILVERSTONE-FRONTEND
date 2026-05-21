@@ -1,21 +1,19 @@
-// src/screens/auth/Step6Review.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Animated, StatusBar,
 } from 'react-native';
-import { LinearGradient }    from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme }          from '../../context/ThemeContext';
-import { useHaptics }        from '../../hooks/useHaptics';
-import { db, storage }       from '../../config/firebase';
+import { useTheme } from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
+import { useHaptics } from '../../hooks/useHaptics';
+import { db } from '../../config/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { fonts, spacing, radius } from '../../constants/theme';
 
 const TOTAL_STEPS = 6;
-const STEP        = 6;
+const STEP = 6;
 
 const NETWORKS = {
   Voda:    { label: 'M-Pesa',   color: '#00A651' },
@@ -38,16 +36,10 @@ function fmtFloat(n) {
   return `TSh ${(n / 1000).toFixed(0)}K/day`;
 }
 
-// ── Upload helper — runs after UID is obtained ────────────────────────────────
-const uploadFile = async (uri, path) => {
-  const response = await fetch(uri);
-  const blob     = await response.blob();
-  const fileRef  = ref(storage, path);
-  await uploadBytes(fileRef, blob);
-  return getDownloadURL(fileRef);
-};
-
 // ── Particle system ──────────────────────────────────────────────────────────
+// Fix: opacity (useNativeDriver:false) and transform (useNativeDriver:true)
+// MUST live on separate Animated.View nodes — never the same view.
+// Outer view owns opacity (JS driver), inner view owns transform (native driver).
 function Particles({ trigger }) {
   const particles = useRef(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
@@ -63,9 +55,12 @@ function Particles({ trigger }) {
 
   useEffect(() => {
     if (!trigger) return;
-    particles.forEach(p => { p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); });
+    particles.forEach(p => {
+      p.x.setValue(0); p.y.setValue(0); p.op.setValue(0);
+    });
     const rad = (deg) => deg * (Math.PI / 180);
 
+    // Native driver — translate only
     const translateAnims = particles.map(p => {
       const tx = Math.cos(rad(p.angle)) * p.dist;
       const ty = Math.sin(rad(p.angle)) * p.dist - 40;
@@ -75,6 +70,7 @@ function Particles({ trigger }) {
       ]);
     });
 
+    // JS driver — opacity only
     const opacityAnims = particles.map(p =>
       Animated.sequence([
         Animated.timing(p.op, { toValue: 1, duration: 100, useNativeDriver: false }),
@@ -92,7 +88,9 @@ function Particles({ trigger }) {
   return (
     <View style={particleStyles.wrap} pointerEvents="none">
       {particles.map((p, i) => (
+        // Outer: opacity only — JS driver
         <Animated.View key={i} style={[particleStyles.opacityLayer, { opacity: p.op }]}>
+          {/* Inner: transform only — native driver */}
           <Animated.View
             style={[particleStyles.dot, {
               width: p.size, height: p.size, borderRadius: p.size / 2,
@@ -107,47 +105,55 @@ function Particles({ trigger }) {
 }
 
 const particleStyles = StyleSheet.create({
-  wrap:         { position: 'absolute', bottom: 27, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  wrap: {
+    position: 'absolute',
+    bottom: 27, left: 0, right: 0,
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
+  },
   opacityLayer: { position: 'absolute' },
   dot:          { position: 'absolute' },
 });
 
 function FieldRow({ label, value, mono }) {
   const { theme } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
+  const s = fieldStyles(theme);
   return (
-    <View style={[fieldStyles.row, { borderBottomColor: theme.border }]}>
-      <Text style={[fieldStyles.label, { color: theme.textDim, fontFamily: fonts.body }]}>{label}</Text>
-      <Text style={[
-        fieldStyles.value,
-        { color: theme.text, fontFamily: fonts.bodySemi },
-        mono && { fontFamily: fonts.mono, fontSize: 12 },
-      ]}>{value}</Text>
+    <View style={s.row}>
+      <Text style={s.label}>{label}</Text>
+      <Text style={[s.value, mono && s.mono]}>{value}</Text>
     </View>
   );
 }
-
-const fieldStyles = StyleSheet.create({
-  row:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 10, borderBottomWidth: 1, gap: 12 },
-  label: { fontSize: 13, flex: 0.45 },
-  value: { fontSize: 13, flex: 0.55, textAlign: 'right' },
+const fieldStyles = (theme) => StyleSheet.create({
+  row: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border, gap: 12,
+  },
+  label: { fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, flex: 0.45 },
+  value: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: theme.text, flex: 0.55, textAlign: 'right' },
+  mono:  { fontFamily: 'RobotoMono_400Regular', fontSize: 12 },
 });
 
 export default function Step6Review({ navigation, route }) {
   const { theme } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
-  const [agreed,   setAgreed]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
-  const [burst,    setBurst]    = useState(false);
-  const [status,   setStatus]   = useState(''); // upload progress label
+  const [agreed, setAgreed]   = useState(false);
+  const [error, setError]     = useState('');
+  const [burst, setBurst]     = useState(false);
 
+  // Guard: AppNavigator tears down this component the moment Firebase auth
+  // state fires. Without this, handleSubmit continues running after unmount.
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
   const p = route.params ?? {};
 
+  // ── Animations ────────────────────────────────────────────────────────────
   const progressAnim = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
   const heroAnim     = useRef(new Animated.Value(0)).current;
   const card1Anim    = useRef(new Animated.Value(0)).current;
@@ -155,10 +161,14 @@ export default function Step6Review({ navigation, route }) {
   const termsAnim    = useRef(new Animated.Value(0)).current;
   const checkAnim    = useRef(new Animated.Value(0)).current;
 
+  // useNativeDriver: false — width
   useEffect(() => {
-    Animated.timing(progressAnim, { toValue: 1, duration: 600, useNativeDriver: false }).start();
+    Animated.timing(progressAnim, {
+      toValue: 1, duration: 600, useNativeDriver: false,
+    }).start();
   }, []);
 
+  // useNativeDriver: true — translate / scale
   useEffect(() => {
     Animated.stagger(100, [
       Animated.spring(heroAnim,  { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }),
@@ -172,63 +182,48 @@ export default function Step6Review({ navigation, route }) {
     haptics.selection();
     const next = !agreed;
     setAgreed(next);
-    Animated.spring(checkAnim, { toValue: next ? 1 : 0, tension: 80, friction: 7, useNativeDriver: true }).start();
+    Animated.spring(checkAnim, {
+      toValue: next ? 1 : 0, tension: 80, friction: 7, useNativeDriver: true,
+    }).start();
   };
 
   const handleSubmit = async () => {
     if (!agreed) { haptics.error(); setError('Please accept the terms to continue.'); return; }
     haptics.medium();
+
     setBurst(false);
     setTimeout(() => setBurst(true), 10);
-    setLoading(true);
+
+    showLoader();
     setError('');
 
     try {
       const auth = getAuth();
-      if (!p.email || !p.password) throw new Error('Missing credentials');
 
+      if (!p.email || !p.password) throw new Error('Missing credentials');
       const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
+
+      // Component may have unmounted while awaiting — bail silently
       if (!isMounted.current) return;
 
       const uid = cred.user.uid;
 
-      // Upload documents now that we have a UID
-      let tinCertificateUrl   = null;
-      let licenceCertificateUrl = null;
-
-      if (p.tinCertUri) {
-        setStatus('Uploading TIN certificate…');
-        try {
-          tinCertificateUrl = await uploadFile(p.tinCertUri, `agents/${uid}/tin-certificate`);
-        } catch (e) { console.warn('TIN cert upload failed:', e); }
-      }
-
-      if (p.licenceUri) {
-        setStatus('Uploading licence certificate…');
-        try {
-          licenceCertificateUrl = await uploadFile(p.licenceUri, `agents/${uid}/licence-certificate`);
-        } catch (e) { console.warn('Licence upload failed:', e); }
-      }
-
-      if (!isMounted.current) return;
-      setStatus('Saving profile…');
-
       await setDoc(doc(db, 'agents', uid), {
         uid,
-        name:                  p.name             ?? '',
-        phone:                 p.phone             ?? '',
-        email:                 p.email             ?? '',
-        nida:                  p.nida              ?? '',
-        businessName:          p.businessName      ?? '',
-        businessLocation:      p.businessLocation  ?? '',
-        coordinates:           p.coordinates       ?? null,
-        networks:              p.networks          ?? [],
-        floatCapacity:         p.floatCapacity     ?? 0,
-        businessTIN:           p.businessTIN       ?? '',
+        name:                  p.name ?? '',
+        phone:                 p.phone ?? '',
+        email:                 p.email ?? '',
+        nida:                  p.nida ?? '',
+        businessName:          p.businessName ?? '',
+        businessLocation:      p.businessLocation ?? '',
+        coordinates:           p.coordinates ?? null,
+        networks:              p.networks ?? [],
+        floatCapacity:         p.floatCapacity ?? 0,
+        businessTIN:           p.businessTIN ?? '',
         businessLicenceNumber: p.businessLicenceNumber ?? '',
-        tinCertificateUrl,
-        licenceCertificateUrl,
-        selfieVerified:        p.selfieVerified    ?? false,
+        tinCertificateUrl:     p.tinCertificateUrl ?? null,
+        licenceCertificateUrl: p.licenceCertificateUrl ?? null,
+        selfieVerified:        p.selfieVerified ?? false,
         role:              'sub-agent',
         status:            'pending',
         pinSet:            false,
@@ -237,11 +232,11 @@ export default function Step6Review({ navigation, route }) {
       });
 
       if (isMounted.current) haptics.success();
-      // AppNavigator watches profile.status and routes to PendingScreen automatically
+      // AppNavigator detects profile.status === 'pending' and routes to
+      // PendingScreen automatically. Do not call navigation.reset here.
     } catch (e) {
       if (!isMounted.current) return;
       haptics.error();
-      setStatus('');
       const msg = e?.message ?? '';
       if (msg.includes('email-already-in-use')) {
         setError('An account with this email already exists. Try logging in instead.');
@@ -250,18 +245,22 @@ export default function Step6Review({ navigation, route }) {
       } else {
         setError('Something went wrong. Please try again.');
       }
-      setLoading(false);
+      hideLoader();
     }
   };
 
-  const headerProgress = progressAnim.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] });
+  const headerProgress = progressAnim.interpolate({
+    inputRange: [0, 1], outputRange: ['0%', '100%'],
+  });
 
   const reveal = (anim) => ({
     opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [24,0] }) }],
+    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [24, 0] }) }],
   });
 
-  const checkScale = checkAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.8, 1.15, 1] });
+  const checkScale = checkAnim.interpolate({
+    inputRange: [0, 0.6, 1], outputRange: [0.8, 1.15, 1],
+  });
 
   const s = styles(theme, insets);
 
@@ -284,17 +283,20 @@ export default function Step6Review({ navigation, route }) {
         <Text style={s.subtitle}>Check everything before submitting your application.</Text>
       </LinearGradient>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
-
-        <Animated.View style={[s.heroCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }, reveal(heroAnim)]}>
-          <View style={[s.heroMap, { backgroundColor: theme.surfaceElev }]}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={[s.heroCard, reveal(heroAnim)]}>
+          <View style={s.heroMap}>
             <Text style={s.heroMapIcon}>📍</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[s.heroName, { color: theme.text }]}>{p.businessName || '—'}</Text>
-            <Text style={[s.heroArea, { color: theme.textDim }]}>{p.businessLocation || '—'}</Text>
+            <Text style={s.heroName}>{p.businessName || '—'}</Text>
+            <Text style={s.heroArea}>{p.businessLocation || '—'}</Text>
             {p.coordinates && (
-              <Text style={[s.heroCoords, { color: theme.muted }]}>{p.coordinates.lat}° · {p.coordinates.lng}°</Text>
+              <Text style={s.heroCoords}>{p.coordinates.lat}° · {p.coordinates.lng}°</Text>
             )}
           </View>
         </Animated.View>
@@ -304,9 +306,9 @@ export default function Step6Review({ navigation, route }) {
             {p.networks.map(id => {
               const n = NETWORKS[id]; if (!n) return null;
               return (
-                <View key={id} style={[s.netChip, { borderColor: n.color + '80', backgroundColor: theme.surfaceAlt }]}>
+                <View key={id} style={[s.netChip, { borderColor: n.color + '80' }]}>
                   <View style={[s.netDot, { backgroundColor: n.color }]} />
-                  <Text style={[s.netLabel, { color: n.color, fontFamily: fonts.bodySemi }]}>{n.label}</Text>
+                  <Text style={[s.netLabel, { color: n.color }]}>{n.label}</Text>
                 </View>
               );
             })}
@@ -314,8 +316,8 @@ export default function Step6Review({ navigation, route }) {
         )}
 
         <Animated.View style={reveal(card1Anim)}>
-          <Text style={[s.sectionTitle, { color: theme.muted }]}>Personal</Text>
-          <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Text style={s.sectionTitle}>Personal</Text>
+          <View style={s.card}>
             <FieldRow label="Full Name" value={p.name || '—'} />
             <FieldRow label="Phone"     value={p.phone || '—'} mono />
             <FieldRow label="Email"     value={p.email || '—'} />
@@ -324,118 +326,105 @@ export default function Step6Review({ navigation, route }) {
         </Animated.View>
 
         <Animated.View style={reveal(card2Anim)}>
-          <Text style={[s.sectionTitle, { color: theme.muted }]}>Business</Text>
-          <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Text style={s.sectionTitle}>Business</Text>
+          <View style={s.card}>
             <FieldRow label="Till Name"   value={p.businessName || '—'} />
             <FieldRow label="Location"    value={p.businessLocation || '—'} />
             <FieldRow label="Float Cap."  value={fmtFloat(p.floatCapacity)} mono />
             <FieldRow label="TIN"         value={p.businessTIN || '—'} mono />
             <FieldRow label="Licence No." value={p.businessLicenceNumber || '—'} mono />
-            <FieldRow label="TIN Cert."   value={p.tinCertUri   ? `✅ ${p.tinCertName  ?? 'Attached'}` : '—'} />
-            <FieldRow label="Lic. Cert."  value={p.licenceUri   ? `✅ ${p.licenceName  ?? 'Attached'}` : '—'} />
+            <FieldRow label="TIN Cert."   value={p.tinCertificateUrl ? '✅ Uploaded' : '—'} />
+            <FieldRow label="Lic. Cert."  value={p.licenceCertificateUrl ? '✅ Uploaded' : '—'} />
             <FieldRow label="Identity"    value={p.selfieVerified ? '✅ Verified (97%)' : '—'} />
           </View>
         </Animated.View>
 
         <Animated.View style={[reveal(termsAnim), { marginTop: 4 }]}>
           <TouchableOpacity style={s.termsRow} onPress={toggleAgree} activeOpacity={0.8}>
-            <Animated.View style={[
-              s.checkbox,
-              { borderColor: theme.border, backgroundColor: theme.surfaceAlt },
-              agreed && { borderColor: theme.primary, backgroundColor: theme.primary },
-              { transform: [{ scale: checkScale }] },
-            ]}>
+            <Animated.View style={[s.checkbox, agreed && s.checkboxActive, { transform: [{ scale: checkScale }] }]}>
               {agreed && <Text style={s.checkMark}>✓</Text>}
             </Animated.View>
-            <Text style={[s.termsText, { color: theme.textDim, fontFamily: fonts.body }]}>
+            <Text style={s.termsText}>
               I confirm all information is accurate and agree to Silverstone's{' '}
-              <Text style={[s.termsLink, { color: theme.primary, fontFamily: fonts.bodySemi }]}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={[s.termsLink, { color: theme.primary, fontFamily: fonts.bodySemi }]}>Privacy Policy</Text>.
+              <Text style={s.termsLink}>Terms of Service</Text> and{' '}
+              <Text style={s.termsLink}>Privacy Policy</Text>.
             </Text>
           </TouchableOpacity>
         </Animated.View>
 
-        {error ? <Text style={[s.errText, { color: theme.primary, fontFamily: fonts.body }]}>{error}</Text> : null}
-        {loading && status ? <Text style={[s.statusText, { color: theme.textDim, fontFamily: fonts.body }]}>{status}</Text> : null}
+        {error ? <Text style={s.errText}>{error}</Text> : null}
 
-        <View style={{ marginTop: spacing.lg }}>
+        <View style={{ marginTop: 24 }}>
           <Particles trigger={burst} />
           <TouchableOpacity onPress={handleSubmit} disabled={!agreed || loading} activeOpacity={0.85}>
             <LinearGradient
-              colors={agreed && !loading ? [theme.gradPrimA, theme.gradPrimB] : [theme.border, theme.border]}
+              colors={agreed && !loading ? [theme.gradPrimA, theme.gradPrimB] : ['#555', '#444']}
               style={s.cta}
             >
-              <Text style={[s.ctaText, (!agreed || loading) && { color: theme.textDim }]}>
-                {loading ? (status || 'Submitting…') : 'Submit Application →'}
-              </Text>
+              <Text style={s.ctaText}>{loading ? 'Submitting…' : 'Submit Application →'}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: insets.bottom + spacing.xl }} />
+        <View style={{ height: insets.bottom + 32 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = (theme, insets) => StyleSheet.create({
-  root:   { flex: 1, backgroundColor: theme.bg },
+  root: { flex: 1, backgroundColor: theme.bg },
   header: {
-    paddingTop: insets.top + 12, paddingBottom: spacing.lg + 4,
-    paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: radius.xxl, borderBottomRightRadius: radius.xxl,
+    paddingTop: insets.top + 12, paddingBottom: 28,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
-  navRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  backBtn:  { marginRight: spacing.md, padding: 4 },
+  navRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  backBtn:  { marginRight: 12, padding: 4 },
   backArrow:{ fontSize: 22, color: '#fff' },
   progressTrack: {
-    flex: 1, height: 3,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2, overflow: 'hidden',
+    flex: 1, height: 3, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
-  stepCounter:  { marginLeft: spacing.md, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: fonts.bodySemi },
-  eyebrow:  { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: fonts.bodySemi, letterSpacing: 1.4, marginBottom: 6 },
-  title:    { color: '#fff', fontSize: 26, fontFamily: fonts.display, marginBottom: 6 },
-  subtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: fonts.body, lineHeight: 20 },
-
+  stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  eyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
+  title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
+  subtitle:{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
   scroll:        { flex: 1 },
-  scrollContent: { padding: spacing.lg },
-
+  scrollContent: { padding: 20 },
   heroCard: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: radius.lg, borderWidth: 1,
-    padding: spacing.md, gap: spacing.md, marginBottom: spacing.md,
+    backgroundColor: theme.surfaceAlt, borderRadius: 16,
+    borderWidth: 1, borderColor: theme.border,
+    padding: 16, gap: 14, marginBottom: 12,
   },
-  heroMap:    { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  heroMap:    { width: 52, height: 52, borderRadius: 10, backgroundColor: '#EEF2F5', alignItems: 'center', justifyContent: 'center' },
   heroMapIcon:{ fontSize: 26 },
-  heroName:   { fontSize: 17, fontFamily: fonts.heading },
-  heroArea:   { fontSize: 13, fontFamily: fonts.body, marginTop: 2 },
-  heroCoords: { fontSize: 11, fontFamily: fonts.mono, marginTop: 3 },
-
-  netChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
-  netChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md - 4, paddingVertical: 6, borderRadius: radius.sm, borderWidth: 1, gap: 6 },
+  heroName:   { fontSize: 17, fontFamily: 'Manrope_700Bold', color: theme.text },
+  heroArea:   { fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, marginTop: 2 },
+  heroCoords: { fontSize: 11, fontFamily: 'RobotoMono_400Regular', color: theme.muted, marginTop: 3 },
+  netChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  netChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, gap: 6, backgroundColor: theme.surfaceAlt },
   netDot:   { width: 7, height: 7, borderRadius: 4 },
-  netLabel: { fontSize: 12 },
-
-  sectionTitle: { fontSize: 11, fontFamily: fonts.bodyBold, letterSpacing: 1.2, marginBottom: spacing.sm, marginTop: 4 },
-  card:         { borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: spacing.md, marginBottom: spacing.lg },
-
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  checkbox: { width: 24, height: 24, borderRadius: radius.sm - 2, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkMark:{ color: '#fff', fontSize: 14, fontFamily: fonts.bodyBold },
-  termsText:{ flex: 1, fontSize: 13, lineHeight: 20 },
-  termsLink:{ },
-
-  errText:    { marginTop: spacing.md, fontSize: 13, textAlign: 'center' },
-  statusText: { marginTop: spacing.sm, fontSize: 13, textAlign: 'center' },
-
-  cta: {
-    height: 54, borderRadius: radius.lg,
+  netLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  sectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: theme.muted, letterSpacing: 1.2, marginBottom: 8, marginTop: 4 },
+  card: { backgroundColor: theme.surfaceAlt, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, marginBottom: 20 },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  checkbox: {
+    width: 24, height: 24, borderRadius: 6,
+    borderWidth: 2, borderColor: theme.border,
     alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, backgroundColor: theme.surfaceAlt,
+  },
+  checkboxActive: { borderColor: theme.primary, backgroundColor: theme.primary },
+  checkMark:      { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
+  termsText:      { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, lineHeight: 20 },
+  termsLink:      { color: theme.primary, fontFamily: 'Inter_600SemiBold' },
+  errText: { marginTop: 12, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.primary, textAlign: 'center' },
+  cta: {
+    height: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#C8102E', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
   },
-  ctaText: { fontSize: 16, fontFamily: fonts.bodyBold, color: '#fff' },
+  ctaText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
 });

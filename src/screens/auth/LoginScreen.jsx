@@ -3,25 +3,26 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  ActivityIndicator, KeyboardAvoidingView,
+  KeyboardAvoidingView,
   Platform, ScrollView, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons }       from '@expo/vector-icons';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import AnimatedInput      from '../../components/AnimatedInput';
 
 export default function LoginScreen({ navigation, route }) {
-  const { login } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { login }              = useAuth();
+  const { theme, isDark }      = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
-  const [email,   setEmail]   = useState('');
-  const [password,setPassword]= useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -29,7 +30,7 @@ export default function LoginScreen({ navigation, route }) {
       return;
     }
     setError('');
-    setLoading(true);
+    showLoader();
     try {
       await login(email.trim(), password);
     } catch (e) {
@@ -42,7 +43,7 @@ export default function LoginScreen({ navigation, route }) {
           ?? 'Login failed. Please try again.'
       );
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -108,14 +109,10 @@ export default function LoginScreen({ navigation, route }) {
 
             <TouchableOpacity
               onPress={handleLogin}
-              disabled={loading}
               style={[s.btn, { backgroundColor: theme.primary }]}
               activeOpacity={0.85}
             >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={s.btnText}>Sign In</Text>
-              }
+              <Text style={s.btnText}>Sign In</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => {}} style={s.forgotWrap}>

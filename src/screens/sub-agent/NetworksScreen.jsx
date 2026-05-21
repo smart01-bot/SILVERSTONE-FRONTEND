@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  ScrollView, Switch, Alert, ActivityIndicator,
+  ScrollView, Switch, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -22,11 +23,11 @@ const NETWORKS = [
 export default function NetworksScreen({ navigation }) {
   const { user, profile } = useAuth();
   const { theme, isDark, tr } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
   const [phones, setPhones] = useState({});
   const [active, setActive] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
+    const [saved,  setSaved]  = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -53,7 +54,7 @@ export default function NetworksScreen({ navigation }) {
         return;
       }
     }
-    setSaving(true);
+    showLoader();
     try {
       await updateDoc(doc(db, 'agents', user.uid), {
         agentPhoneNumbers: phones,
@@ -64,7 +65,7 @@ export default function NetworksScreen({ navigation }) {
     } catch (e) {
       Alert.alert(tr('error'), tr('error'));
     } finally {
-      setSaving(false);
+      hideLoader();
     }
   };
 
@@ -136,14 +137,11 @@ export default function NetworksScreen({ navigation }) {
 
         <TouchableOpacity
           onPress={handleSave}
-          disabled={saving}
+          
           style={[s.saveBtn, { backgroundColor: saved ? '#16A34A' : theme.primary }]}
           activeOpacity={0.85}
         >
-          {saving
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={s.saveBtnText}>{saved ? tr('save') + ' ✓' : tr('save')}</Text>
-          }
+          <Text style={s.saveBtnText}>{saved ? tr('save') + ' ✓' : tr('save')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

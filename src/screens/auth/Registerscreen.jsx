@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  ActivityIndicator, KeyboardAvoidingView,
+  KeyboardAvoidingView,
   Platform, ScrollView, Image, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { Ionicons }       from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import AnimatedInput      from '../../components/AnimatedInput';
 
@@ -112,9 +113,9 @@ const dp = StyleSheet.create({
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
   const { theme, isDark } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
   const [step,    setStep]    = useState(1);
-  const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
   const [agreed,  setAgreed]  = useState(false);
   const [showPwd,  setShowPwd]  = useState(false);
@@ -179,7 +180,7 @@ export default function RegisterScreen({ navigation }) {
     if (err) { setError(err); return; }
     if (step < STEPS) { setStep(s => s + 1); return; }
 
-    setLoading(true);
+    showLoader();
     try {
       const email = `${form.phone.replace(/\s/g, '')}@silverstone.tz`;
       await register({
@@ -203,7 +204,7 @@ export default function RegisterScreen({ navigation }) {
           ?? 'Registration failed. Please try again.'
       );
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -356,13 +357,10 @@ export default function RegisterScreen({ navigation }) {
             )}
             <TouchableOpacity
               onPress={handleNext}
-              disabled={loading}
               style={[s.btnPrimary, { backgroundColor: theme.primary }]}
               activeOpacity={0.85}
             >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={s.btnPrimaryText}>{step < STEPS ? 'Next' : 'Submit Application'}</Text>
+              {<Text style={s.btnPrimaryText}>{step < STEPS ? 'Next' : 'Submit Application'}</Text>
               }
             </TouchableOpacity>
           </View>
