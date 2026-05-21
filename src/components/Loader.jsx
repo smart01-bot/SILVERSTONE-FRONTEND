@@ -1,122 +1,42 @@
 // src/components/Loader.jsx
 // Two exports:
-//   <ScreenLoader />     — full-screen branded loader for AppNavigator states
-//   <ButtonDots color /> — inline 3-dot animation for button loading states
+//   <ScreenLoader />     — full-screen branded loader (exact HTML animation via WebView)
+//   <ButtonDots color /> — inline 3-dot bounce for button loading states
 
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Animated, StyleSheet, Easing } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
-import { fonts } from '../constants/theme';
+import { SPINNER_HTML } from './spinnerHtml';
 
 // ─── Screen Loader ─────────────────────────────────────────────────────────
-// Spins the Silverstone logo mark and pulses its opacity + glow shadow,
-// phase-locked on the same 2.4s ease-in-out curve — exactly like the HTML:
-//   slow at 0°/360° → dim & faint glow
-//   fast at 180°    → bright & full glow
-//
-// Mixed Animated driver rule respected:
-//   rotation  → native driver  (transform only, outer Animated.View)
-//   opacity   → JS driver      (inner Animated.View)
-//   shadow    → JS driver      (inner Animated.View)
-
-const LOGO = require('../../assets/images/SilverS.png');
-const DURATION = 2400; // ms — same for both spin and pulse to phase-lock them
-const LOGO_SIZE = 110;
+// Renders the exact spinning/glowing logo HTML in a transparent WebView.
+// Passes 'dark' or 'light' to the HTML via postMessage so the glow colour
+// matches the app theme automatically.
 
 export function ScreenLoader() {
   const { theme, isDark } = useTheme();
+  const webRef = useRef(null);
 
-  // Native driver — rotation
-  const spinAnim  = useRef(new Animated.Value(0)).current;
-  // JS driver — opacity + glow
-  const pulseAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Spin: 0→1 in DURATION ms, ease-in-out, loops continuously
-    const spinLoop = Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: DURATION,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      })
-    );
-
-    // Pulse: 0→1→0 over DURATION ms with the same easing curve
-    // → glow peaks exactly at the 180° point (max speed) and fades at 0°/360°
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: DURATION / 2,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0,
-          duration: DURATION / 2,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-      ])
-    );
-
-    spinLoop.start();
-    pulseLoop.start();
-
-    return () => {
-      spinLoop.stop();
-      pulseLoop.stop();
-    };
-  }, []);
-
-  const rotate = spinAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  // Opacity: 0.45 dim at rest → 1.0 fully lit at peak
-  const opacity = pulseAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [0.45, 1],
-  });
-
-  // Shadow radius: barely visible → strong bloom glow
-  const shadowRadius = pulseAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [2, 22],
-  });
-
-  // Shadow opacity: invisible → full
-  const shadowOpacity = pulseAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [0, 0.9],
-  });
-
-  // White glow on dark backgrounds, dark glow on light — mirrors HTML behaviour
-  const glowColor = isDark ? '#ffffff' : '#000000';
+  // Once the WebView is ready, tell it which theme we're in
+  const onLoad = () => {
+    webRef.current?.postMessage(isDark ? 'dark' : 'light');
+  };
 
   return (
     <View style={[s.root, { backgroundColor: theme.bg }]}>
-      {/* Outer view: rotation only (native driver) */}
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        {/* Inner view: opacity + shadow glow (JS driver) */}
-        <Animated.View
-          style={{
-            opacity,
-            shadowColor:   glowColor,
-            shadowOffset:  { width: 0, height: 0 },
-            shadowRadius,
-            shadowOpacity,
-          }}
-        >
-          <Image
-            source={LOGO}
-            style={s.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
-      </Animated.View>
+      <WebView
+        ref={webRef}
+        source={{ html: SPINNER_HTML }}
+        style={s.webview}
+        scrollEnabled={false}
+        bounces={false}
+        overScrollMode="never"
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        backgroundColor="transparent"
+        onLoad={onLoad}
+      />
     </View>
   );
 }
@@ -184,15 +104,15 @@ export function ButtonDots({ color = '#fff', size = 6 }) {
 // ─── Styles ────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  // ScreenLoader
   root: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: {
-    width:  LOGO_SIZE,
-    height: LOGO_SIZE,
+  webview: {
+    width: 220,
+    height: 220,
+    backgroundColor: 'transparent',
   },
 
   // ButtonDots
@@ -202,7 +122,5 @@ const s = StyleSheet.create({
     gap:           5,
     height:        20,
   },
-  dot: {
-    // size / color applied inline
-  },
+  dot: {},
 });
