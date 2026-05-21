@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Alert, ActivityIndicator,
+  RefreshControl, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
@@ -65,13 +66,13 @@ function SkeletonQueueCard({ theme }) {
 
 export default function QueueScreen() {
   const { theme, isDark, tr } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
   const [requests,   setRequests]   = useState([]);
   const [filter,     setFilter]     = useState('All');
   const [refreshing, setRefreshing] = useState(false);
   const [loading,    setLoading]    = useState(true);
-  const [actionLoad, setActionLoad] = useState(null);
-
+  
   const FILTERS = ['All', 'Urgent', 'Pending', 'Approved'];
   const FILTER_LABELS = {
     All:      tr('queue'),
@@ -113,11 +114,11 @@ export default function QueueScreen() {
   const waitColor = (m)  => { if (m < 5) return '#16A34A'; if (m < 15) return '#F59E0B'; return '#C8102E'; };
 
   const handleApprove = async (req) => {
-    setActionLoad(req.id + '_approve');
+    showLoader();
     try {
       await updateDoc(doc(db, 'requests', req.id), { status: 'approved', approvedAt: Timestamp.now() });
     } catch (e) { Alert.alert('Error', 'Failed to approve request.'); }
-    finally { setActionLoad(null); }
+    finally { showLoader(); }
   };
 
   const handleProcess = async (req) => {
@@ -129,11 +130,11 @@ export default function QueueScreen() {
         {
           text: 'Confirm', style: 'destructive',
           onPress: async () => {
-            setActionLoad(req.id + '_process');
+            showLoader();
             try {
               await updateDoc(doc(db, 'requests', req.id), { status: 'completed', processedAt: Timestamp.now() });
             } catch (e) { Alert.alert('Error', 'Failed to process transfer.'); }
-            finally { setActionLoad(null); }
+            finally { showLoader(); }
           },
         },
       ]
@@ -145,13 +146,13 @@ export default function QueueScreen() {
       ...REJECTION_REASONS.map(reason => ({
         text: reason,
         onPress: async () => {
-          setActionLoad(req.id + '_reject');
+          showLoader();
           try {
             await updateDoc(doc(db, 'requests', req.id), {
               status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
             });
           } catch (e) { Alert.alert('Error', 'Failed to reject request.'); }
-          finally { setActionLoad(null); }
+          finally { showLoader(); }
         },
       })),
       { text: 'Cancel', style: 'cancel' },
@@ -286,24 +287,18 @@ export default function QueueScreen() {
                 <View style={s.actions}>
                   {req.status === 'pending' && (
                     <TouchableOpacity onPress={() => handleApprove(req)} style={[s.btnOutline, { borderColor: '#0891B2' }]} activeOpacity={0.75}>
-                      {actionLoad === req.id + '_approve'
-                        ? <ActivityIndicator size="small" color="#0891B2" />
-                        : <Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Approve</Text>
+                      {<Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Approve</Text>
                       }
                     </TouchableOpacity>
                   )}
                   {(req.status === 'pending' || req.status === 'approved') && (
                     <TouchableOpacity onPress={() => handleProcess(req)} style={[s.btnFilled, { backgroundColor: '#C8102E' }]} activeOpacity={0.85}>
-                      {actionLoad === req.id + '_process'
-                        ? <ActivityIndicator size="small" color="#fff" />
-                        : <Text style={s.btnFilledText}>Process</Text>
+                      {<Text style={s.btnFilledText}>Process</Text>
                       }
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={() => handleReject(req)} style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
-                    {actionLoad === req.id + '_reject'
-                      ? <ActivityIndicator size="small" color={theme.textDim} />
-                      : <Text style={[s.btnOutlineText, { color: theme.textDim }]}>Reject</Text>
+                    {<Text style={[s.btnOutlineText, { color: theme.textDim }]}>Reject</Text>
                     }
                   </TouchableOpacity>
                 </View>

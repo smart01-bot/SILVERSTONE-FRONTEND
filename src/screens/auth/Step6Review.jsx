@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { useHaptics } from '../../hooks/useHaptics';
 import { db } from '../../config/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -116,6 +117,7 @@ const particleStyles = StyleSheet.create({
 
 function FieldRow({ label, value, mono }) {
   const { theme } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
   const s = fieldStyles(theme);
   return (
     <View style={s.row}>
@@ -136,11 +138,11 @@ const fieldStyles = (theme) => StyleSheet.create({
 
 export default function Step6Review({ navigation, route }) {
   const { theme } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
   const [agreed, setAgreed]   = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [burst, setBurst]     = useState(false);
 
@@ -192,7 +194,7 @@ export default function Step6Review({ navigation, route }) {
     setBurst(false);
     setTimeout(() => setBurst(true), 10);
 
-    setLoading(true);
+    showLoader();
     setError('');
 
     try {
@@ -243,7 +245,7 @@ export default function Step6Review({ navigation, route }) {
       } else {
         setError('Something went wrong. Please try again.');
       }
-      setLoading(false);
+      hideLoader();
     }
   };
 

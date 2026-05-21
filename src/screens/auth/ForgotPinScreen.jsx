@@ -3,28 +3,29 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  ActivityIndicator, Image,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons }       from '@expo/vector-icons';
 import { useAuth }        from '../../context/AuthContext';
 import { useTheme }       from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import AnimatedInput      from '../../components/AnimatedInput';
 
 export default function ForgotPinScreen({ onBack, onComplete }) {
   const { user, login, resetPin } = useAuth();
   const { theme, isDark } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
   const [password, setPassword] = useState('');
   const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
 
   const handleVerify = async () => {
     if (!password) { setError('Please enter your password.'); return; }
     setError('');
-    setLoading(true);
+    showLoader();
     try {
       await login(user.email, password);
       await resetPin();
@@ -32,7 +33,7 @@ export default function ForgotPinScreen({ onBack, onComplete }) {
     } catch (e) {
       setError('Incorrect password. Please try again.');
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -88,14 +89,10 @@ export default function ForgotPinScreen({ onBack, onComplete }) {
 
         <TouchableOpacity
           onPress={handleVerify}
-          disabled={loading}
           style={[s.btn, { backgroundColor: theme.primary }]}
           activeOpacity={0.85}
         >
-          {loading
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={s.btnText}>Verify & Reset PIN</Text>
-          }
+          {<Text style={s.btnText}>Verify & Reset PIN</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

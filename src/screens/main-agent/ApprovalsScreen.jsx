@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Alert, ActivityIndicator, Linking,
+  RefreshControl, Alert, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
@@ -43,13 +44,13 @@ function SkeletonAgentCard({ theme }) {
 
 export default function ApprovalsScreen() {
   const { theme, isDark } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
 
   const [agents,     setAgents]     = useState([]);
   const [filter,     setFilter]     = useState('Pending');
   const [refreshing, setRefreshing] = useState(false);
   const [loading,    setLoading]    = useState(true);
-  const [actionLoad, setActionLoad] = useState(null);
-
+  
   const FILTERS = ['Pending', 'Approved', 'Rejected'];
 
   useEffect(() => {
@@ -67,13 +68,13 @@ export default function ApprovalsScreen() {
   const pendingCount = agents.filter(a => a.status === 'pending').length;
 
   const handleApprove = async (agent) => {
-    setActionLoad(agent.id + '_approve');
+    showLoader();
     try {
       await updateDoc(doc(db, 'agents', agent.id), { status: 'approved', approvedAt: Timestamp.now() });
     } catch (e) {
       Alert.alert('Error', 'Failed to approve agent.');
     } finally {
-      setActionLoad(null);
+      showLoader();
     }
   };
 
@@ -87,7 +88,7 @@ export default function ApprovalsScreen() {
   };
 
   const doReject = async (agent, reason) => {
-    setActionLoad(agent.id + '_reject');
+    showLoader();
     try {
       await updateDoc(doc(db, 'agents', agent.id), {
         status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
@@ -95,7 +96,7 @@ export default function ApprovalsScreen() {
     } catch (e) {
       Alert.alert('Error', 'Failed to reject agent.');
     } finally {
-      setActionLoad(null);
+      showLoader();
     }
   };
 
@@ -253,9 +254,7 @@ export default function ApprovalsScreen() {
                     style={[s.btnFilled, { backgroundColor: '#C8102E' }]}
                     activeOpacity={0.85}
                   >
-                    {actionLoad === agent.id + '_approve'
-                      ? <ActivityIndicator size="small" color="#fff" />
-                      : <Text style={s.btnFilledText}>Approve</Text>
+                    {<Text style={s.btnFilledText}>Approve</Text>
                     }
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -263,9 +262,7 @@ export default function ApprovalsScreen() {
                     style={[s.btnOutline, { borderColor: '#C8102E' }]}
                     activeOpacity={0.75}
                   >
-                    {actionLoad === agent.id + '_reject'
-                      ? <ActivityIndicator size="small" color="#C8102E" />
-                      : <Text style={[s.btnOutlineText, { color: '#C8102E' }]}>Reject</Text>
+                    {<Text style={[s.btnOutlineText, { color: '#C8102E' }]}>Reject</Text>
                     }
                   </TouchableOpacity>
                 </View>

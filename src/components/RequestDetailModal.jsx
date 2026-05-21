@@ -2,11 +2,12 @@
 import React, { useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  Animated, PanResponder, ScrollView, Alert, ActivityIndicator,
+  Animated, PanResponder, ScrollView, Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
 import { NETWORK_COLORS, NETWORK_WALLETS } from '../constants/networks';
@@ -30,8 +31,8 @@ export default function RequestDetailModal({
   request, visible, onClose, role = 'sub-agent', onRetry,
 }) {
   const { theme, lang } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
   const { user }        = useAuth();
-  const [loading, setLoading] = React.useState(false);
 
   const translateY     = useRef(new Animated.Value(600)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -86,26 +87,26 @@ export default function RequestDetailModal({
   };
 
   const handleApprove = async () => {
-    setLoading(true);
+    showLoader();
     try {
       await updateRequestStatus(request.id, 'approved', user.uid);
       onClose();
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
   const handleProcess = async () => {
-    setLoading(true);
+    showLoader();
     try {
       await createTransaction(request, user.uid);
       onClose();
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -119,14 +120,14 @@ export default function RequestDetailModal({
           text: 'Reject',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
+            showLoader();
             try {
               await updateRequestStatus(request.id, 'rejected', user.uid);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
             } finally {
-              setLoading(false);
+              hideLoader();
             }
           },
         },
@@ -144,14 +145,14 @@ export default function RequestDetailModal({
           text: 'Cancel Request',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
+            showLoader();
             try {
               await updateRequestStatus(request.id, 'rejected', user.uid);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
             } finally {
-              setLoading(false);
+              hideLoader();
             }
           },
         },
@@ -313,9 +314,7 @@ export default function RequestDetailModal({
                 disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}
               >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.actionBtnText}>Cancel Request</Text>
+                {<Text style={styles.actionBtnText}>Cancel Request</Text>
                 }
               </TouchableOpacity>
             )}
@@ -325,9 +324,7 @@ export default function RequestDetailModal({
                 disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: '#0891B2' }]}
               >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.actionBtnText}>Approve</Text>
+                {<Text style={styles.actionBtnText}>Approve</Text>
                 }
               </TouchableOpacity>
             )}
@@ -338,9 +335,7 @@ export default function RequestDetailModal({
                 disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: theme.primary }]}
               >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.actionBtnText}>Process Transfer</Text>
+                {<Text style={styles.actionBtnText}>Process Transfer</Text>
                 }
               </TouchableOpacity>
             )}
