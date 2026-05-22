@@ -2,71 +2,39 @@
 // Two exports:
 //   <ScreenLoader />     — cold start fullscreen: spinning S logo, no blur
 //   <ButtonDots color /> — inline 3-dot bounce for button loading states
-//
-// NOTE: This is a temporary pure-RN implementation. The final version
-// should use react-native-webview + spinnerHtml.js (exact HTML animation)
-// once a custom dev build is set up. See HANDOFF_SESSION4.md.
 
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Animated, StyleSheet, Easing } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
-
-const LOGO     = require('../../assets/images/SilverS.png');
-const DURATION = 2400;
-const SIZE     = 110;
+import { SPINNER_HTML } from './spinnerHtml';
 
 // ─── Screen Loader ─────────────────────────────────────────────────────────
 
 export function ScreenLoader() {
   const { theme, isDark } = useTheme();
-  const spinAnim  = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const webRef = useRef(null);
 
+  const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
+
+  // Re-send theme if user switches dark/light while loader is mounted
   useEffect(() => {
-    const spin = Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1, duration: DURATION,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      })
-    );
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1, duration: DURATION / 2,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0, duration: DURATION / 2,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-      ])
-    );
-    spin.start();
-    pulse.start();
-    return () => { spin.stop(); pulse.stop(); };
-  }, []);
-
-  const rotate  = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const opacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
-  const shadow  = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
-  const shadowO = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] });
+    webRef.current?.postMessage(isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   return (
     <View style={[s.root, { backgroundColor: theme.bg }]}>
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        <Animated.View style={{
-          opacity,
-          shadowColor:   isDark ? '#ffffff' : '#000000',
-          shadowOffset:  { width: 0, height: 0 },
-          shadowRadius:  shadow,
-          shadowOpacity: shadowO,
-        }}>
-          <Image source={LOGO} style={s.logo} resizeMode="contain" />
-        </Animated.View>
-      </Animated.View>
+      <WebView
+        ref={webRef}
+        source={{ html: SPINNER_HTML }}
+        style={s.webview}
+        scrollEnabled={false}
+        bounces={false}
+        overScrollMode="never"
+        backgroundColor="transparent"
+        androidLayerType="hardware"
+        onLoad={onLoad}
+      />
     </View>
   );
 }
@@ -105,6 +73,6 @@ export function ButtonDots({ color = '#fff', size = 6 }) {
 
 const s = StyleSheet.create({
   root:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo:    { width: SIZE, height: SIZE },
+  webview: { width: 220, height: 220, backgroundColor: 'transparent' },
   dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 20 },
 });
