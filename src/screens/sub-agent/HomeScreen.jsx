@@ -15,18 +15,14 @@ import {
   collection, query, where, orderBy, limit, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { NETWORK_COLORS, NETWORK_TEXT_COLORS, NETWORK_SHORT } from '../../constants/networks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_H       = 210;
 const SLIDE_INTERVAL = 3500;
 const TRANSITION_MS  = 640; // must match scrollTo animation duration
 
-const NETWORKS = {
-  Voda:    { color: '#E40000', short: 'VOD' },
-  Yas:     { color: '#0070B8', short: 'YAS' },
-  Airtel:  { color: '#FF0000', short: 'AIR' },
-  Halotel: { color: '#D4A017', short: 'HAL' },
-};
+// Network config imported from constants/networks.js
 
 const FILLER_REQUESTS = [
   { id: 'filler-1', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', _filler: true },
@@ -36,8 +32,8 @@ const FILLER_REQUESTS = [
 
 const FILLER_NETWORKS = [
   { name: 'Voda',    color: '#E40000', volume: 350000 },
-  { name: 'Airtel',  color: '#FF0000', volume: 230000 },
-  { name: 'Halotel', color: '#D4A017', volume: 120000 },
+  { name: 'Airtel',  color: '#FFFB14', volume: 230000 },
+  { name: 'Halotel', color: '#FF9B17', volume: 120000 },
   { name: 'Yas',     color: '#0070B8', volume:  80000 },
 ];
 
@@ -155,15 +151,21 @@ function BannerCard({
         {latestCompleted ? (
           <>
             <View style={s.routeRow}>
-              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.sourceNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}</Text>
+              <View style={[s.netBadge, { backgroundColor: NETWORK_COLORS[latestCompleted.sourceNetwork] ?? '#fff' }]}>
+                <Text style={[s.netBadgeText, { color: NETWORK_TEXT_COLORS[latestCompleted.sourceNetwork] ?? '#fff' }]} numberOfLines={1}>
+                  {NETWORK_SHORT[latestCompleted.sourceNetwork] ?? latestCompleted.sourceNetwork}
+                </Text>
               </View>
               <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
-              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
+              <View style={[s.netBadge, { backgroundColor: NETWORK_COLORS[latestCompleted.destNetwork] ?? '#fff' }]}>
+                <Text style={[s.netBadgeText, { color: NETWORK_TEXT_COLORS[latestCompleted.destNetwork] ?? '#fff' }]} numberOfLines={1}>
+                  {NETWORK_SHORT[latestCompleted.destNetwork] ?? latestCompleted.destNetwork}
+                </Text>
               </View>
-              <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
             </View>
+            <Text style={s.slideAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+              {fmt(Number(latestCompleted.amount) || 0)}
+            </Text>
             <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
             <View style={s.completedPill}>
               <Ionicons name="checkmark-circle" size={13} color="#16A34A" />

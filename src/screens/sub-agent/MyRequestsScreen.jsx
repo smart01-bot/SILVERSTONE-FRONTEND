@@ -21,12 +21,7 @@ import {
 import { db } from '../../config/firebase';
 import { USE_MOCK } from '../../config/dev';
 
-const NETWORK_COLORS = {
-  Voda:    '#E40000',
-  Yas:     '#0070B8',
-  Airtel:  '#FF0000',
-  Halotel: '#D4A017',
-};
+import { NETWORK_COLORS, NETWORK_TEXT_COLORS } from '../../constants/networks';
 
 const MOCK_REQUESTS = [
   { id: 'r1', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },

@@ -13,12 +13,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import Constants from 'expo-constants';
 
-const NETWORK_COLORS = {
-  Voda:    '#E40000',
-  Yas:     '#0070B8',
-  Airtel:  '#FF0000',
-  Halotel: '#D4A017',
-};
+import { NETWORK_COLORS, NETWORK_TEXT_COLORS } from '../../constants/networks';
 
 export default function ProfileScreen({ navigation }) {
   const { user, profile, logout } = useAuth();

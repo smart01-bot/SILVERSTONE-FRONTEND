@@ -142,9 +142,10 @@ export default function Step6Review({ navigation, route }) {
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
-  const [agreed, setAgreed]   = useState(false);
-  const [error, setError]     = useState('');
-  const [burst, setBurst]     = useState(false);
+  const [agreed,   setAgreed]  = useState(false);
+  const [error,    setError]   = useState('');
+  const [burst,    setBurst]   = useState(false);
+  const [loading,  setLoading] = useState(false);
 
   // Guard: AppNavigator tears down this component the moment Firebase auth
   // state fires. Without this, handleSubmit continues running after unmount.
@@ -194,6 +195,8 @@ export default function Step6Review({ navigation, route }) {
     setBurst(false);
     setTimeout(() => setBurst(true), 10);
 
+    setLoading(true);
+    setLoading(true);
     showLoader();
     setError('');
 
@@ -245,6 +248,8 @@ export default function Step6Review({ navigation, route }) {
       } else {
         setError('Something went wrong. Please try again.');
       }
+      setLoading(false);
+      setLoading(false);
       hideLoader();
     }
   };

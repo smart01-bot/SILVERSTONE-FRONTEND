@@ -22,8 +22,8 @@ const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
 const NETWORK_COLORS = {
   Voda:    '#E40000',
   Yas:     '#0070B8',
-  Airtel:  '#FF0000',
-  Halotel: '#D4A017',
+  Airtel:  '#FFFB14',
+  Halotel: '#FF9B17',
 };
 
 export default function NewRequestScreen({ navigation, route }) {
@@ -279,7 +279,7 @@ export default function NewRequestScreen({ navigation, route }) {
 
           <PressableScale
             onPress={handleSubmit}
-            style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
+            style={[s.submitBtn, { backgroundColor: theme.primary }]}
             scaleDown={0.97}
           >
             {<Text style={s.submitText}>{tr('submitRequest')}</Text>}

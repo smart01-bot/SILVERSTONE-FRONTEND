@@ -16,8 +16,8 @@ import { db } from '../../config/firebase';
 const NETWORKS = [
   { name: 'Voda',    wallet: 'M-Pesa',       color: '#E40000', short: 'VOD' },
   { name: 'Yas',     wallet: 'Mixx',         color: '#0070B8', short: 'YAS' },
-  { name: 'Airtel',  wallet: 'Airtel Money', color: '#FF0000', short: 'AIR' },
-  { name: 'Halotel', wallet: 'Halopesa',     color: '#D4A017', short: 'HAL' },
+  { name: 'Airtel',  wallet: 'Airtel Money', color: '#FFFB14', short: 'AIR' },
+  { name: 'Halotel', wallet: 'Halopesa',     color: '#FF9B17', short: 'HAL' },
 ];
 
 export default function NetworksScreen({ navigation }) {
