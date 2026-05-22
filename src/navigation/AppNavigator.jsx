@@ -77,18 +77,19 @@ export default function AppNavigator() {
     return <ScreenLoader />;
   }
 
-  // No user
+  // No user — go straight to RoleSelect (Splash already showed at top)
   if (!user) {
     return (
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <AuthNavigator />
+        <AuthNavigator initialRoute="RoleSelect" />
       </NavigationContainer>
     );
   }
 
   // Profile loading
+  // Profile still fetching — show blank bg, login overlay already handled the visual
   if (!profile) {
-    return <ScreenLoader />;
+    return <View style={[styles.root, { backgroundColor: theme.bg }]} />;
   }
 
   // Pending or rejected

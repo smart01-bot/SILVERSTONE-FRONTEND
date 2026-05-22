@@ -1,13 +1,12 @@
 // src/context/LoaderContext.jsx
-// Global overlay loader — blurs whatever screen is behind it and shows
-// the spinning Silverstone S in the foreground.
+// Global overlay loader — blurs the screen behind it and shows the spinning S.
 //
 // Usage in any screen:
 //   const { showLoader, hideLoader } = useLoader();
 //   showLoader();   // before async work
-//   hideLoader();   // in finally block
+//   hideLoader();   // in finally {}
 
-import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
@@ -15,7 +14,6 @@ import { useTheme } from './ThemeContext';
 import { SPINNER_HTML } from '../components/spinnerHtml';
 
 const LoaderContext = createContext({ showLoader: () => {}, hideLoader: () => {} });
-
 export const useLoader = () => useContext(LoaderContext);
 
 export function LoaderProvider({ children }) {
@@ -24,26 +22,25 @@ export function LoaderProvider({ children }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const webRef   = useRef(null);
 
+  const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
+
+  // Re-send theme if user switches dark/light while overlay is mounted
+  useEffect(() => {
+    webRef.current?.postMessage(isDark ? 'dark' : 'light');
+  }, [isDark]);
+
   const showLoader = useCallback(() => {
     setVisible(true);
     Animated.timing(fadeAnim, {
-      toValue:         1,
-      duration:        180,
-      useNativeDriver: true,
+      toValue: 1, duration: 180, useNativeDriver: true,
     }).start();
   }, []);
 
   const hideLoader = useCallback(() => {
     Animated.timing(fadeAnim, {
-      toValue:         0,
-      duration:        220,
-      useNativeDriver: true,
+      toValue: 0, duration: 220, useNativeDriver: true,
     }).start(() => setVisible(false));
   }, []);
-
-  const onWebViewLoad = () => {
-    webRef.current?.postMessage(isDark ? 'dark' : 'light');
-  };
 
   return (
     <LoaderContext.Provider value={{ showLoader, hideLoader }}>
@@ -54,15 +51,12 @@ export function LoaderProvider({ children }) {
           style={[StyleSheet.absoluteFillObject, s.overlay, { opacity: fadeAnim }]}
           pointerEvents="box-none"
         >
-          {/* Frosted glass blur over whatever is behind */}
           <BlurView
             intensity={60}
             tint={isDark ? 'dark' : 'light'}
             style={StyleSheet.absoluteFillObject}
           />
-
-          {/* Spinning S dead centre */}
-          <View style={s.spinnerWrap}>
+          <View style={s.center}>
             <WebView
               ref={webRef}
               source={{ html: SPINNER_HTML }}
@@ -70,10 +64,9 @@ export function LoaderProvider({ children }) {
               scrollEnabled={false}
               bounces={false}
               overScrollMode="never"
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
               backgroundColor="transparent"
-              onLoad={onWebViewLoad}
+              androidLayerType="hardware"
+              onLoad={onLoad}
             />
           </View>
         </Animated.View>
@@ -83,18 +76,7 @@ export function LoaderProvider({ children }) {
 }
 
 const s = StyleSheet.create({
-  overlay: {
-    zIndex:   9999,
-    elevation: 9999,
-  },
-  spinnerWrap: {
-    flex:            1,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-  webview: {
-    width:           220,
-    height:          220,
-    backgroundColor: 'transparent',
-  },
+  overlay: { zIndex: 9999, elevation: 9999 },
+  center:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  webview: { width: 220, height: 220, backgroundColor: 'transparent' },
 });

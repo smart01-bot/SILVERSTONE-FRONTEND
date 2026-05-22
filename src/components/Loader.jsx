@@ -1,9 +1,7 @@
 // src/components/Loader.jsx
 // Two exports:
-//   <ScreenLoader />     — cold start only: fullscreen spinning S, no blur
+//   <ScreenLoader />     — cold start fullscreen: spinning S logo, no blur
 //   <ButtonDots color /> — inline 3-dot bounce for button loading states
-//
-// For the global blur overlay use LoaderContext: useLoader()
 
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
@@ -11,15 +9,18 @@ import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import { SPINNER_HTML } from './spinnerHtml';
 
-// ─── Screen Loader (cold start only) ───────────────────────────────────────
+// ─── Screen Loader ─────────────────────────────────────────────────────────
 
 export function ScreenLoader() {
   const { theme, isDark } = useTheme();
   const webRef = useRef(null);
 
-  const onLoad = () => {
+  const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
+
+  // Re-send theme if user switches dark/light while loader is mounted
+  useEffect(() => {
     webRef.current?.postMessage(isDark ? 'dark' : 'light');
-  };
+  }, [isDark]);
 
   return (
     <View style={[s.root, { backgroundColor: theme.bg }]}>
@@ -30,9 +31,8 @@ export function ScreenLoader() {
         scrollEnabled={false}
         bounces={false}
         overScrollMode="never"
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
         backgroundColor="transparent"
+        androidLayerType="hardware"
         onLoad={onLoad}
       />
     </View>
@@ -61,16 +61,11 @@ export function ButtonDots({ color = '#fff', size = 6 }) {
   return (
     <View style={s.dotsRow}>
       {dots.map((dot, i) => (
-        <Animated.View
-          key={i}
-          style={{
-            width:           size,
-            height:          size,
-            borderRadius:    size / 2,
-            backgroundColor: color,
-            transform:       [{ translateY: dot }],
-          }}
-        />
+        <Animated.View key={i} style={{
+          width: size, height: size, borderRadius: size / 2,
+          backgroundColor: color,
+          transform: [{ translateY: dot }],
+        }} />
       ))}
     </View>
   );
