@@ -7,7 +7,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useLoader }      from '../../context/LoaderContext';
+import { useLoader } from '../context/LoaderContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
 import { NETWORK_COLORS, NETWORK_WALLETS } from '../constants/networks';
