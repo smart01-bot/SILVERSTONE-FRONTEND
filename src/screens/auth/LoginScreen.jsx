@@ -33,6 +33,8 @@ export default function LoginScreen({ navigation, route }) {
     showLoader();
     try {
       await login(email.trim(), password);
+      // Don't hideLoader() on success — overlay stays up while AppNavigator
+      // switches underneath. PinEntryScreen / PinSetupScreen will fade it out.
     } catch (e) {
       setError(
         e.message
@@ -42,7 +44,6 @@ export default function LoginScreen({ navigation, route }) {
           ?.replace('(auth/wrong-password).', 'Incorrect password.')
           ?? 'Login failed. Please try again.'
       );
-    } finally {
       hideLoader();
     }
   };

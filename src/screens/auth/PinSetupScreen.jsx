@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader } from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 
 // ── Animated PIN dot ──────────────────────────────────────────────────────────
@@ -32,6 +33,12 @@ function PinDot({ filled }) {
 export default function PinSetupScreen({ onComplete }) {
   const { savePin, profile } = useAuth();
   const { theme, isDark }    = useTheme();
+  const { hideLoader }       = useLoader();
+
+  useEffect(() => {
+    const t = setTimeout(() => hideLoader(), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   const [pin,      setPin]      = useState('');
   const [firstPin, setFirstPin] = useState('');

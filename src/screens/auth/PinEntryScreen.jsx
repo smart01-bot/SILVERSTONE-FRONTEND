@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLoader } from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { checkLockout, recordFailedAttempt, clearLockout } from '../../utils/pinLockout';
 
@@ -38,6 +39,7 @@ export default function PinEntryScreen({
 }) {
   const { verifyPin, profile, logout } = useAuth();
   const { theme, isDark } = useTheme();
+  const { hideLoader } = useLoader();
 
   const [pin,           setPin]           = useState('');
   const [error,         setError]         = useState('');
@@ -50,9 +52,11 @@ export default function PinEntryScreen({
   const timerRef  = useRef(null);
 
   useEffect(() => {
+    // Fade out the login overlay to reveal this screen (cross-fade effect)
+    const t = setTimeout(() => hideLoader(), 50);
     checkLockoutStatus();
     checkBiometrics();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { clearTimeout(t); if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
   const checkLockoutStatus = async () => {
