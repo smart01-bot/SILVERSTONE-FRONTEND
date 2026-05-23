@@ -1,5 +1,5 @@
 // src/components/RequestDetailModal.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
   Animated, PanResponder, ScrollView, Alert,
@@ -7,10 +7,10 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useLoader }      from '../../context/LoaderContext';
+import { useLoader } from '../context/LoaderContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
-import { NETWORK_COLORS, NETWORK_TEXT_COLORS, NETWORK_WALLETS } from '../constants/networks';
+import { NETWORK_COLORS, NETWORK_WALLETS } from '../constants/networks';
 import { timeAgo } from '../utils/time';
 import { updateRequestStatus, createTransaction } from '../utils/firestore';
 
@@ -32,7 +32,6 @@ export default function RequestDetailModal({
 }) {
   const { theme, lang } = useTheme();
   const { showLoader, hideLoader } = useLoader();
-  const [loading, setLoading] = useState(false);
   const { user }        = useAuth();
 
   const translateY     = useRef(new Animated.Value(600)).current;
@@ -88,7 +87,6 @@ export default function RequestDetailModal({
   };
 
   const handleApprove = async () => {
-    setLoading(true);
     showLoader();
     try {
       await updateRequestStatus(request.id, 'approved', user.uid);
@@ -96,13 +94,11 @@ export default function RequestDetailModal({
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      setLoading(false);
       hideLoader();
     }
   };
 
   const handleProcess = async () => {
-    setLoading(true);
     showLoader();
     try {
       await createTransaction(request, user.uid);
@@ -110,7 +106,6 @@ export default function RequestDetailModal({
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      setLoading(false);
       hideLoader();
     }
   };
@@ -125,16 +120,14 @@ export default function RequestDetailModal({
           text: 'Reject',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
-    showLoader();
+            showLoader();
             try {
               await updateRequestStatus(request.id, 'rejected', user.uid);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
             } finally {
-              setLoading(false);
-      hideLoader();
+              hideLoader();
             }
           },
         },
@@ -152,16 +145,14 @@ export default function RequestDetailModal({
           text: 'Cancel Request',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
-    showLoader();
+            showLoader();
             try {
               await updateRequestStatus(request.id, 'rejected', user.uid);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
             } finally {
-              setLoading(false);
-      hideLoader();
+              hideLoader();
             }
           },
         },
