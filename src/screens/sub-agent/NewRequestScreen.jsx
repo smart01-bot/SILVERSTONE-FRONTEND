@@ -15,21 +15,20 @@ import { fonts, spacing, radius } from '../../constants/theme';
 import AnimatedInput  from '../../components/AnimatedInput';
 import PressableScale from '../../components/PressableScale';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
-import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
-const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
+const NETWORKS = ['Vodacom', 'Airtel', 'Halotel', 'Yas'];
 const NETWORK_COLORS = {
-  Voda:    '#E40000',
-  Yas:     '#0070B8',
+  Vodacom: '#E40000',
   Airtel:  '#FFFB14',
   Halotel: '#FF9B17',
+  Yas:     '#0070B8',
 };
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { theme, tr }     = useTheme();
-  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.uid, profile?.name);
+  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.id, profile?.name ?? profile?.username);
 
   const prefill = route?.params?.prefill;
 
@@ -76,8 +75,8 @@ export default function NewRequestScreen({ navigation, route }) {
     showLoader();
 
     const requestData = {
-      agentId:       user.uid,
-      agentName:     profile?.name ?? 'Agent',
+      agentId:       user.id,
+      agentName:     profile?.name ?? profile?.username ?? 'Agent',
       sourceNetwork, destNetwork, sourcePhone, destPhone,
       amount:        Number(amount.replace(/,/g, '')),
       urgent,
@@ -96,18 +95,19 @@ export default function NewRequestScreen({ navigation, route }) {
         return;
       }
 
-      // Online — write directly to Firestore
-      const q    = query(collection(db, 'requests'), where('status', '==', 'pending'));
-      const snap = await getDocs(q);
-      const pos  = snap.size + 1;
-      await addDoc(collection(db, 'requests'), {
-        ...requestData,
-        status:        'pending',
-        queuePosition: pos,
-        createdAt:     Timestamp.now(),
+      // Online — submit to backend API
+      const { request, queuePosition } = await api.post('/api/requests/submit', {
+        subAgentId:            user.id,
+        subagent_name:         profile?.name ?? profile?.username ?? 'Agent',
+        requested_network:     destNetwork,
+        source_network:        sourceNetwork,
+        requested_phoneNumber: destPhone,
+        source_phoneNumber:    sourcePhone,
+        amount:                Number(amount.replace(/,/g, '')),
+        urgency:               urgent,
       });
       navigation.replace('RequestSuccess', {
-        queuePosition: pos,
+        queuePosition,
         sourceNetwork, destNetwork,
         amount: requestData.amount,
         queued: false,
@@ -279,7 +279,7 @@ export default function NewRequestScreen({ navigation, route }) {
 
           <PressableScale
             onPress={handleSubmit}
-            style={[s.submitBtn, { backgroundColor: theme.primary }]}
+            style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
             scaleDown={0.97}
           >
             {<Text style={s.submitText}>{tr('submitRequest')}</Text>}

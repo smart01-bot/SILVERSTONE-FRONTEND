@@ -46,7 +46,7 @@ export default function AppNavigator() {
       setPinExists(exists);
       setChecking(false);
     });
-  }, [user?.uid, profile?.pinSet, profile?.status]);
+  }, [user?.id, profile?.pin_set, profile?.status]);
 
   useEffect(() => {
     if (sessionLocked) {

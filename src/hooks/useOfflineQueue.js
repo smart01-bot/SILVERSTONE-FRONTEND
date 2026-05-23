@@ -1,13 +1,17 @@
+// src/hooks/useOfflineQueue.js
+// Offline-first request queue. Stores to AsyncStorage when offline,
+// drains to the backend API on reconnect.
+
 import { useEffect, useRef, useState } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { submitRequest } from '../utils/firestore';
+import api from '../config/api';
 
 const QUEUE_KEY = 'silverstone_offline_queue';
 
-export function useOfflineQueue(userId, agentName) {
-  const [isOnline, setIsOnline]   = useState(true);
-  const [syncing, setSyncing]     = useState(false);
+export function useOfflineQueue(agentId, agentName) {
+  const [isOnline,    setIsOnline]    = useState(true);
+  const [syncing,     setSyncing]     = useState(false);
   const [syncedCount, setSyncedCount] = useState(0);
   const prevOnline = useRef(true);
 
@@ -15,15 +19,11 @@ export function useOfflineQueue(userId, agentName) {
     const unsub = NetInfo.addEventListener((state) => {
       const online = !!(state.isConnected && state.isInternetReachable !== false);
       setIsOnline(online);
-
-      // Just came back online — trigger sync
-      if (online && !prevOnline.current) {
-        syncQueue();
-      }
+      if (online && !prevOnline.current) syncQueue();
       prevOnline.current = online;
     });
     return () => unsub();
-  }, [userId, agentName]);
+  }, [agentId, agentName]);
 
   const enqueue = async (requestData) => {
     try {
@@ -31,11 +31,11 @@ export function useOfflineQueue(userId, agentName) {
       const queue = raw ? JSON.parse(raw) : [];
       queue.push({ ...requestData, queuedAt: Date.now() });
       await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    } catch (_) {}
+    } catch {}
   };
 
   const syncQueue = async () => {
-    if (!userId) return;
+    if (!agentId) return;
     try {
       const raw = await AsyncStorage.getItem(QUEUE_KEY);
       if (!raw) return;
@@ -46,15 +46,23 @@ export function useOfflineQueue(userId, agentName) {
       let uploaded = 0;
       for (const item of queue) {
         try {
-          await submitRequest(userId, agentName ?? 'Agent', item);
+          await api.post('/api/requests/submit', {
+            subAgentId:           agentId,
+            subagent_name:        agentName ?? 'Agent',
+            requested_network:    item.destNetwork,
+            source_network:       item.sourceNetwork,
+            requested_phoneNumber: item.destPhone,
+            source_phoneNumber:   item.sourcePhone,
+            amount:               item.amount,
+            urgency:              item.urgent ?? false,
+          });
           uploaded++;
-        } catch (_) {}
+        } catch {}
       }
       await AsyncStorage.removeItem(QUEUE_KEY);
       setSyncedCount(uploaded);
-      // Auto-clear toast after 4s
       setTimeout(() => setSyncedCount(0), 4000);
-    } catch (_) {
+    } catch {
     } finally {
       setSyncing(false);
     }
@@ -64,9 +72,7 @@ export function useOfflineQueue(userId, agentName) {
     try {
       const raw = await AsyncStorage.getItem(QUEUE_KEY);
       return raw ? JSON.parse(raw).length : 0;
-    } catch {
-      return 0;
-    }
+    } catch { return 0; }
   };
 
   return { isOnline, syncing, syncedCount, enqueue, syncQueue, getPendingCount };
