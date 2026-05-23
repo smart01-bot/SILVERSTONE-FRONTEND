@@ -6,7 +6,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { useLoader }      from '../../context/LoaderContext';
+import { useLoader } from '../../context/LoaderContext';
+import { useAuth }   from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
 import { db } from '../../config/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -117,7 +118,6 @@ const particleStyles = StyleSheet.create({
 
 function FieldRow({ label, value, mono }) {
   const { theme } = useTheme();
-  const { showLoader, hideLoader } = useLoader();
   const s = fieldStyles(theme);
   return (
     <View style={s.row}>
@@ -139,13 +139,19 @@ const fieldStyles = (theme) => StyleSheet.create({
 export default function Step6Review({ navigation, route }) {
   const { theme } = useTheme();
   const { showLoader, hideLoader } = useLoader();
+  const { logout } = useAuth();
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
-  const [agreed,   setAgreed]  = useState(false);
-  const [error,    setError]   = useState('');
-  const [burst,    setBurst]   = useState(false);
-  const [loading,  setLoading] = useState(false);
+  const [agreed,  setAgreed]  = useState(false);
+  const [error,   setError]   = useState('');
+  const [burst,   setBurst]   = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignOut = async () => {
+    haptics.light();
+    try { await logout(); } catch {}
+  };
 
   // Guard: AppNavigator tears down this component the moment Firebase auth
   // state fires. Without this, handleSubmit continues running after unmount.
@@ -195,9 +201,8 @@ export default function Step6Review({ navigation, route }) {
     setBurst(false);
     setTimeout(() => setBurst(true), 10);
 
-    setLoading(true);
-    setLoading(true);
     showLoader();
+    setLoading(true);
     setError('');
 
     try {
@@ -249,7 +254,6 @@ export default function Step6Review({ navigation, route }) {
         setError('Something went wrong. Please try again.');
       }
       setLoading(false);
-      setLoading(false);
       hideLoader();
     }
   };
@@ -281,7 +285,12 @@ export default function Step6Review({ navigation, route }) {
           <View style={s.progressTrack}>
             <Animated.View style={[s.progressFill, { width: headerProgress }]} />
           </View>
-          <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
+          <View style={s.navRight}>
+            <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
+            <TouchableOpacity onPress={handleSignOut} style={s.signOutBtn} hitSlop={8}>
+              <Text style={s.signOutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
         <Text style={s.title}>Review & Submit</Text>
@@ -392,6 +401,9 @@ const styles = (theme, insets) => StyleSheet.create({
   },
   progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
   stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  navRight:     { marginLeft: 12, alignItems: 'flex-end', gap: 2 },
+  signOutBtn:   { paddingTop: 1 },
+  signOutText:  { fontSize: 10, fontFamily: 'Inter_600SemiBold', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5 },
   eyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
   title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
   subtitle:{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
