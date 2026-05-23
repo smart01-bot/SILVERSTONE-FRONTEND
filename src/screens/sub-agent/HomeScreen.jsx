@@ -321,14 +321,14 @@ export default function HomeScreen({ navigation }) {
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
     if (secs < 172800) return tr('yesterday');
-    return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
+    return (ts?.toDate ? ts.toDate() : new Date(ts)).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
   const hasRealData     = requests.length > 0;
   const displayRequests = hasRealData ? requests.slice(0, 4) : FILLER_REQUESTS;
 
   const realNetworkBreakdown = Object.entries(NETWORKS).map(([name, meta]) => {
-    const net = requests.filter(r => r.source_network ?? r.sourceNetwork === name && r.status === 'completed');
+    const net = requests.filter(r => (r.source_network ?? r.sourceNetwork) === name && r.status === 'completed');
     const vol = net.reduce((s, r) => s + (Number(r.amount) || 0), 0);
     return { name, ...meta, volume: vol };
   }).filter(n => n.volume > 0);
