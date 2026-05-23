@@ -5,8 +5,8 @@
   "scripts": {
     "start": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && expo start --lan",
     "start:clear": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && expo start --clear --lan",
-    "android": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && expo start --android",
-    "ios": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "build:android": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile preview --platform android",
     "build:dev": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile development --platform android"
   },

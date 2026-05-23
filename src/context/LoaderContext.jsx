@@ -5,13 +5,20 @@
 //   const { showLoader, hideLoader } = useLoader();
 //   showLoader();   // before async work
 //   hideLoader();   // in finally {}
+//
+// WebView spinner in dev builds + production. Pure-RN SpinningS in Expo Go.
 
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useTheme } from './ThemeContext';
 import { SPINNER_HTML } from '../components/spinnerHtml';
+import { SpinningS } from '../components/Loader';
+
+const IS_EXPO_GO =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 const LoaderContext = createContext({ showLoader: () => {}, hideLoader: () => {} });
 export const useLoader = () => useContext(LoaderContext);
@@ -24,7 +31,6 @@ export function LoaderProvider({ children }) {
 
   const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
 
-  // Re-send theme if user switches dark/light while overlay is mounted
   useEffect(() => {
     webRef.current?.postMessage(isDark ? 'dark' : 'light');
   }, [isDark]);
@@ -57,17 +63,21 @@ export function LoaderProvider({ children }) {
             style={StyleSheet.absoluteFillObject}
           />
           <View style={s.center}>
-            <WebView
-              ref={webRef}
-              source={{ html: SPINNER_HTML }}
-              style={s.webview}
-              scrollEnabled={false}
-              bounces={false}
-              overScrollMode="never"
-              backgroundColor="transparent"
-              androidLayerType="hardware"
-              onLoad={onLoad}
-            />
+            {IS_EXPO_GO ? (
+              <SpinningS size={72} />
+            ) : (
+              <WebView
+                ref={webRef}
+                source={{ html: SPINNER_HTML }}
+                style={s.webview}
+                scrollEnabled={false}
+                bounces={false}
+                overScrollMode="never"
+                backgroundColor="transparent"
+                androidLayerType="hardware"
+                onLoad={onLoad}
+              />
+            )}
           </View>
         </Animated.View>
       )}

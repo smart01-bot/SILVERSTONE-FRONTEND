@@ -2,12 +2,51 @@
 // Two exports:
 //   <ScreenLoader />     — cold start fullscreen: spinning S logo, no blur
 //   <ButtonDots color /> — inline 3-dot bounce for button loading states
+//
+// WebView spinner is used in dev builds + production.
+// Falls back to pure-RN SpinningS in Expo Go (WebView not available there).
 
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, Animated, Easing, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useTheme } from '../context/ThemeContext';
 import { SPINNER_HTML } from './spinnerHtml';
+
+const IS_EXPO_GO =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+// ─── Pure-RN fallback (Expo Go only) ───────────────────────────────────────
+
+export function SpinningS({ size = 72 }) {
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
+  const rotate = spin.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <Animated.Image
+      source={require('../../assets/images/SilverS.png')}
+      style={{ width: size, height: size, transform: [{ rotate }] }}
+      resizeMode="contain"
+    />
+  );
+}
 
 // ─── Screen Loader ─────────────────────────────────────────────────────────
 
@@ -17,24 +56,27 @@ export function ScreenLoader() {
 
   const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
 
-  // Re-send theme if user switches dark/light while loader is mounted
   useEffect(() => {
     webRef.current?.postMessage(isDark ? 'dark' : 'light');
   }, [isDark]);
 
   return (
     <View style={[s.root, { backgroundColor: theme.bg }]}>
-      <WebView
-        ref={webRef}
-        source={{ html: SPINNER_HTML }}
-        style={s.webview}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        backgroundColor="transparent"
-        androidLayerType="hardware"
-        onLoad={onLoad}
-      />
+      {IS_EXPO_GO ? (
+        <SpinningS size={72} />
+      ) : (
+        <WebView
+          ref={webRef}
+          source={{ html: SPINNER_HTML }}
+          style={s.webview}
+          scrollEnabled={false}
+          bounces={false}
+          overScrollMode="never"
+          backgroundColor="transparent"
+          androidLayerType="hardware"
+          onLoad={onLoad}
+        />
+      )}
     </View>
   );
 }
