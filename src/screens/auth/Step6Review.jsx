@@ -142,6 +142,7 @@ export default function Step6Review({ navigation, route }) {
   const haptics   = useHaptics();
 
   const [agreed, setAgreed]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [burst, setBurst]     = useState(false);
 
@@ -194,6 +195,7 @@ export default function Step6Review({ navigation, route }) {
     setTimeout(() => setBurst(true), 10);
 
     showLoader();
+    setLoading(true);
     setError('');
 
     try {
@@ -222,6 +224,7 @@ export default function Step6Review({ navigation, route }) {
       // AppNavigator detects profile.status === 'pending' → routes to PendingScreen automatically.
     } catch (e) {
       if (!isMounted.current) return;
+      setLoading(false);
       haptics.error();
       const msg = e?.message ?? '';
       if (msg.includes('email-already-in-use')) {

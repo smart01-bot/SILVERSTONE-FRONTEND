@@ -326,7 +326,7 @@ export default function Step4Business({ navigation, route }) {
                   />
                 </Animated.View>
               </View>
-              <View style={s.sliderStops} pointerEvents="box-none">
+              <View style={s.sliderStops}>
                 {FLOAT_STEPS.map((_, i) => (
                   <TouchableOpacity
                     key={i}
@@ -342,7 +342,7 @@ export default function Step4Business({ navigation, route }) {
                       },
                     ]}
                     onPress={() => handleSlider(i)}
-                    hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+                    hitSlop={{ top: 20, bottom: 20, left: 16, right: 16 }}
                   />
                 ))}
               </View>
