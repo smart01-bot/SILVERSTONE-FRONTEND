@@ -36,6 +36,7 @@
       ]
     ],
     "extra": {
+      "apiUrl": "https://silverstone-backend.onrender.com",
       "firebaseApiKey": "AIzaSyCvD5JbWjzEEF2CbG5r8_YkvoRaY3X9qpA",
       "firebaseAuthDomain": "silverstone-frontend.firebaseapp.com",
       "firebaseProjectId": "silverstone-frontend",

@@ -3,8 +3,9 @@
 // JWT is stored under a fixed key in SecureStore.
 
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8800';
+const BASE_URL = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:8800';
 const JWT_KEY  = 'silverstone_jwt';
 
 const getToken = () => SecureStore.getItemAsync(JWT_KEY);
