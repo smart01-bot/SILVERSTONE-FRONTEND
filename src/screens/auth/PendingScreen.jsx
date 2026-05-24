@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth }  from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
-import { getAuth } from 'firebase/auth';
+
 
 const TARGET_PCT   = 60;
 const ANIMATE_FROM = 25;
@@ -62,7 +62,7 @@ const orbitStyles = StyleSheet.create({
 
 export default function PendingScreen({ navigation }) {
   const { theme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
   const insets  = useSafeAreaInsets();
   const haptics = useHaptics();
 
@@ -76,8 +76,8 @@ export default function PendingScreen({ navigation }) {
   const stepsTranslate = useRef(STEPS.map(() => new Animated.Value(0))).current;
   const stepsOpacity   = useRef(STEPS.map(() => new Animated.Value(0))).current;
 
-  const auth  = getAuth();
-  const phone = auth.currentUser?.phoneNumber ?? '+255 ••• ••• •••';
+  
+  const phone = profile?.phone ?? '+255 ••• ••• •••';
   const maskedPhone = phone.replace(/(\+255\s?\d{3})\s?\d{3}\s?(\d{3})/, '$1 ••• $2');
 
   // JS driver — width, opacity

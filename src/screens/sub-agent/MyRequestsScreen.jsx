@@ -18,19 +18,19 @@ import api from '../../config/api';
 import { USE_MOCK } from '../../config/dev';
 
 const NETWORK_COLORS = {
-  Vodacom: '#E40000',
-  Airtel:  '#FFFB14',
-  Halotel: '#FF9B17',
+  Voda:    '#E40000',
   Yas:     '#0070B8',
+  Airtel:  '#FF0000',
+  Halotel: '#D4A017',
 };
 
 const MOCK_REQUESTS = [
-  { id: 'r1', agentId: 'mock', sourceNetwork: 'Vodacom',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },
+  { id: 'r1', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },
   { id: 'r2', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Yas',     amount: 75000,  status: 'pending',   createdAt: { toDate: () => new Date(Date.now() - 900_000)   } },
   { id: 'r3', agentId: 'mock', sourceNetwork: 'Yas',     destNetwork: 'Halotel', amount: 300000, status: 'rejected',  createdAt: { toDate: () => new Date(Date.now() - 86_400_000) } },
-  { id: 'r4', agentId: 'mock', sourceNetwork: 'Halotel', destNetwork: 'Vodacom',    amount: 500000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 7_200_000)  } },
-  { id: 'r5', agentId: 'mock', sourceNetwork: 'Vodacom',    destNetwork: 'Yas',     amount: 200000, status: 'approved',  createdAt: { toDate: () => new Date(Date.now() - 1_800_000)  } },
-  { id: 'r6', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Vodacom',    amount: 90000,  status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 43_200_000) } },
+  { id: 'r4', agentId: 'mock', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 500000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 7_200_000)  } },
+  { id: 'r5', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Yas',     amount: 200000, status: 'approved',  createdAt: { toDate: () => new Date(Date.now() - 1_800_000)  } },
+  { id: 'r6', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Voda',    amount: 90000,  status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 43_200_000) } },
 ];
 
 export default function MyRequestsScreen({ navigation }) {
@@ -52,21 +52,25 @@ export default function MyRequestsScreen({ navigation }) {
     { key: 'rejected',  label: tr('statusRejected')  },
   ];
 
-  const fetchRequests = async () => {
-    if (!user?.id) return;
-    if (USE_MOCK) { setRequests(MOCK_REQUESTS); setLoading(false); return; }
-    try {
-      const data = await api.get(`/api/agents/${user.id}/requests`);
-      setRequests(data);
-    } catch {} finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
+    if (!user?.id) return;
+
+    if (USE_MOCK) {
+      setRequests(MOCK_REQUESTS);
+      setLoading(false);
+      return;
+    }
+
+    const fetchRequests = async () => {
+      try {
+        const data = await api.get(`/api/agents/${user.id}/requests`);
+        const docs = Array.isArray(data) ? data : (data?.requests ?? []);
+        setRequests(docs);
+      } catch {}
+      finally { setLoading(false); }
+    };
+
     fetchRequests();
-    // Poll every 15s for request status updates
     const interval = setInterval(fetchRequests, 15_000);
     return () => clearInterval(interval);
   }, [user?.id]);
@@ -95,10 +99,8 @@ export default function MyRequestsScreen({ navigation }) {
       {
         text: tr('confirm'), style: 'destructive',
         onPress: async () => {
-          try {
-            await api.put(`/api/requests/${req.id}`, { status: 'cancelled' });
-            fetchRequests();
-          } catch (e) { Alert.alert(tr('error'), tr('error')); }
+          try { await api.put(`/api/requests/${req.id}`, { status: 'cancelled' }); }
+          catch (e) { Alert.alert(tr('error'), tr('error')); }
         },
       },
     ]);
@@ -107,10 +109,10 @@ export default function MyRequestsScreen({ navigation }) {
   const handleRetry = (req) => {
     navigation.navigate('NewRequest', {
       prefill: {
-        sourceNetwork: req.source_network ?? req.sourceNetwork,
-        destNetwork:   req.requested_network ?? req.destNetwork,
-        sourcePhone:   req.source_phonenumber ?? req.sourcePhone,
-        destPhone:     req.requested_phonenumber ?? req.destPhone,
+        sourceNetwork: (req.source_network ?? req.sourceNetwork),
+        destNetwork:   (req.dest_network   ?? req.destNetwork),
+        sourcePhone:   req.sourcePhone,
+        destPhone:     req.destPhone,
         amount:        req.amount,
       },
     });
@@ -144,7 +146,7 @@ export default function MyRequestsScreen({ navigation }) {
     return `TZS ${n}`;
   };
 
-  const onRefresh = () => { setRefreshing(true); fetchRequests(); };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
   const emptyConfig = () => {
     if (filter !== 'all') {
@@ -219,17 +221,17 @@ export default function MyRequestsScreen({ navigation }) {
               style={[s.card, {
                 backgroundColor: theme.surfaceAlt,
                 borderColor:     theme.border,
-                borderLeftColor: NETWORK_COLORS[req.source_network ?? req.sourceNetwork] ?? theme.border,
+                borderLeftColor: NETWORK_COLORS[(req.source_network ?? req.sourceNetwork)] ?? theme.border,
               }]}
               scaleDown={0.98}
             >
               <View style={s.cardTop}>
                 <View style={s.routeRow}>
-                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[req.source_network ?? req.sourceNetwork] ?? theme.muted }]} />
-                  <Text style={[s.network, { color: theme.text }]}>{req.source_network ?? req.sourceNetwork}</Text>
+                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[(req.source_network ?? req.sourceNetwork)] ?? theme.muted }]} />
+                  <Text style={[s.network, { color: theme.text }]}>{(req.source_network ?? req.sourceNetwork)}</Text>
                   <Ionicons name="arrow-forward" size={14} color={theme.textDim} />
-                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[req.requested_network ?? req.destNetwork] ?? theme.muted }]} />
-                  <Text style={[s.network, { color: theme.text }]}>{req.requested_network ?? req.destNetwork}</Text>
+                  <View style={[s.netDot, { backgroundColor: NETWORK_COLORS[(req.dest_network   ?? req.destNetwork)] ?? theme.muted }]} />
+                  <Text style={[s.network, { color: theme.text }]}>{(req.dest_network   ?? req.destNetwork)}</Text>
                 </View>
                 {req.urgent && (
                   <View style={s.urgentTag}>
@@ -250,7 +252,7 @@ export default function MyRequestsScreen({ navigation }) {
                 </View>
               </View>
 
-              <Text style={[s.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
+              <Text style={[s.time, { color: theme.textDim }]}>{timeAgo((req.created_at     ?? req.createdAt))}</Text>
 
               {req.status === 'pending' && (
                 <TouchableOpacity

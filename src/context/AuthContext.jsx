@@ -1,58 +1,33 @@
 // src/context/AuthContext.jsx
-// Auth via the Silverstone backend API. No Firebase.
-// JWT stored in SecureStore, sent as Bearer token on every request.
+// Full rewrite — no Firebase. JWT in SecureStore, all calls via api.js.
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api, { tokenStore } from '../config/api';
+import api from '../config/api';
 
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 min background → lock
-const LAST_ACTIVE_KEY = 'silverstone_last_active';
+const SESSION_TIMEOUT  = 5 * 60 * 1000; // 5 min
+const LAST_ACTIVE_KEY  = 'silverstone_last_active';
+const pinKey = (id) => `silverstone_pin_${id}`;
 
 const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
-  const [user,          setUser]          = useState(null); // agent object from API
-  const [profile,       setProfile]       = useState(null); // same as user, kept for nav compat
+  const [user,          setUser]          = useState(null); // decoded JWT payload {id, role}
+  const [profile,       setProfile]       = useState(null); // full agent object from /api/auth/me
   const [authLoading,   setAuthLoading]   = useState(true);
   const [sessionLocked, setSessionLocked] = useState(false);
 
-  const hasInitializedSession = useRef(false);
-  const profilePollRef        = useRef(null);
+  const profilePollRef = useRef(null);
 
-  // ── Helpers ───────────────────────────────────────────────
-  const pinKey = (id) => `silverstone_pin_${id}`;
-
-  const setAgent = useCallback((agent) => {
-    setUser(agent);
-    setProfile(agent);
-  }, []);
-
-  const clearAgent = useCallback(() => {
-    setUser(null);
-    setProfile(null);
-    setSessionLocked(false);
-    hasInitializedSession.current = false;
-  }, []);
-
-  // ── Poll profile every 30s (replaces Firestore onSnapshot) ─
-  const startProfilePoll = useCallback((id) => {
+  // ── Poll /api/auth/me every 30s ───────────────────────────
+  const startProfilePoll = (userId) => {
     stopProfilePoll();
-    profilePollRef.current = setInterval(async () => {
-      try {
-        const { agent } = await api.get('/api/auth/me');
-        setAgent(agent);
-      } catch {
-        // token expired or network error — stop polling, clear session
-        stopProfilePoll();
-        await tokenStore.delete();
-        clearAgent();
-      }
-    }, 30_000);
-  }, [setAgent, clearAgent]);
+    fetchProfile();
+    profilePollRef.current = setInterval(fetchProfile, 30_000);
+  };
 
   const stopProfilePoll = () => {
     if (profilePollRef.current) {
@@ -61,40 +36,29 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── App startup: try to restore session from SecureStore ──
-  useEffect(() => {
-    const restore = async () => {
-      try {
-        const token = await tokenStore.get();
-        if (!token) { setAuthLoading(false); return; }
-
-        const { agent } = await api.get('/api/auth/me');
-        setAgent(agent);
-
-        if (!hasInitializedSession.current) {
-          hasInitializedSession.current = true;
-          if (agent.pin_set) setSessionLocked(true);
-        }
-
-        startProfilePoll(agent.id);
-      } catch {
-        await tokenStore.delete();
-      } finally {
-        setAuthLoading(false);
+  const fetchProfile = async () => {
+    try {
+      const { agent } = await api.get('/api/auth/me');
+      setProfile(agent);
+    } catch (err) {
+      // 401 means token expired — log out
+      if (err.status === 401) {
+        await _clearSession();
       }
-    };
-    restore();
-    return () => stopProfilePoll();
-  }, []);
+    }
+  };
 
-  // ── AppState: lock after >5 min background ────────────────
+  // ── AppState: lock session after >5 min background ────────
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (nextState === 'active') {
         const saved   = await AsyncStorage.getItem(LAST_ACTIVE_KEY);
         const elapsed = saved ? Date.now() - parseInt(saved, 10) : 0;
-        if (elapsed > SESSION_TIMEOUT && user && profile?.pin_set) {
-          setSessionLocked(true);
+        if (elapsed > SESSION_TIMEOUT) {
+          setProfile(prof => {
+            if (prof?.pin_set) setSessionLocked(true);
+            return prof;
+          });
         }
         await AsyncStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
       } else {
@@ -102,34 +66,94 @@ export function AuthProvider({ children }) {
       }
     });
     return () => sub.remove();
-  }, [user, profile]);
+  }, []);
+
+  // ── Bootstrap: check for existing JWT on mount ────────────
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        const token = await api.getToken();
+        if (!token) {
+          setAuthLoading(false);
+          return;
+        }
+        // Validate token by hitting /me
+        const { agent } = await api.get('/api/auth/me');
+        // Decode payload for user object (id + role)
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser({ id: payload.id, role: payload.role });
+        setProfile(agent);
+        startProfilePoll(payload.id);
+      } catch {
+        await api.clearToken();
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    bootstrap();
+    return stopProfilePoll;
+  }, []);
+
+  // ── Internal session clear ────────────────────────────────
+  const _clearSession = async () => {
+    stopProfilePoll();
+    const uid = user?.id;
+    if (uid) {
+      try { await SecureStore.deleteItemAsync(pinKey(uid)); } catch {}
+    }
+    await api.clearToken();
+    await AsyncStorage.removeItem(LAST_ACTIVE_KEY);
+    setUser(null);
+    setProfile(null);
+    setSessionLocked(false);
+  };
 
   // ── Login ─────────────────────────────────────────────────
   const login = async (email, password) => {
     const { token, agent } = await api.post('/api/auth/login', { email, password });
-    await tokenStore.set(token);
-    setAgent(agent);
-    hasInitializedSession.current = false;
-    if (agent.pin_set) setSessionLocked(true);
-    startProfilePoll(agent.id);
+    await api.setToken(token);
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    setUser({ id: payload.id, role: payload.role });
+    setProfile(agent);
+    startProfilePoll(payload.id);
   };
 
   // ── Register ──────────────────────────────────────────────
-  const register = async (payload) => {
-    const { token, agent } = await api.post('/api/auth/register', payload);
-    await tokenStore.set(token);
-    setAgent(agent);
-    startProfilePoll(agent.id);
+  const register = async ({
+    username, name, phone, email, password,
+    networks = [], agentPhoneNumbers = [],
+    businessName, businessLocation, coordinates,
+    regNo, tin, nida, floatCapacity,
+    tinCertUrl, licenceCertUrl, selfieVerified = false,
+  }) => {
+    const { token, agent } = await api.post('/api/auth/register', {
+      username, name: name || username, phone, email, password,
+      networks, agentPhoneNumbers,
+      role: 'sub-agent',
+      businessName, businessLocation, coordinates,
+      regNo, tin, nida, floatCapacity,
+      tinCertUrl, licenceCertUrl, selfieVerified,
+    });
+    await api.setToken(token);
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    setUser({ id: payload.id, role: payload.role });
+    setProfile(agent);
+    startProfilePoll(payload.id);
     return agent;
   };
 
-  // ── PIN management (device-side, SecureStore) ─────────────
+  // ── Logout ────────────────────────────────────────────────
+  const logout = async () => {
+    try { await api.post('/api/auth/logout', {}); } catch {}
+    await _clearSession();
+  };
+
+  // ── PIN management ────────────────────────────────────────
   const savePin = async (pin) => {
     if (!user) throw new Error('Not authenticated');
     await SecureStore.setItemAsync(pinKey(user.id), pin);
-    await api.post('/api/auth/set-pin', {});           // flip pin_set flag on backend
+    await api.post('/api/auth/set-pin', {});
     setProfile(prev => prev ? { ...prev, pin_set: true } : prev);
-    setUser(prev => prev ? { ...prev, pin_set: true } : prev);
   };
 
   const verifyPin = async (pin) => {
@@ -137,7 +161,9 @@ export function AuthProvider({ children }) {
     try {
       const stored = await SecureStore.getItemAsync(pinKey(user.id));
       return stored === pin;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
 
   const checkPinExists = async () => {
@@ -145,7 +171,9 @@ export function AuthProvider({ children }) {
     try {
       const stored = await SecureStore.getItemAsync(pinKey(user.id));
       return !!stored && profile?.pin_set === true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
 
   const resetPin = async () => {
@@ -154,40 +182,23 @@ export function AuthProvider({ children }) {
       await SecureStore.deleteItemAsync(pinKey(user.id));
       await api.put(`/api/agents/${user.id}`, { pin_set: false });
       setProfile(prev => prev ? { ...prev, pin_set: false } : prev);
-      setUser(prev => prev ? { ...prev, pin_set: false } : prev);
     } catch {}
   };
 
   const unlockSession = () => setSessionLocked(false);
 
-  // ── Logout ────────────────────────────────────────────────
-  const logout = async () => {
-    stopProfilePoll();
-    try {
-      if (user?.id) await SecureStore.deleteItemAsync(pinKey(user.id));
-      await AsyncStorage.removeItem(LAST_ACTIVE_KEY);
-      await api.post('/api/auth/logout', {}).catch(() => {}); // best-effort
-    } catch {}
-    await tokenStore.delete();
-    clearAgent();
-  };
-
   // ── Password reset ────────────────────────────────────────
-  const requestPasswordReset = async (email) => {
-    return api.post('/api/auth/forgot-password', { email });
-  };
-
-  const confirmPasswordReset = async (resetToken, newPassword) => {
-    return api.post('/api/auth/reset-password', { resetToken, newPassword });
+  const resetPassword = async (email) => {
+    await api.post('/api/auth/forgot-password', { email });
   };
 
   return (
     <AuthContext.Provider value={{
       user, profile, authLoading,
       sessionLocked, unlockSession,
-      login, register, logout,
+      register, login, logout,
       savePin, verifyPin, checkPinExists, resetPin,
-      requestPasswordReset, confirmPasswordReset,
+      resetPassword,
     }}>
       {children}
     </AuthContext.Provider>

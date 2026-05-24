@@ -1,46 +1,50 @@
 // src/config/api.js
-// Central API client. All backend calls go through here.
-// JWT is stored in SecureStore and sent as a Bearer token.
+// Central API client — all screens use this, never raw fetch.
+// JWT is stored under a fixed key in SecureStore.
 
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8800';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8800';
+const JWT_KEY  = 'silverstone_jwt';
 
-const TOKEN_KEY = 'silverstone_access_token';
+const getToken = () => SecureStore.getItemAsync(JWT_KEY);
 
-export const tokenStore = {
-  get:    ()      => SecureStore.getItemAsync(TOKEN_KEY),
-  set:    (token) => SecureStore.setItemAsync(TOKEN_KEY, token),
-  delete: ()      => SecureStore.deleteItemAsync(TOKEN_KEY),
-};
+const request = async (method, path, body) => {
+  const token   = await getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-const api = async (path, options = {}) => {
-  const token = await tokenStore.get();
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers ?? {}),
-  };
-
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
     headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  const data = await res.json().catch(() => ({}));
+  // 204 No Content — nothing to parse
+  if (res.status === 204) return null;
+
+  const data = await res.json().catch(() => ({ error: res.statusText }));
 
   if (!res.ok) {
-    const message = data?.error ?? data?.errors?.[0]?.msg ?? `Request failed (${res.status})`;
-    throw Object.assign(new Error(message), { status: res.status, data });
+    const err = new Error(data?.error || data?.message || 'Request failed');
+    err.status = res.status;
+    err.data   = data;
+    throw err;
   }
 
   return data;
 };
 
-export const get    = (path, opts = {}) => api(path, { method: 'GET',    ...opts });
-export const post   = (path, body, opts = {}) => api(path, { method: 'POST',   body: JSON.stringify(body), ...opts });
-export const put    = (path, body, opts = {}) => api(path, { method: 'PUT',    body: JSON.stringify(body), ...opts });
-export const del    = (path, opts = {}) => api(path, { method: 'DELETE', ...opts });
+const api = {
+  get:  (path)        => request('GET',    path),
+  post: (path, body)  => request('POST',   path, body),
+  put:  (path, body)  => request('PUT',    path, body),
+  del:  (path)        => request('DELETE', path),
 
-export default { get, post, put, del, tokenStore, API_URL };
+  // Token lifecycle — called by AuthContext only
+  setToken:   (token) => SecureStore.setItemAsync(JWT_KEY, token),
+  clearToken: ()      => SecureStore.deleteItemAsync(JWT_KEY),
+  getToken,
+};
+
+export default api;

@@ -9,14 +9,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+
 import api from '../../config/api';
 import Constants from 'expo-constants';
 
 const NETWORK_COLORS = {
-  Vodacom: '#E40000',
-  Airtel:  '#FFFB14',
-  Halotel: '#FF9B17',
+  Voda:    '#E40000',
   Yas:     '#0070B8',
+  Airtel:  '#FF0000',
+  Halotel: '#D4A017',
 };
 
 export default function ProfileScreen({ navigation }) {
@@ -27,12 +28,12 @@ export default function ProfileScreen({ navigation }) {
   const [editValue, setEditValue] = useState('');
   const [saving,    setSaving]    = useState(false);
 
-  const initials = profile?.name ?? profile?.username
+  const initials = profile?.name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   const avatarColor = () => {
     const colors = ['#C8102E', '#0891B2', '#16A34A', '#7C3AED'];
-    return colors[(profile?.name ?? profile?.username?.charCodeAt(0) ?? 0) % colors.length];
+    return colors[(profile?.name?.charCodeAt(0) ?? 0) % colors.length];
   };
 
   const startEdit = (field, value) => { setEditing(field); setEditValue(value ?? ''); };
@@ -179,8 +180,8 @@ export default function ProfileScreen({ navigation }) {
           <View style={[s.avatar, { backgroundColor: avatarColor() + '20' }]}>
             <Text style={[s.avatarText, { color: avatarColor() }]}>{initials}</Text>
           </View>
-          <Text style={[s.name,  { color: theme.text }]}>{profile?.name ?? profile?.username ?? profile?.username ?? 'Agent'}</Text>
-          <Text style={[s.email, { color: theme.textDim }]}>{user?.email ?? ''}</Text>
+          <Text style={[s.name,  { color: theme.text }]}>{profile?.name ?? 'Agent'}</Text>
+          <Text style={[s.email, { color: theme.textDim }]}>{profile?.email ?? ''}</Text>
           {profile?.networks?.length > 0 && (
             <View style={s.chips}>
               {profile.networks.map(net => (
@@ -197,7 +198,7 @@ export default function ProfileScreen({ navigation }) {
 
         <View style={[s.section, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
           <Text style={[s.sectionTitle, { color: theme.textDim }]}>{tr('personalInfo').toUpperCase()}</Text>
-          <EditableRow label={tr('fullName')} field="name"             value={profile?.name ?? profile?.username} />
+          <EditableRow label={tr('fullName')} field="name"             value={profile?.name} />
           <EditableRow label={tr('phone')}    field="phone"            value={profile?.phone} />
           <EditableRow label={tr('location')} field="businessLocation" value={profile?.businessLocation} />
         </View>

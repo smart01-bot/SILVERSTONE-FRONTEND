@@ -6,9 +6,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { useLoader } from '../../context/LoaderContext';
+import { useLoader }      from '../../context/LoaderContext';
 import { useAuth }   from '../../context/AuthContext';
-import api from '../../config/api';
 import { useHaptics } from '../../hooks/useHaptics';
 
 const TOTAL_STEPS = 6;
@@ -116,6 +115,7 @@ const particleStyles = StyleSheet.create({
 
 function FieldRow({ label, value, mono }) {
   const { theme } = useTheme();
+  const { showLoader, hideLoader } = useLoader();
   const s = fieldStyles(theme);
   return (
     <View style={s.row}>
@@ -137,19 +137,13 @@ const fieldStyles = (theme) => StyleSheet.create({
 export default function Step6Review({ navigation, route }) {
   const { theme } = useTheme();
   const { showLoader, hideLoader } = useLoader();
-  const { logout, register } = useAuth();
+  const { register } = useAuth();
   const insets    = useSafeAreaInsets();
   const haptics   = useHaptics();
 
-  const [agreed,  setAgreed]  = useState(false);
-  const [error,   setError]   = useState('');
-  const [burst,   setBurst]   = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSignOut = async () => {
-    haptics.light();
-    try { await logout(); } catch {}
-  };
+  const [agreed, setAgreed]   = useState(false);
+  const [error, setError]     = useState('');
+  const [burst, setBurst]     = useState(false);
 
   // Guard: AppNavigator tears down this component the moment Firebase auth
   // state fires. Without this, handleSubmit continues running after unmount.
@@ -200,39 +194,32 @@ export default function Step6Review({ navigation, route }) {
     setTimeout(() => setBurst(true), 10);
 
     showLoader();
-    setLoading(true);
     setError('');
 
     try {
       if (!p.email || !p.password) throw new Error('Missing credentials');
 
       await register({
-        username:       p.name ?? p.email,
-        name:           p.name ?? '',
-        email:          p.email,
-        password:       p.password,
-        phone:          p.phone ?? '',
-        role:           'sub-agent',
-        networks:       p.networks ?? [],
-        agentPhoneNumbers: [],
-        businessName:      p.businessName ?? '',
-        businessLocation:  p.businessLocation ?? '',
-        coordinates:       p.coordinates ?? null,
-        regNo:             p.businessLicenceNumber ?? '',
-        tin:               p.businessTIN ?? '',
-        nida:              p.nida ?? '',
-        floatCapacity:     p.floatCapacity ?? 0,
-        tinCertUrl:        p.tinCertificateUrl ?? null,
-        licenceCertUrl:    p.licenceCertificateUrl ?? null,
-        selfieVerified:    p.selfieVerified ?? false,
+        username:         p.name ?? p.email.split('@')[0],
+        name:             p.name ?? '',
+        phone:            p.phone ?? '',
+        email:            p.email ?? '',
+        password:         p.password,
+        nida:             p.nida ?? '',
+        businessName:     p.businessName ?? '',
+        businessLocation: p.businessLocation ?? '',
+        coordinates:      p.coordinates ?? null,
+        networks:         p.networks ?? [],
+        floatCapacity:    p.floatCapacity ?? 0,
+        regNo:            p.businessLicenceNumber ?? '',
+        tin:              p.businessTIN ?? '',
+        tinCertUrl:       p.tinCertificateUrl ?? null,
+        licenceCertUrl:   p.licenceCertificateUrl ?? null,
+        selfieVerified:   p.selfieVerified ?? false,
       });
 
-      // Component may have unmounted while awaiting — bail silently
-      if (!isMounted.current) return;
-
       if (isMounted.current) haptics.success();
-      // AppNavigator detects profile.status === 'pending' and routes to
-      // PendingScreen automatically — no manual navigation needed.
+      // AppNavigator detects profile.status === 'pending' → routes to PendingScreen automatically.
     } catch (e) {
       if (!isMounted.current) return;
       haptics.error();
@@ -244,7 +231,6 @@ export default function Step6Review({ navigation, route }) {
       } else {
         setError('Something went wrong. Please try again.');
       }
-      setLoading(false);
       hideLoader();
     }
   };
@@ -276,12 +262,7 @@ export default function Step6Review({ navigation, route }) {
           <View style={s.progressTrack}>
             <Animated.View style={[s.progressFill, { width: headerProgress }]} />
           </View>
-          <View style={s.navRight}>
-            <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
-            <TouchableOpacity onPress={handleSignOut} style={s.signOutBtn} hitSlop={8}>
-              <Text style={s.signOutText}>Sign Out</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
         </View>
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
         <Text style={s.title}>Review & Submit</Text>
@@ -392,9 +373,6 @@ const styles = (theme, insets) => StyleSheet.create({
   },
   progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
   stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  navRight:     { marginLeft: 12, alignItems: 'flex-end', gap: 2 },
-  signOutBtn:   { paddingTop: 1 },
-  signOutText:  { fontSize: 10, fontFamily: 'Inter_600SemiBold', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5 },
   eyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
   title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
   subtitle:{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },

@@ -12,10 +12,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, where, orderBy, onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
 function SkeletonTransferRow({ theme, last }) {
   return (
@@ -48,18 +45,16 @@ export default function TransfersScreen() {
   const FILTERS = ['All', 'Today', 'This Week', 'This Month'];
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'requests'),
-        where('status', '==', 'completed'),
-        orderBy('processedAt', 'desc')
-      ),
-      snap => {
-        setTransfers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      }
-    );
-    return unsub;
+    const fetch = async () => {
+      try {
+        const data = await api.get('/api/transfers');
+        setTransfers(Array.isArray(data) ? data : (data?.transfers ?? []));
+      } catch {}
+      finally { setLoading(false); }
+    };
+    fetch();
+    const interval = setInterval(fetch, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const filterByDate = (items) => {
@@ -67,7 +62,8 @@ export default function TransfersScreen() {
     const week  = new Date(); week.setDate(week.getDate() - 7);
     const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
     return items.filter(t => {
-      const d = t.processedAt?.toDate?.() ?? new Date(0);
+      const _ts = t.processed_at ?? (t.processed_at ?? t.processedAt);
+      const d = _ts?.toDate ? _ts.toDate() : (_ts ? new Date(_ts) : new Date(0));
       if (filter === 'Today')      return d >= day;
       if (filter === 'This Week')  return d >= week;
       if (filter === 'This Month') return d >= month;
@@ -79,10 +75,10 @@ export default function TransfersScreen() {
     if (!search) return true;
     const sv = search.toLowerCase();
     return (
-      t.agentName?.toLowerCase().includes(sv) ||
+      (t.agent_name   ?? t.agentName)?.toLowerCase().includes(sv) ||
       String(t.amount).includes(sv) ||
-      t.sourceNetwork?.toLowerCase().includes(sv) ||
-      t.destNetwork?.toLowerCase().includes(sv)
+      (t.source_network ?? t.sourceNetwork)?.toLowerCase().includes(sv) ||
+      (t.dest_network   ?? t.destNetwork)?.toLowerCase().includes(sv)
     );
   });
 
@@ -95,8 +91,9 @@ export default function TransfersScreen() {
   };
 
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const date = ts?.toDate ? ts.toDate() : new Date(ts);
+    const secs = Math.floor((Date.now() - date.getTime()) / 1000);
     if (secs < 60)    return 'Just now';
     if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
     if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
@@ -199,12 +196,12 @@ export default function TransfersScreen() {
                 <PressableScale style={s.row} scaleDown={0.98}>
                   <View style={s.rowLeft}>
                     <Text style={[s.rowId,    { color: theme.textDim }]}>#{t.id.slice(-6).toUpperCase()}</Text>
-                    <Text style={[s.rowAgent, { color: theme.text }]}>{t.agentName ?? 'Agent'}</Text>
-                    <Text style={[s.rowRoute, { color: theme.textDim }]}>{t.sourceNetwork} → {t.destNetwork}</Text>
+                    <Text style={[s.rowAgent, { color: theme.text }]}>{(t.agent_name   ?? t.agentName) ?? 'Agent'}</Text>
+                    <Text style={[s.rowRoute, { color: theme.textDim }]}>{(t.source_network ?? t.sourceNetwork)} → {(t.dest_network   ?? t.destNetwork)}</Text>
                   </View>
                   <View style={s.rowRight}>
                     <Text style={[s.rowAmount, { color: theme.primary }]}>{fmt(Number(t.amount) || 0)}</Text>
-                    <Text style={[s.rowTime,   { color: theme.textDim }]}>{timeAgo(t.processedAt)}</Text>
+                    <Text style={[s.rowTime,   { color: theme.textDim }]}>{timeAgo((t.processed_at ?? t.processedAt))}</Text>
                   </View>
                 </PressableScale>
                 {i < filtered.length - 1 && (

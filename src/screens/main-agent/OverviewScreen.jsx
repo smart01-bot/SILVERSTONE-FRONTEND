@@ -13,11 +13,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox, SkeletonCard } from '../../components/SkeletonLoader';
 import EmptyState    from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, where, orderBy,
-  onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
 // ─── Animated stat card ───────────────────────────────────────────────────────
 function StatCard({ stat, index, theme }) {
@@ -78,8 +74,9 @@ export default function OverviewScreen({ navigation }) {
 
   const reqId   = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const date = ts?.toDate ? ts.toDate() : new Date(ts);
+    const secs = Math.floor((Date.now() - date.getTime()) / 1000);
     if (secs < 60)     return tr('justNow');
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
@@ -100,40 +97,37 @@ export default function OverviewScreen({ navigation }) {
   useEffect(() => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
-    const reqUnsub = onSnapshot(
-      query(collection(db, 'requests'), orderBy('createdAt', 'desc')),
-      snap => {
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const fetch = async () => {
+      try {
+        const [reqData, agentData] = await Promise.all([
+          api.get('/api/requests'),
+          api.get('/api/agents'),
+        ]);
+        const docs  = Array.isArray(reqData)   ? reqData   : (reqData?.requests   ?? []);
+        const agents = Array.isArray(agentData) ? agentData : (agentData?.agents   ?? []);
+
         setTotalRequests(docs.length);
         setRecentRequests(docs.slice(0, 5));
+        setActiveAgents(agents.filter(a => a.status === 'approved' && a.role === 'sub-agent').length);
+
         let pending = 0, compToday = 0, volume = 0;
         docs.forEach(r => {
           if (r.status === 'pending') pending++;
-          if (r.status === 'completed' && r.processedAt?.toDate?.() >= todayStart) compToday++;
+          const _ts = r.processed_at ?? r.processedAt;
+          const processed = _ts?.toDate ? _ts.toDate() : (_ts ? new Date(_ts) : null);
+          if (r.status === 'completed' && processed >= todayStart) compToday++;
           if (r.status === 'completed') volume += Number(r.amount) || 0;
         });
         setPendingRequests(pending);
         setCompletedToday(compToday);
         setTotalVolume(volume);
-        setLoading(false);
-      },
-      (err) => {
-        console.warn('OverviewScreen requests snapshot error:', err);
-        setLoading(false);
-      }
-    );
+      } catch (err) { console.warn('OverviewScreen error:', err); }
+      finally { setLoading(false); }
+    };
 
-    const agentUnsub = onSnapshot(
-      query(
-        collection(db, 'agents'),
-        where('status', '==', 'approved'),
-        where('role',   '==', 'sub-agent')
-      ),
-      snap => setActiveAgents(snap.size),
-      (err) => console.warn('OverviewScreen agents snapshot error:', err)
-    );
-
-    return () => { reqUnsub(); agentUnsub(); };
+    fetch();
+    const interval = setInterval(fetch, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const onRefresh = () => {
@@ -320,12 +314,12 @@ export default function OverviewScreen({ navigation }) {
                   >
                     <View style={[s.reqDot, { backgroundColor: statusColor(req.status) }]} />
                     <View style={s.reqInfo}>
-                      <Text style={[s.reqAgent,  { color: theme.text }]}>{req.agentName ?? 'Agent'}</Text>
+                      <Text style={[s.reqAgent,  { color: theme.text }]}>{(req.agent_name     ?? req.agentName) ?? 'Agent'}</Text>
                       <Text style={[s.reqMeta,   { color: theme.textDim }]}>
-                        {reqId(req.id)} · {req.sourceNetwork} → {req.destNetwork}
+                        {reqId(req.id)} · {(req.source_network ?? req.sourceNetwork)} → {(req.dest_network   ?? req.destNetwork)}
                         {req.urgent ? ' · URGENT' : ''}
                       </Text>
-                      <Text style={[s.reqTime,   { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
+                      <Text style={[s.reqTime,   { color: theme.textDim }]}>{timeAgo((req.created_at     ?? req.createdAt))}</Text>
                     </View>
                     <View style={s.reqRight}>
                       <Text style={[s.reqAmount, { color: theme.primary }]}>

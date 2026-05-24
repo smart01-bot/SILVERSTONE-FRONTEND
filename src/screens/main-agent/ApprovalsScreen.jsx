@@ -13,11 +13,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, where, onSnapshot,
-  doc, updateDoc, Timestamp,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
 function SkeletonAgentCard({ theme }) {
   return (
@@ -54,14 +50,17 @@ export default function ApprovalsScreen() {
   const FILTERS = ['Pending', 'Approved', 'Rejected'];
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'agents'), where('role', '==', 'sub-agent')),
-      snap => {
-        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      }
-    );
-    return unsub;
+    const fetch = async () => {
+      try {
+        const data = await api.get('/api/agents');
+        const all = Array.isArray(data) ? data : (data?.agents ?? []);
+        setAgents(all.filter(a => a.role === 'sub-agent'));
+      } catch {}
+      finally { setLoading(false); }
+    };
+    fetch();
+    const interval = setInterval(fetch, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered     = agents.filter(a => a.status === filter.toLowerCase());
@@ -70,7 +69,7 @@ export default function ApprovalsScreen() {
   const handleApprove = async (agent) => {
     showLoader();
     try {
-      await updateDoc(doc(db, 'agents', agent.id), { status: 'approved', approvedAt: Timestamp.now() });
+      await api.put(`/api/agents/${agent.id}`, { status: 'approved' });
     } catch (e) {
       Alert.alert('Error', 'Failed to approve agent.');
     } finally {
@@ -90,9 +89,7 @@ export default function ApprovalsScreen() {
   const doReject = async (agent, reason) => {
     showLoader();
     try {
-      await updateDoc(doc(db, 'agents', agent.id), {
-        status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
-      });
+      await api.put(`/api/agents/${agent.id}`, { status: 'rejected', rejection_reason: reason });
     } catch (e) {
       Alert.alert('Error', 'Failed to reject agent.');
     } finally {
@@ -123,8 +120,9 @@ export default function ApprovalsScreen() {
   };
 
   const daysAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const days = Math.floor((Date.now() - ts.toDate().getTime()) / 86400000);
+    if (!ts) return '';
+    const date = ts?.toDate ? ts.toDate() : new Date(ts);
+    const days = Math.floor((Date.now() - date.getTime()) / 86400000);
     if (days === 0) return 'TODAY';
     if (days === 1) return 'YESTERDAY';
     return `${days}D AGO`;

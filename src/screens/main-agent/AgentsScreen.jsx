@@ -12,10 +12,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, where, onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
 function SkeletonAgentCard({ theme }) {
   return (
@@ -51,22 +48,17 @@ export default function AgentsScreen() {
   const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'agents'),
-        where('status', '==', 'approved'),
-        where('role',   '==', 'sub-agent')
-      ),
-      snap => {
-        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
-      (err) => {
-        console.warn('AgentsScreen snapshot error:', err);
-        setLoading(false);
-      }
-    );
-    return unsub;
+    const fetch = async () => {
+      try {
+        const data = await api.get('/api/agents');
+        const all = Array.isArray(data) ? data : (data?.agents ?? []);
+        setAgents(all.filter(a => a.status === 'approved' && a.role === 'sub-agent'));
+      } catch (err) { console.warn('AgentsScreen error:', err); }
+      finally { setLoading(false); }
+    };
+    fetch();
+    const interval = setInterval(fetch, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = agents.filter(a => {

@@ -13,11 +13,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
 import EmptyState     from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, orderBy,
-  onSnapshot, doc, updateDoc, Timestamp,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import api from '../../config/api';
 
 const REJECTION_REASONS = [
   'Insufficient float',
@@ -82,20 +78,22 @@ export default function QueueScreen() {
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'requests'), orderBy('createdAt', 'desc')),
-      snap => {
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const fetch = async () => {
+      try {
+        const data = await api.get('/api/requests');
+        const docs = (Array.isArray(data) ? data : (data?.requests ?? []));
         docs.sort((a, b) => {
           if (a.urgent && !b.urgent) return -1;
           if (!a.urgent && b.urgent) return 1;
           return 0;
         });
         setRequests(docs);
-        setLoading(false);
-      }
-    );
-    return unsub;
+      } catch {}
+      finally { setLoading(false); }
+    };
+    fetch();
+    const interval = setInterval(fetch, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = requests.filter(r => {
@@ -110,13 +108,13 @@ export default function QueueScreen() {
   const urgentCount   = requests.filter(r => r.status === 'pending' && r.urgent).length;
   const approvedCount = requests.filter(r => r.status === 'approved').length;
 
-  const waitMins  = (ts) => { if (!ts?.toDate) return 0; return Math.floor((Date.now() - ts.toDate().getTime()) / 60000); };
+  const waitMins  = (ts) => { if (!ts) return 0; const d = ts?.toDate ? ts.toDate() : new Date(ts); return Math.floor((Date.now() - d.getTime()) / 60000); };
   const waitColor = (m)  => { if (m < 5) return '#16A34A'; if (m < 15) return '#F59E0B'; return '#C8102E'; };
 
   const handleApprove = async (req) => {
     showLoader();
     try {
-      await updateDoc(doc(db, 'requests', req.id), { status: 'approved', approvedAt: Timestamp.now() });
+      await api.put(`/api/requests/${req.id}`, { status: 'approved' });
     } catch (e) { Alert.alert('Error', 'Failed to approve request.'); }
     finally { showLoader(); }
   };
@@ -124,7 +122,7 @@ export default function QueueScreen() {
   const handleProcess = async (req) => {
     Alert.alert(
       'Process Transfer',
-      `Confirm transfer of TZS ${Number(req.amount).toLocaleString()} from ${req.sourceNetwork} to ${req.destNetwork}?`,
+      `Confirm transfer of TZS ${Number(req.amount).toLocaleString()} from ${(req.source_network ?? req.sourceNetwork)} to ${(req.dest_network   ?? req.destNetwork)}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -132,7 +130,7 @@ export default function QueueScreen() {
           onPress: async () => {
             showLoader();
             try {
-              await updateDoc(doc(db, 'requests', req.id), { status: 'completed', processedAt: Timestamp.now() });
+              await api.put(`/api/requests/${req.id}`, { status: 'completed' });
             } catch (e) { Alert.alert('Error', 'Failed to process transfer.'); }
             finally { showLoader(); }
           },
@@ -148,9 +146,7 @@ export default function QueueScreen() {
         onPress: async () => {
           showLoader();
           try {
-            await updateDoc(doc(db, 'requests', req.id), {
-              status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
-            });
+            await api.put(`/api/requests/${req.id}`, { status: 'rejected', rejection_reason: reason });
           } catch (e) { Alert.alert('Error', 'Failed to reject request.'); }
           finally { showLoader(); }
         },
@@ -237,7 +233,7 @@ export default function QueueScreen() {
           />
         ) : (
           filtered.map(req => {
-            const mins = waitMins(req.createdAt);
+            const mins = waitMins((req.created_at     ?? req.createdAt));
             return (
               <PressableScale
                 key={req.id}
@@ -252,11 +248,11 @@ export default function QueueScreen() {
                   <View style={s.agentRow}>
                     <View style={[s.avatar, { backgroundColor: theme.primaryLight }]}>
                       <Text style={[s.avatarText, { color: theme.primary }]}>
-                        {req.agentName?.charAt(0)?.toUpperCase() ?? 'A'}
+                        {(req.agent_name     ?? req.agentName)?.charAt(0)?.toUpperCase() ?? 'A'}
                       </Text>
                     </View>
                     <View>
-                      <Text style={[s.agentName, { color: theme.text }]}>{req.agentName ?? 'Agent'}</Text>
+                      <Text style={[s.agentName, { color: theme.text }]}>{(req.agent_name     ?? req.agentName) ?? 'Agent'}</Text>
                       <Text style={[s.agentSub,  { color: theme.textDim }]}>Waiting {mins} min</Text>
                     </View>
                   </View>
@@ -273,15 +269,15 @@ export default function QueueScreen() {
                 </View>
 
                 <View style={s.routeRow}>
-                  <Text style={[s.route,  { color: theme.text }]}>{req.sourceNetwork}</Text>
+                  <Text style={[s.route,  { color: theme.text }]}>{(req.source_network ?? req.sourceNetwork)}</Text>
                   <Ionicons name="arrow-forward" size={16} color={theme.textDim} />
-                  <Text style={[s.route,  { color: theme.text }]}>{req.destNetwork}</Text>
+                  <Text style={[s.route,  { color: theme.text }]}>{(req.dest_network   ?? req.destNetwork)}</Text>
                   <Text style={[s.amount, { color: theme.primary }]}>TZS {Number(req.amount).toLocaleString()}</Text>
                 </View>
 
                 <View style={s.phonesRow}>
-                  <Text style={[s.phone, { color: theme.textDim }]}>From: {req.sourcePhone}</Text>
-                  <Text style={[s.phone, { color: theme.textDim }]}>To: {req.destPhone}</Text>
+                  <Text style={[s.phone, { color: theme.textDim }]}>From: {(req.source_phone   ?? req.sourcePhone)}</Text>
+                  <Text style={[s.phone, { color: theme.textDim }]}>To: {(req.dest_phone     ?? req.destPhone)}</Text>
                 </View>
 
                 <View style={s.actions}>

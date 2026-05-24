@@ -17,18 +17,18 @@ import PressableScale from '../../components/PressableScale';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import api from '../../config/api';
 
-const NETWORKS = ['Vodacom', 'Airtel', 'Halotel', 'Yas'];
+const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
 const NETWORK_COLORS = {
-  Vodacom: '#E40000',
-  Airtel:  '#FFFB14',
-  Halotel: '#FF9B17',
+  Voda:    '#E40000',
   Yas:     '#0070B8',
+  Airtel:  '#FF0000',
+  Halotel: '#D4A017',
 };
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { theme, tr }     = useTheme();
-  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.id, profile?.name ?? profile?.username);
+  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.uid, profile?.name);
 
   const prefill = route?.params?.prefill;
 
@@ -75,17 +75,18 @@ export default function NewRequestScreen({ navigation, route }) {
     showLoader();
 
     const requestData = {
-      agentId:       user.id,
-      agentName:     profile?.name ?? profile?.username ?? 'Agent',
-      sourceNetwork, destNetwork, sourcePhone, destPhone,
-      amount:        Number(amount.replace(/,/g, '')),
+      source_network: sourceNetwork,
+      dest_network:   destNetwork,
+      source_phone:   sourcePhone,
+      dest_phone:     destPhone,
+      amount:         Number(amount.replace(/,/g, '')),
       urgent,
     };
 
     try {
       if (!isOnline) {
         // Offline — persist to AsyncStorage queue; sync fires automatically on reconnect
-        await enqueue(requestData);
+        await enqueue({ ...requestData, agent_id: user.id, agent_name: profile?.name ?? 'Agent' });
         navigation.replace('RequestSuccess', {
           queuePosition: null,
           sourceNetwork, destNetwork,
@@ -95,19 +96,14 @@ export default function NewRequestScreen({ navigation, route }) {
         return;
       }
 
-      // Online — submit to backend API
-      const { request, queuePosition } = await api.post('/api/requests/submit', {
-        subAgentId:            user.id,
-        subagent_name:         profile?.name ?? profile?.username ?? 'Agent',
-        requested_network:     destNetwork,
-        source_network:        sourceNetwork,
-        requested_phoneNumber: destPhone,
-        source_phoneNumber:    sourcePhone,
-        amount:                Number(amount.replace(/,/g, '')),
-        urgency:               urgent,
+      // Online — POST to backend
+      const result = await api.post('/api/requests/submit', {
+        ...requestData,
+        agent_id:   user.id,
+        agent_name: profile?.name ?? 'Agent',
       });
       navigation.replace('RequestSuccess', {
-        queuePosition,
+        queuePosition: result?.queue_position ?? null,
         sourceNetwork, destNetwork,
         amount: requestData.amount,
         queued: false,

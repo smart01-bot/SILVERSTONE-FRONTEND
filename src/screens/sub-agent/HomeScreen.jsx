@@ -19,20 +19,20 @@ const SLIDE_INTERVAL = 3500;
 const TRANSITION_MS  = 640; // must match scrollTo animation duration
 
 const NETWORKS = {
-  Vodacom: { color: '#E40000', short: 'VOD' },
+  Voda:    { color: '#E40000', short: 'VOD' },
   Yas:     { color: '#0070B8', short: 'YAS' },
   Airtel:  { color: '#FF0000', short: 'AIR' },
   Halotel: { color: '#D4A017', short: 'HAL' },
 };
 
 const FILLER_REQUESTS = [
-  { id: 'filler-1', sourceNetwork: 'Vodacom',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', _filler: true },
+  { id: 'filler-1', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', _filler: true },
   { id: 'filler-2', sourceNetwork: 'Airtel',  destNetwork: 'Halotel', amount: 80000,  status: 'pending',   _filler: true },
-  { id: 'filler-3', sourceNetwork: 'Halotel', destNetwork: 'Vodacom',    amount: 200000, status: 'completed', _filler: true },
+  { id: 'filler-3', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 200000, status: 'completed', _filler: true },
 ];
 
 const FILLER_NETWORKS = [
-  { name: 'Vodacom',    color: '#E40000', volume: 350000 },
+  { name: 'Voda',    color: '#E40000', volume: 350000 },
   { name: 'Airtel',  color: '#FF0000', volume: 230000 },
   { name: 'Halotel', color: '#D4A017', volume: 120000 },
   { name: 'Yas',     color: '#0070B8', volume:  80000 },
@@ -161,7 +161,7 @@ function BannerCard({
               </View>
               <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
             </View>
-            <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
+            <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo((latestCompleted.created_at ?? latestCompleted.createdAt))}</Text>
             <View style={s.completedPill}>
               <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
               <Text style={s.completedText}>Completed</Text>
@@ -261,41 +261,42 @@ export default function HomeScreen({ navigation }) {
   const [todayCount,   setTodayCount]   = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
 
-  const firstName = (profile?.name ?? profile?.username ?? '').split(' ')[0] ?? 'Agent';
+  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
   const initials  = profile?.name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
-  const fetchRequests = async () => {
-    if (!user?.id) return;
-    try {
-      const docs = await api.get(`/api/agents/${user.id}/requests`);
-      setRequests(docs);
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      let total = 0, todayV = 0, tCount = 0, pending = 0;
-      docs.forEach(r => {
-        const amt = Number(r.amount) || 0;
-        total += amt;
-        if (r.status === 'pending') pending++;
-        const created = r.created_at ? new Date(r.created_at) : null;
-        if (created && created >= today) { todayV += amt; tCount++; }
-      });
-      setTotalVolume(total);
-      setTodayVolume(todayV);
-      setTodayCount(tCount);
-      setPendingCount(pending);
-    } catch {} finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchRequests = async () => {
+      try {
+        const data = await api.get(`/api/agents/${user.id}/requests`);
+        const docs = Array.isArray(data) ? data : (data?.requests ?? []);
+        setRequests(docs);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        let total = 0, todayV = 0, tCount = 0, pending = 0;
+        docs.forEach(r => {
+          const amt = Number(r.amount) || 0;
+          total += amt;
+          if (r.status === 'pending') pending++;
+          const created = r.created_at ?? r.createdAt;
+          const d = created?.toDate ? created.toDate() : new Date(created);
+          if (d >= today) { todayV += amt; tCount++; }
+        });
+        setTotalVolume(total);
+        setTodayVolume(todayV);
+        setTodayCount(tCount);
+        setPendingCount(pending);
+      } catch {}
+      finally { setLoading(false); }
+    };
+
     fetchRequests();
     const interval = setInterval(fetchRequests, 15_000);
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  const onRefresh = () => { setRefreshing(true); fetchRequests(); };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
   const fmt = (n) => {
     if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
@@ -314,21 +315,21 @@ export default function HomeScreen({ navigation }) {
   };
 
   const timeAgo = (ts) => {
-    if (!ts) return '2h ago';
+    if (!ts) return '';
     const date = ts?.toDate ? ts.toDate() : new Date(ts);
     const secs = Math.floor((Date.now() - date.getTime()) / 1000);
     if (secs < 60)     return tr('justNow');
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
     if (secs < 172800) return tr('yesterday');
-    return (ts?.toDate ? ts.toDate() : new Date(ts)).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
+    return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
   const hasRealData     = requests.length > 0;
   const displayRequests = hasRealData ? requests.slice(0, 4) : FILLER_REQUESTS;
 
   const realNetworkBreakdown = Object.entries(NETWORKS).map(([name, meta]) => {
-    const net = requests.filter(r => (r.source_network ?? r.sourceNetwork) === name && r.status === 'completed');
+    const net = requests.filter(r => ((r.source_network ?? r.sourceNetwork) === name) && r.status === 'completed');
     const vol = net.reduce((s, r) => s + (Number(r.amount) || 0), 0);
     return { name, ...meta, volume: vol };
   }).filter(n => n.volume > 0);
@@ -460,10 +461,10 @@ export default function HomeScreen({ navigation }) {
               {displayRequests.map((req, i) => (
                 <View key={req.id}>
                   <View style={s.reqRow}>
-                    <View style={[s.reqNetDot, { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted }]} />
+                    <View style={[s.reqNetDot, { backgroundColor: NETWORKS[(req.source_network ?? req.sourceNetwork)]?.color ?? theme.muted }]} />
                     <View style={s.reqInfo}>
-                      <Text style={[s.reqRoute, { color: theme.text }]} numberOfLines={1}>{req.sourceNetwork} → {req.destNetwork}</Text>
-                      <Text style={[s.reqMeta, { color: theme.textDim }]} numberOfLines={1}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
+                      <Text style={[s.reqRoute, { color: theme.text }]} numberOfLines={1}>{(req.source_network ?? req.sourceNetwork)} → {(req.dest_network   ?? req.destNetwork)}</Text>
+                      <Text style={[s.reqMeta, { color: theme.textDim }]} numberOfLines={1}>{reqId(req.id)} · {timeAgo((req.created_at     ?? req.createdAt))}</Text>
                     </View>
                     <View style={s.reqRight}>
                       <Text style={[s.reqAmount, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(Number(req.amount) || 0)}</Text>

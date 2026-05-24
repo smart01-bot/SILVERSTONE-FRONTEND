@@ -10,10 +10,11 @@ import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
+
 import api from '../../config/api';
 
 const NETWORKS = [
-  { name: 'Vodacom', wallet: 'M-Pesa',       color: '#E40000', short: 'VOD' },
+  { name: 'Voda',    wallet: 'M-Pesa',       color: '#E40000', short: 'VOD' },
   { name: 'Yas',     wallet: 'Mixx',         color: '#0070B8', short: 'YAS' },
   { name: 'Airtel',  wallet: 'Airtel Money', color: '#FF0000', short: 'AIR' },
   { name: 'Halotel', wallet: 'Halopesa',     color: '#D4A017', short: 'HAL' },
@@ -30,7 +31,7 @@ export default function NetworksScreen({ navigation }) {
 
   useEffect(() => {
     if (profile) {
-      setPhones(profile.agentphonenumbers ?? {});
+      setPhones(profile.agentPhoneNumbers ?? {});
       setActive(profile.networks ?? []);
     }
   }, [profile]);
@@ -55,7 +56,10 @@ export default function NetworksScreen({ navigation }) {
     }
     showLoader();
     try {
-      await api.put(`/api/agents/${user.id}`, { agentphonenumbers: phones, networks: active });
+      await api.put(`/api/agents/${user.id}`, {
+        agentphonenumbers: phones,
+        networks: active,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
