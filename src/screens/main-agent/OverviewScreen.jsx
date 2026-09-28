@@ -1,3 +1,5 @@
+import { formatTzs } from '../../api/exchanges';
+import { requestStatusLabel } from '../../api/presentation';
 // src/screens/main-agent/OverviewScreen.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -70,28 +72,24 @@ export default function OverviewScreen({ navigation }) {
   const initials = profile?.name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'MA';
 
-  const fmt = (n) => {
-    if (n >= 1_000_000) return `TSh ${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `TSh ${(n / 1_000).toFixed(0)}k`;
-    return `TSh ${n}`;
-  };
+  const fmt = n => `TZS ${formatTzs(n)}`;
 
   const reqId   = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const secs = Math.floor((Date.now() - Date.parse(ts)) / 1000);
     if (secs < 60)     return tr('justNow');
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
     if (secs < 172800) return tr('yesterday');
-    return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
+    return new Date(ts).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
   const statusColor = (status) => {
     switch (status) {
       case 'completed': return '#16A34A';
-      case 'pending':   return '#F59E0B';
-      case 'approved':  return '#0891B2';
+      case 'awaiting_review':   return '#F59E0B';
+      case 'awaiting_source':  return '#0891B2';
       case 'rejected':  return '#C8102E';
       default:          return theme.textDim;
     }
@@ -106,11 +104,11 @@ export default function OverviewScreen({ navigation }) {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setTotalRequests(docs.length);
         setRecentRequests(docs.slice(0, 5));
-        let pending = 0, compToday = 0, volume = 0;
+        let pending = 0, compToday = 0, volume = 0n;
         docs.forEach(r => {
-          if (r.status === 'pending') pending++;
-          if (r.status === 'completed' && r.processedAt?.toDate?.() >= todayStart) compToday++;
-          if (r.status === 'completed') volume += Number(r.amount) || 0;
+          if (r.status === 'awaiting_review') pending++;
+          if (r.status === 'completed' && new Date(r.processedAt) >= todayStart) compToday++;
+          if (r.status === 'completed') volume += BigInt(r.amount || 0);
         });
         setPendingRequests(pending);
         setCompletedToday(compToday);
@@ -228,7 +226,7 @@ export default function OverviewScreen({ navigation }) {
         >
           <View style={s.decorCircle} />
           <View style={s.decorCircle2} />
-          <Text style={s.heroLabel}>{tr('totalVolume').toUpperCase()} · 30D</Text>
+          <Text style={s.heroLabel}>CONFIRMED EXCHANGE VOLUME</Text>
           {loading ? (
             <SkeletonBox width={200} height={48} borderRadius={10} style={{ marginTop: 6, opacity: 0.35 }} />
           ) : (
@@ -236,7 +234,7 @@ export default function OverviewScreen({ navigation }) {
           )}
           <View style={s.heroSubRow}>
             <Ionicons name="trending-up-outline" size={14} color="rgba(255,255,255,0.8)" />
-            <Text style={s.heroSub}>+{fmt(totalVolume * 0.124)} {tr('vsLastMonth')}</Text>
+            <Text style={s.heroSub}>Silverstone fee: TZS 0 · Provider execution disabled</Text>
           </View>
         </LinearGradient>
 
@@ -279,12 +277,7 @@ export default function OverviewScreen({ navigation }) {
               {tr('totalRequests')} vs {tr('totalTx')} · {totalRequests} {tr('totalTx').toLowerCase()}
             </Text>
             <View style={s.chartBars}>
-              {[0.4, 0.7, 0.5, 0.9, 0.6, 0.8, 1.0].map((h, i) => (
-                <View key={i} style={s.barGroup}>
-                  <View style={[s.bar, { height: h * 140, backgroundColor: '#C8102E', opacity: 0.85 }]} />
-                  <View style={[s.bar, { height: h * 0.7 * 140, backgroundColor: '#0891B2', opacity: 0.85 }]} />
-                </View>
-              ))}
+              <Text style={{color:theme.textDim}}>Historical chart unavailable. No settlement data has been fabricated.</Text>
             </View>
           </View>
         </View>
@@ -333,7 +326,7 @@ export default function OverviewScreen({ navigation }) {
                       </Text>
                       <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
                         <Text style={[s.statusText, { color: statusColor(req.status) }]}>
-                          {tr('status' + (req.status ? req.status.charAt(0).toUpperCase() + req.status.slice(1) : 'Pending'))}
+                          {requestStatusLabel(req.status)}
                         </Text>
                       </View>
                     </View>

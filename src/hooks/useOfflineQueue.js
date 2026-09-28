@@ -1,10 +1,69 @@
-import { useEffect,useState } from 'react';
-import NetInfo from '@react-native-community/netinfo';
-// Legacy queued records are deliberately neither read, replayed nor removed.
-// Identity-bound idempotent offline exchanges are Phase 3 work.
-export function useOfflineQueue() {
-  const [isOnline,setIsOnline]=useState(true);
-  useEffect(()=>NetInfo.addEventListener(state=>setIsOnline(!!state.isConnected && state.isInternetReachable!==false)),[]);
-  const disabled=async()=>{throw new Error('Exchange submission is not available yet.');};
-  return {isOnline,syncing:false,syncedCount:0,enqueue:disabled,syncQueue:disabled,getPendingCount:async()=>0};
+import { useEffect, useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../config/api";
+import { createExchangeOutbox } from "../api/offlineExchanges";
+import { sendExchange, newExchangeKey } from "../api/exchanges";
+const outbox = createExchangeOutbox({
+  storage: AsyncStorage,
+  send: sendExchange,
+  currentOwner: api.currentOwner,
+  newKey: newExchangeKey,
+});
+export function useOfflineQueue(owner) {
+  const [isOnline, setOnline] = useState(false),
+    [syncing, setSyncing] = useState(false),
+    [syncedCount, setCount] = useState(0),
+    [pendingCount, setPending] = useState(0),
+    [queueError, setError] = useState("");
+  const refresh = async () => {
+    const rows = await outbox.list(owner);
+    if (api.currentOwner() !== owner) return;
+    setPending(rows.length);
+    setError(rows.find((r) => r.lastError)?.lastError || "");
+  };
+  const syncQueue = async () => {
+    if (!owner) return;
+    setSyncing(true);
+    try {
+      const result = await outbox.sync(owner);
+      setCount(result.submitted.length);
+      await refresh();
+      return result;
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+  useEffect(
+    () =>
+      NetInfo.addEventListener((s) =>
+        setOnline(!!s.isConnected && s.isInternetReachable !== false),
+      ),
+    [],
+  );
+  useEffect(() => {
+    setCount(0);
+    setPending(0);
+    setError("");
+    if (owner) refresh().catch((e) => setError(e.message));
+  }, [owner]);
+  useEffect(() => {
+    if (owner && isOnline) syncQueue();
+  }, [owner, isOnline]);
+  return {
+    isOnline,
+    syncing,
+    syncedCount,
+    pendingCount,
+    queueError,
+    syncQueue,
+    enqueue: async (payload) => {
+      const r = await outbox.enqueue(owner, payload);
+      await refresh();
+      return r;
+    },
+    getPendingCount: async () => (await outbox.list(owner)).length,
+  };
 }

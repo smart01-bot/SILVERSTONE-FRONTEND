@@ -1,3 +1,26 @@
+## Phase 3 implemented exchange contract (local synthetic only)
+
+All requests require a live Express session and active approved account. Every exchange command also rechecks both participants and current assignment under locks. Status, owner, assignment, verification and capacity cannot be client-written. The synthetic fixture source is not provider verification.
+
+| Route under /api/v1 | Contract |
+| --- | --- |
+| GET /me/accounts | Owned typed identifiers and explicit verification status/source |
+| POST /me/accounts | networkCode, identifierType (phone/agent/till/account), identifier; always creates unverified; 30 per owner maximum |
+| POST /requests | sourceAccountId, destinationAccountId, amountTzs (positive decimal string within BIGINT), currency TZS, urgent boolean; Idempotency-Key required; exactly two not_started legs |
+| GET /requests | Scoped current-assignment list; FIFO queueSequence; limit 1–100, decimal cursor, page.nextCursor |
+| GET /requests/:id | Canonical state/version, immutable account snapshot, legs, reservation, history, nextAction, zero service fee |
+| POST /requests/:id/accept | Assigned main-agent; expectedVersion, optional reason; stable Idempotency-Key; conditional capacity reservation + state + history + job in one transaction |
+| POST /requests/:id/reject | Assigned main-agent; expectedVersion and reason 3–1000 chars; same idempotency rule; only safely closable requests |
+| POST /requests/:id/cancel | Owner; expectedVersion; same idempotency rule; only before movement/uncertainty/claimed work |
+
+Idempotency is actor+operation+key and normalized-payload hash, stored with the original response. Keys are 16–128 ASCII letters/digits/underscore/hyphen. A changed payload returns 409 IDEMPOTENCY_CONFLICT. Same key/body returns original response, even if later status has changed; refresh detail for current status. Accept replay does not reserve twice. Lists' cursor changed from Phase 1 UUID to FIFO decimal sequence; treat it as opaque.
+
+Create requires different networks and owned synthetic_fixture accounts; assigned main-agent must have one unambiguous synthetic account on each network. Native startup never seeds these accounts/capacity. Publicly added accounts remain unusable for exchange until a separately designed verification mechanism exists.
+
+Allowed local path: awaiting_review → awaiting_source (reserved, provider disabled) → cancelled/rejected if safe. Internal conservative unknown recording sets origin leg unknown and request needs_attention; retains hold and records reconciliation job. No public worker, provider callback, verification, capacity, arbitrary-state or manual-confirmation endpoint. No completed transition or ledger settlement is implemented.
+
+Durable prepare_collection jobs: ready → claimed → blocked (provider disabled), ready (pre-execution retry, 5-second backoff), or reconciliation (unknown). Claims default 30 seconds, configurable 1–300; claim token and unexpired server-clock lease are both required for finish. Worker claims lock request rows with SKIP LOCKED. Failed/expired preparation can recover, but reconciliation cannot requeue. This is not a provider exactly-once claim. Recheck all actual provider capabilities before extending it.
+
 ## Phase 2 implemented contract — local only
 
 This section supersedes the Phase 1 unavailability notes for onboarding below. Other proposed endpoints remain unimplemented. All routes require a current session. Owner routes deny main-agent/suspended/closed identities; editing requires pending + draft/changes_requested.

@@ -1,5 +1,6 @@
+import { exchangeAction, formatTzs } from '../api/exchanges';
 // src/components/RequestDetailModal.jsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
   Animated, PanResponder, ScrollView, Alert,
@@ -12,9 +13,8 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
 import { NETWORK_COLORS, NETWORK_WALLETS } from '../constants/networks';
 import { timeAgo } from '../utils/time';
-import { updateRequestStatus, createTransaction } from '../utils/firestore';
 
-const fmt = (n) => `TZS ${Number(n).toLocaleString()}`;
+const fmt = (n) => `TZS ${formatTzs(n)}`;
 
 function NetDot({ network, size = 10 }) {
   return (
@@ -32,6 +32,7 @@ export default function RequestDetailModal({
 }) {
   const { theme, lang } = useTheme();
   const { showLoader, hideLoader } = useLoader();
+  const [loading,setLoading]=useState(false);
   const { user }        = useAuth();
 
   const translateY     = useRef(new Animated.Value(600)).current;
@@ -87,52 +88,26 @@ export default function RequestDetailModal({
   };
 
   const handleApprove = async () => {
-    showLoader();
+    setLoading(true);showLoader();
     try {
-      await updateRequestStatus(request.id, 'approved', user.id);
+      await exchangeAction(request,'accept');
       onClose();
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      hideLoader();
-    }
-  };
-
-  const handleProcess = async () => {
-    showLoader();
-    try {
-      await createTransaction(request, user.id);
-      onClose();
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    } finally {
-      hideLoader();
+      setLoading(false);hideLoader();
     }
   };
 
   const handleReject = () => {
-    Alert.alert(
-      'Reject Request',
-      'Are you sure you want to reject this request?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            showLoader();
-            try {
-              await updateRequestStatus(request.id, 'rejected', user.id);
-              onClose();
-            } catch (e) {
-              Alert.alert('Error', e.message);
-            } finally {
-              hideLoader();
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Reject request','Select a reason',[
+      ...['Insufficient capacity','Incorrect account details','Duplicate request'].map(reason=>({text:reason,onPress:async()=>{
+        setLoading(true);showLoader();
+        try {await exchangeAction(request,'reject',reason);onClose();}
+        catch(e){Alert.alert('Error',e.message);}
+        finally{setLoading(false);hideLoader();}
+      }})),{text:'Keep request',style:'cancel'},
+    ]);
   };
 
   const handleCancel = () => {
@@ -145,14 +120,14 @@ export default function RequestDetailModal({
           text: 'Cancel Request',
           style: 'destructive',
           onPress: async () => {
-            showLoader();
+            setLoading(true);showLoader();
             try {
-              await updateRequestStatus(request.id, 'rejected', user.id);
+              await exchangeAction(request,'cancel');
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
             } finally {
-              hideLoader();
+              setLoading(false);hideLoader();
             }
           },
         },
@@ -274,8 +249,8 @@ export default function RequestDetailModal({
             borderColor:     theme.border,
           }]}>
             {[
-              ['Source Phone', request.sourcePhone],
-              ['Dest Phone',   request.destPhone],
+              ['Source account', request.sourcePhone],
+              ['Destination account',   request.destPhone],
               role === 'main-agent' && request.agentName
                 ? ['Agent', request.agentName]
                 : null,
@@ -298,6 +273,10 @@ export default function RequestDetailModal({
             ))}
           </View>
 
+          <Text style={{color:theme.textDim}}>{request.nextAction}</Text>
+          <Text style={{color:theme.textDim}}>Silverstone fee: TZS 0 · Provider execution disabled</Text>
+          {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{leg.type}: {leg.status}</Text>)}
+          {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{event.event}: {event.reason}</Text>)}
           {/* Actions */}
           <View style={styles.actions}>
             {role === 'sub-agent' && request.status === 'rejected' && (
@@ -308,7 +287,7 @@ export default function RequestDetailModal({
                 <Text style={styles.actionBtnText}>Retry Request</Text>
               </TouchableOpacity>
             )}
-            {role === 'sub-agent' && request.status === 'pending' && (
+            {role === 'sub-agent' && request.status === 'awaiting_review' && (
               <TouchableOpacity
                 onPress={handleCancel}
                 disabled={loading}
@@ -318,29 +297,18 @@ export default function RequestDetailModal({
                 }
               </TouchableOpacity>
             )}
-            {role === 'main-agent' && request.status === 'pending' && (
+            {role === 'main-agent' && request.status === 'awaiting_review' && (
               <TouchableOpacity
                 onPress={handleApprove}
                 disabled={loading}
                 style={[styles.actionBtn, { backgroundColor: '#0891B2' }]}
               >
-                {<Text style={styles.actionBtnText}>Approve</Text>
+                {<Text style={styles.actionBtnText}>Accept and reserve</Text>
                 }
               </TouchableOpacity>
             )}
             {role === 'main-agent' &&
-              (request.status === 'pending' || request.status === 'approved') && (
-              <TouchableOpacity
-                onPress={handleProcess}
-                disabled={loading}
-                style={[styles.actionBtn, { backgroundColor: theme.primary }]}
-              >
-                {<Text style={styles.actionBtnText}>Process Transfer</Text>
-                }
-              </TouchableOpacity>
-            )}
-            {role === 'main-agent' &&
-              (request.status === 'pending' || request.status === 'approved') && (
+              (request.status === 'awaiting_review' || request.status === 'awaiting_source') && (
               <TouchableOpacity
                 onPress={handleReject}
                 disabled={loading}

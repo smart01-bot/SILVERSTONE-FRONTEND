@@ -1,3 +1,4 @@
+import { api } from '../../config/api';
 // src/screens/sub-agent/NetworksScreen.jsx
 import React, { useState, useEffect } from 'react';
 import {
@@ -25,16 +26,15 @@ export default function NetworksScreen({ navigation }) {
   const { theme, isDark, tr } = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
+  const codes={Voda:'vodacom',Airtel:'airtel',Yas:'yas',Halotel:'halotel'};
+  const [accounts,setAccounts]=useState([]);
+  const [types,setTypes]=useState({});
+  const [busy,setBusy]=useState(false);
   const [phones, setPhones] = useState({});
   const [active, setActive] = useState([]);
     const [saved,  setSaved]  = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setPhones(profile.agentPhoneNumbers ?? {});
-      setActive(profile.networks ?? []);
-    }
-  }, [profile]);
+  useEffect(()=>{api.call('/me/accounts').then(setAccounts).catch(e=>Alert.alert('Accounts unavailable',e.message));},[user?.id]);
 
   const toggleNetwork = (name) => {
     setActive(prev =>
@@ -42,31 +42,18 @@ export default function NetworksScreen({ navigation }) {
     );
   };
 
-  const validatePhone = (phone) => {
-    if (!phone) return true;
-    return /^(07|06|\+2557|\+2556)\d{8}$/.test(phone.replace(/\s/g, ''));
-  };
-
-  const handleSave = async () => {
-    for (const net of NETWORKS) {
-      if (phones[net.name] && !validatePhone(phones[net.name])) {
-        Alert.alert(tr('error'), `${tr('error')} ${net.name}`);
-        return;
-      }
-    }
-    showLoader();
+  const validatePhone = value => !value || /^[A-Za-z0-9+_-]{1,64}$/.test(value);
+  const handleSave=async()=>{
+    if(busy)return;setBusy(true);showLoader();
     try {
-      await updateDoc(doc(db, 'agents', user.id), {
-        agentPhoneNumbers: phones,
-        networks:          active,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (e) {
-      Alert.alert(tr('error'), tr('error'));
-    } finally {
-      hideLoader();
-    }
+      for(const net of NETWORKS.filter(n=>active.includes(n.name)&&phones[n.name])) {
+        const body={networkCode:codes[net.name],identifierType:types[net.name]||'phone',identifier:phones[net.name].trim()};
+        if(!accounts.some(a=>a.networkCode===body.networkCode&&a.identifierType===body.identifierType&&a.identifier===body.identifier)) await api.call('/me/accounts',{method:'POST',body,expectedOwner:user.id});
+      }
+      setAccounts(await api.call('/me/accounts'));setSaved(true);
+      Alert.alert('Accounts saved','New accounts are unverified. Verification and provider execution remain unavailable.');
+    }catch(e){Alert.alert('Unable to save',e.message);setAccounts(await api.call('/me/accounts').catch(()=>accounts));}
+    finally{setBusy(false);hideLoader();}
   };
 
   return (
@@ -87,7 +74,7 @@ export default function NetworksScreen({ navigation }) {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         <Text style={[s.desc, { color: theme.textDim }]}>
-          {tr('sourceNetwork')} — {tr('destNetwork')}
+          Saved network accounts. Adding an identifier does not verify it or activate payments.
         </Text>
 
         {NETWORKS.map(net => (
@@ -115,7 +102,9 @@ export default function NetworksScreen({ navigation }) {
             </View>
 
             <View style={[s.phoneWrap, { borderTopColor: theme.border }]}>
-              <Text style={[s.phoneLabel, { color: theme.textDim }]}>{tr('phone')}</Text>
+              {accounts.filter(a=>a.networkCode===codes[net.name]).map(a=><Text key={a.id} style={{color:theme.textDim}}>{a.identifierType}: {a.identifier} · {a.verificationStatus}</Text>)}
+              <Text style={[s.phoneLabel, { color: theme.textDim }]}>Add identifier</Text>
+              <View style={{flexDirection:'row',flexWrap:'wrap',gap:12}}>{['phone','agent','till','account'].map(type=><TouchableOpacity key={type} onPress={()=>setTypes(v=>({...v,[net.name]:type}))}><Text style={{color:(types[net.name]||'phone')===type?theme.primary:theme.textDim}}>{type}</Text></TouchableOpacity>)}</View>
               <TextInput
                 style={[s.phoneInput, {
                   backgroundColor: theme.bg,
@@ -124,9 +113,9 @@ export default function NetworksScreen({ navigation }) {
                 }]}
                 value={phones[net.name] ?? ''}
                 onChangeText={val => setPhones(p => ({ ...p, [net.name]: val }))}
-                placeholder="07XX XXX XXX"
+                placeholder="Phone: +255… or typed account ID"
                 placeholderTextColor={theme.muted}
-                keyboardType="phone-pad"
+                keyboardType="default"
               />
               {phones[net.name] && !validatePhone(phones[net.name]) && (
                 <Text style={s.phoneError}>{tr('error')}</Text>
@@ -137,6 +126,7 @@ export default function NetworksScreen({ navigation }) {
 
         <TouchableOpacity
           onPress={handleSave}
+          disabled={busy}
           
           style={[s.saveBtn, { backgroundColor: saved ? '#16A34A' : theme.primary }]}
           activeOpacity={0.85}

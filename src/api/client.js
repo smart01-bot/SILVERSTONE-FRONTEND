@@ -8,10 +8,14 @@ export function createApiClient({
 }) {
   const key = "silverstone_api_session_v1";
   let tokens = null;
+  let ownerId = null;
   let revision = 0;
   let refreshing = null;
   let writing = Promise.resolve();
-  async function request(path, { method = "GET", body, token } = {}) {
+  async function request(
+    path,
+    { method = "GET", body, token, headers = {} } = {},
+  ) {
     if (!baseUrl || !/^https?:\/\//.test(baseUrl))
       throw new Error("Set the API address before signing in.");
     const controller = new AbortController();
@@ -21,6 +25,7 @@ export function createApiClient({
         method,
         signal: controller.signal,
         headers: {
+          ...headers,
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -66,6 +71,7 @@ export function createApiClient({
   async function clear() {
     revision++;
     tokens = null;
+    ownerId = null;
     writing = writing.catch(() => {}).then(() => storage.removeItem(key));
     await writing;
     onInvalidSession();
@@ -97,6 +103,8 @@ export function createApiClient({
   }
   async function envelope(path, options = {}) {
     const current = revision;
+    if (options.expectedOwner && options.expectedOwner !== ownerId)
+      throw new Error("Session owner changed. Queued request retained.");
     try {
       const result = await request(path, {
         ...options,
@@ -127,6 +135,7 @@ export function createApiClient({
     }
   }
   return {
+    currentOwner: () => ownerId,
     async restore() {
       const raw = await storage.getItem(key);
       if (!raw) return null;
@@ -137,7 +146,9 @@ export function createApiClient({
         return null;
       }
       try {
-        return (await envelope("/me")).data;
+        const agent = (await envelope("/me")).data;
+        ownerId = agent.id;
+        return agent;
       } catch (error) {
         if (error.status === 401) return null;
         throw error;
@@ -150,6 +161,8 @@ export function createApiClient({
         body: { email, password },
       });
       await save(data, current);
+      if (current !== revision) throw new Error("Session changed.");
+      ownerId = data.agent.id;
       return data.agent;
     },
     async register(body) {
@@ -159,6 +172,8 @@ export function createApiClient({
         body,
       });
       await save(data, current);
+      if (current !== revision) throw new Error("Session changed.");
+      ownerId = data.agent.id;
       return data.agent;
     },
     async logout() {

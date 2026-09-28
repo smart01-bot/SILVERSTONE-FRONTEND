@@ -1,3 +1,15 @@
+## Phase 3 — D09 and D10 approved, 27 September 2026
+
+The user explicitly approved D09 and D10 as presented, and authorized local Phase 3 implementation/verification on development in both repositories. No push, main changes, deployment, live database, real notifications or payments. These approvals supersede historical proposed wording below.
+
+- D09 APPROVED: assigned main-agent accepts and atomically reserves destination capacity before source collection becomes eligible. Insufficient capacity blocks acceptance. Unknown payment outcomes retain the hold pending reconciliation.
+- D10 APPROVED: PostgreSQL durable jobs with expiring leases and unique claim tokens. Expired preparation claims can recover; stale tokens cannot finalize. Unknown external outcomes must be reconciled before any retry.
+- Capacity and verified operational accounts remain explicit synthetic fixtures only. Public account registration creates unverified identifiers, never verification/capacity. Provider execution and manual settlement remain disabled.
+
+Local implementation details: FIFO server queue sequence; urgency is a review flag, not priority or a guarantee. Same-network exchange requests are rejected in this prototype. Existing terms/account snapshots are immutable. No money ledger entries are created without settlement evidence. Preparation jobs can become blocked, retryable or reconciliation-required, never settled. These details do not establish real provider capabilities or production balance policy.
+
+Manual settlement remains UNAVAILABLE. A future proposal must specify separate operator capability, assigned scope, independent evidence/reference checks, amount/currency/accounts, duplicate/replay handling, immutable actor audit and reconciliation authority. No such capability or public endpoint was enabled. D09/D10 approval does not approve it.
+
 ## Phase 2 current implementation boundary
 
 Local review now requires a reviewer_grants record (unrevoked), active/approved main-agent status and current assignment. No self-review, unassigned review, role promotion or client verification writes. Transactional decision audit identifies reviewer/revision/reason/time; document reads record access. Unsubmitted draft contents remain applicant-only.

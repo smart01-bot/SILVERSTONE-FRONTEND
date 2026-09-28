@@ -4,6 +4,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const STATUS_CONFIG = {
+  awaiting_review:{color:'#F59E0B',bg:'#F59E0B20',label:'Awaiting review'},
+  awaiting_source:{color:'#0891B2',bg:'#0891B220',label:'Reserved · provider disabled'},
+  needs_attention:{color:'#C8102E',bg:'#C8102E20',label:'Reconciliation needed'},
+  expired:{color:'#6B6B70',bg:'#6B6B7020',label:'Expired'},
   pending: {
     color: '#F59E0B',
     bg:    '#F59E0B20',

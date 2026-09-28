@@ -1,13 +1,10 @@
-# Silverstone current state — Phase 2 local delivery
+# Silverstone Phase 3 — local delivery
 
-All implementation remains on development in both repositories. Local-only authority: no push, main changes, deployments, live database changes or Firebase migration. Silverstone charges no service fee; payments remain disabled.
+Status: local synthetic core-exchange gate passes; release acceptance remains PARTIAL. D09/D10 explicitly approved. Phase 4 not started. All changes on development, unpublished; main/live data untouched.
 
-**Status: synthetic onboarding/API/client gate passes; full Phase 2 acceptance remains partial. Phase 3 has not started.**
+Starting local Phase 2: frontend 419fef2fb218ca3c4d3091f88c6bbd9d2c25213f; backend e4f31b46f6bdfa0868db19a5fd3e9136c78d0057.
+Remote development: frontend e92ad465429b54aa5c707d330e7d67badbeee631; backend 8002e9b8d2c5d9393bad5c1fec5898ea0393adf0. Remote Phase 0 alone is not a valid continuation base. Final local SHAs are in the delivered handoff header and recovery bundles.
 
-Remote development is unchanged: frontend e92ad465429b54aa5c707d330e7d67badbeee631; backend 8002e9b8d2c5d9393bad5c1fec5898ea0393adf0. Phase 2 starts from unpublished Phase 1 frontend 66bf0e479f422421bc1732bef314ac156867d989 / backend 2bd0e2818ad6e1841c0b6df7fbce6fcd20fc0af2. Final local commits appear in the closing delivery header and recovery bundles.
+Implemented typed accounts, immutable two-leg request terms/history, FIFO queue, actor-bound idempotency, atomic synthetic reservations, durable preparation jobs/claim recovery, identity-bound offline retries and existing-screen controls. No provider execution/manual settlement, fee or fabricated financial completion.
 
-Implemented: authenticated versioned drafts, private validated PNG/JPEG evidence, immutable submissions, scoped explicitly granted manual review, correction/resubmission, approval/rejection reasons and reviewer audit, server access restrictions and frontend PIN transition. Existing wizard identity/styles preserved; no fake OTP/selfie result.
-
-Verification: 26 backend tests, 9 frontend tests, backend syntax/import build, actual frontend HTTP onboarding journey, Android JS/Hermes export and diff checks pass. Native Android/PIN/screenshots and native PostgreSQL remain unverified. Real SMS provider, production private storage/retention/evidence policy, production reviewer provisioning and existing-user migration remain unresolved. Real applicants can save drafts, but phone verification blocks submission; only disposable synthetic fixtures carry clearly labelled test proof.
-
-Read handoffs/PHASE-02-HANDOFF.md and both LOCAL-DEVELOPMENT.md guides. Never interpret remote Phase 0, synthetic phone proof, image validation or manual review as live KYC/payment readiness.
+Verification: 36 backend tests, 13 frontend tests, backend build, three actual frontend-client HTTP journeys and Android JS/Hermes export passed. Native Android and native multi-connection PostgreSQL evidence remain unavailable. Phase 2 OTP/storage/evidence/retention/bootstrap dependencies remain open. Read handoffs/PHASE-03-HANDOFF.md.

@@ -1,3 +1,13 @@
+## Phase 3 — D09 and D10 approved, 27 September 2026
+
+The user explicitly approved D09 and D10 as presented, and authorized local Phase 3 implementation/verification on development in both repositories. No push, main changes, deployment, live database, real notifications or payments. These approvals supersede historical proposed wording below.
+
+- D09 APPROVED: assigned main-agent accepts and atomically reserves destination capacity before source collection becomes eligible. Insufficient capacity blocks acceptance. Unknown payment outcomes retain the hold pending reconciliation.
+- D10 APPROVED: PostgreSQL durable jobs with expiring leases and unique claim tokens. Expired preparation claims can recover; stale tokens cannot finalize. Unknown external outcomes must be reconciled before any retry.
+- Capacity and verified operational accounts remain explicit synthetic fixtures only. Public account registration creates unverified identifiers, never verification/capacity. Provider execution and manual settlement remain disabled.
+
+Local implementation details: FIFO server queue sequence; urgency is a review flag, not priority or a guarantee. Same-network exchange requests are rejected in this prototype. Existing terms/account snapshots are immutable. No money ledger entries are created without settlement evidence. Preparation jobs can become blocked, retryable or reconciliation-required, never settled. These details do not establish real provider capabilities or production balance policy.
+
 ## Phase 2 implementation decisions — 27 September 2026
 
 User authorized local Phase 2 implementation/verification only on both development branches. No push/live changes/notifications/payments. Existing identity migration remains excluded.
@@ -36,8 +46,8 @@ All proposals dated 27 September 2026. “Confirmed” means directly required b
 | D06 | Approved | Root Expo app → Express → PostgreSQL, Supabase host/private storage | Fits current app and relational two-leg models; hosting/access unverified |
 | D07 | Approved | Harden Express as single authentication authority | Reuses backend bcrypt and integration work; requires explicit existing-user migration plan |
 | D08 | Approved | One active main-agent assignment per sub-agent; restricted reviewers | Prevent global review and cross-agent leakage |
-| D09 | Proposed | Main-agent accepts and reserves destination capacity before source collection | Avoid knowingly collecting funds without a destination plan; provider/operating policy must confirm |
-| D10 | Proposed | PostgreSQL durable jobs/outbox, leased workers; optional Redis | Recover work after worker/Redis failure without losing financial state |
+| D09 | Approved | Main-agent accepts and reserves destination capacity before source collection | Avoid knowingly collecting funds without a destination plan; provider/operating policy must confirm |
+| D10 | Approved | PostgreSQL durable jobs/outbox, leased workers; optional Redis | Recover work after worker/Redis failure without losing financial state |
 | D11 | Approved | Versioned camelCase API, UUIDs, integer whole-TZS strings | Remove current shape drift and floating-point ambiguity; provider precision remains an external question |
 | D12 | Open | Existing users/documents and schema migration | Owner must provide authorized non-sensitive inventory; do not assume empty database |
 | D13 | Open | Evidence requirements, retention, reviewers and first main-agent bootstrap | Product/partner policy; no invented compliance claims |

@@ -1,3 +1,4 @@
+import { exchangeAction, formatTzs } from '../api/exchanges';
 // src/components/RequestDetailModal.jsx
 import React, { useRef, useEffect } from 'react';
 import {
@@ -76,17 +77,11 @@ export default function RequestDetailModal({
     })
   ).current;
 
-  const fmt = (n) => {
-    if (!n) return 'TZS 0';
-    const num = Number(n);
-    if (num >= 1_000_000) return `TZS ${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000)     return `TZS ${(num / 1_000).toFixed(0)}k`;
-    return `TZS ${num}`;
-  };
+  const fmt = n => `TZS ${formatTzs(n)}`;
 
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const secs = Math.floor((Date.now() - Date.parse(ts)) / 1000);
     if (secs < 60)    return 'Just now';
     if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
     if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
@@ -110,12 +105,10 @@ export default function RequestDetailModal({
           style: 'destructive',
           onPress: async () => {
             try {
-              await updateDoc(doc(db, 'requests', request.id), {
-                status: 'cancelled',
-              });
+              await exchangeAction(request,'cancel');
               onClose?.();
             } catch (e) {
-              Alert.alert('Error', 'Failed to cancel.');
+              Alert.alert('Error', e.message);
             }
           },
         },
@@ -231,7 +224,7 @@ export default function RequestDetailModal({
           {/* Sub-agent actions */}
           {!isMainAgent && (
             <View style={styles.actions}>
-              {request.status === 'pending' && (
+              {request.status === 'awaiting_review' && (
                 <TouchableOpacity
                   onPress={handleCancel}
                   style={[styles.actionBtn, { borderColor: '#C8102E' }]}

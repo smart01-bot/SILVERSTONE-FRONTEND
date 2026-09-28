@@ -1,3 +1,9 @@
+# Phase 3 local exchange preview
+
+Start the backend isolated preview. Sign in as sub@example.test or main@example.test using the synthetic password in the backend guide. The seeded Voda/Airtel accounts are explicitly synthetic_fixture. Publicly adding an account creates unverified only. Choose Voda → Airtel, amount <= 1,000,000 TZS test capacity, submit; main-agent Queue → Accept and reserve. Detail shows both legs not_started and provider disabled. Never send funds. Cancel/reject safely before claims or uncertainty; holds release once. Claims and uncertainty are exercised by automated tests.
+
+New offline records persist under the originating owner and retain failed/uncertain submissions. New Request auto-retries on reconnection while mounted, or use its retry control. Cached account identifiers allow offline preparation after the first online load. Existing legacy offline records remain untouched. Native offline/UUID/SecureStore behavior still needs device verification. expo-modules-core is pinned explicitly to the already installed/locked 1.12.26 runtime (see package.json for authoritative version). Run npm ci when applying the package changes, then npm test and the existing Android build:check. No APK or cloud build is authorized.
+
 # Silverstone frontend — Phase 2 local onboarding
 
 This section supersedes historical preview-only descriptions below. Use development and the isolated backend; no live accounts/data. Existing UI/branding remains. Drafts are saved server-side by Next/Save draft after creating credentials; passwords are not stored in drafts. Sign in and Resume saved draft to restore. Unsaved edits are not durable.

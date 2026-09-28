@@ -1,5 +1,8 @@
+import { api } from '../../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getNetworkAccounts } from '../../api/exchanges';
 // src/screens/sub-agent/NewRequestScreen.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
@@ -28,8 +31,20 @@ export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { showLoader, hideLoader } = useLoader();
   const { theme, tr }     = useTheme();
-  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.id, profile?.name);
+  const { isOnline, syncedCount, enqueue, syncQueue, pendingCount, queueError } = useOfflineQueue(user?.id, profile?.name);
 
+  const [accounts,setAccounts] = useState([]);
+  const [loading,setLoading] = useState(false);
+  const [submitted,setSubmitted] = useState(false);
+  const busy = useRef(false);
+  const codes={Voda:'vodacom',Airtel:'airtel',Yas:'yas',Halotel:'halotel'};
+  const selectedAccount=label=>{const matches=accounts.filter(a=>a.networkCode===codes[label]&&a.verificationStatus==='synthetic_fixture');return matches.length===1?matches[0]:null;};
+  useEffect(()=>{let cancelled=false;setAccounts([]);const owner=user?.id;if(!owner)return;
+    (async()=>{const key='silverstone_accounts_v1_'+owner;
+      try {const cached=await AsyncStorage.getItem(key);if(cached&&!cancelled)setAccounts(JSON.parse(cached));
+       if(isOnline){const rows=await getNetworkAccounts();if(api.currentOwner()===owner){await AsyncStorage.setItem(key,JSON.stringify(rows));if(!cancelled)setAccounts(rows);}}
+      }catch(e){if(!cancelled)setError(e.message);}
+    })();return()=>{cancelled=true;};},[user?.id,isOnline]);
   const prefill = route?.params?.prefill;
 
   const [sourceNetwork, setSourceNetwork] = useState(prefill?.sourceNetwork ?? '');
@@ -40,11 +55,8 @@ export default function NewRequestScreen({ navigation, route }) {
   const [urgent,        setUrgent]        = useState(false);
   const [error,         setError]         = useState('');
 
-  useEffect(() => {
-    if (sourceNetwork && profile?.agentPhoneNumbers?.[sourceNetwork]) {
-      setSourcePhone(profile.agentPhoneNumbers[sourceNetwork]);
-    }
-  }, [sourceNetwork]);
+  useEffect(()=>{setSourcePhone(selectedAccount(sourceNetwork)?.identifier||'');setDestPhone(selectedAccount(destNetwork)?.identifier||'');setSubmitted(false);},[sourceNetwork,destNetwork,accounts]);
+  useEffect(()=>setSubmitted(false),[amount,urgent]);
 
   const formatAmount = (val) => {
     const digits = val.replace(/\D/g, '');
@@ -54,8 +66,8 @@ export default function NewRequestScreen({ navigation, route }) {
   const handleAmountChange = (val) => setAmount(formatAmount(val));
 
   const addQuick = (n) => {
-    const current = Number(amount.replace(/,/g, '')) || 0;
-    setAmount(formatAmount(String(current + n)));
+    const current = BigInt(amount.replace(/,/g, '') || '0');
+    setAmount(formatAmount(String(current + BigInt(n))));
   };
 
   const validate = () => {
@@ -69,7 +81,19 @@ export default function NewRequestScreen({ navigation, route }) {
   };
 
   const handleSubmit = async () => {
-    setError('Exchange submission is not available yet. No request or payment was created.');
+    if(busy.current||submitted)return;
+    const problem=validate();if(problem){setError(problem);return;}
+    const source=selectedAccount(sourceNetwork),destination=selectedAccount(destNetwork);
+    if(!source||!destination){setError('Verified test accounts are required. Connect to load your accounts.');return;}
+    if(source.networkCode===destination.networkCode){setError('Choose two different networks.');return;}
+    busy.current=true;setLoading(true);showLoader();
+    try {
+      await enqueue({sourceAccountId:source.id,destinationAccountId:destination.id,amountTzs:amount.replace(/,/g,''),currency:'TZS',urgent});
+      setSubmitted(true);
+      setError('Request saved on this device. No funds moved.');
+      if(isOnline){const result=await syncQueue();setError(result?.remaining===0?'Request submitted for review. No funds moved.':'Saved request retained. Retry below with the same key.');}
+    }catch(e){setError(e.message);}
+    finally{busy.current=false;setLoading(false);hideLoader();}
   };
 
   const NetworkPicker = ({ label, selected, onSelect }) => (
@@ -150,18 +174,18 @@ export default function NewRequestScreen({ navigation, route }) {
           <NetworkPicker label={tr('destNetwork')}   selected={destNetwork}   onSelect={setDestNetwork}   />
 
           <AnimatedInput
-            label={tr('sourcePhone')}
+            label="Source account identifier" editable={false}
             value={sourcePhone}
             onChangeText={setSourcePhone}
-            placeholder="07XX XXX XXX"
+            placeholder="Select a verified test network account"
             keyboardType="phone-pad"
           />
 
           <AnimatedInput
-            label={tr('destPhone')}
+            label="Destination account identifier" editable={false}
             value={destPhone}
             onChangeText={setDestPhone}
-            placeholder="07XX XXX XXX"
+            placeholder="Select a verified test network account"
             keyboardType="phone-pad"
           />
 
@@ -201,13 +225,16 @@ export default function NewRequestScreen({ navigation, route }) {
           >
             <View>
               <Text style={[s.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
-              <Text style={[s.urgentSub,   { color: theme.textDim }]}>{tr('urgentDesc')}</Text>
+              <Text style={[s.urgentSub,   { color: theme.textDim }]}>{"Flag for review; queue remains first-in, first-out."}</Text>
             </View>
             <View style={[s.toggle, { backgroundColor: urgent ? '#F59E0B' : theme.border }]}>
               <View style={[s.toggleKnob, { transform: [{ translateX: urgent ? 18 : 2 }] }]} />
             </View>
           </TouchableOpacity>
 
+          <Text style={[s.label,{color:theme.textDim}]}>Silverstone fee: TZS 0. Provider execution disabled.</Text>
+          {pendingCount>0&&<TouchableOpacity onPress={syncQueue} disabled={!isOnline||loading}><Text style={{color:theme.primary}}>{pendingCount} saved request(s) — Retry submission</Text></TouchableOpacity>}
+          {queueError?<Text style={{color:theme.danger}}>{queueError}</Text>:null}
           {error ? <Text style={[s.error, { color: theme.danger }]}>{error}</Text> : null}
 
           {sourceNetwork && destNetwork && amount ? (
@@ -232,6 +259,7 @@ export default function NewRequestScreen({ navigation, route }) {
 
           <PressableScale
             onPress={handleSubmit}
+            disabled={loading || submitted}
             style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
             scaleDown={0.97}
           >

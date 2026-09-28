@@ -1,3 +1,13 @@
+## Phase 3 current boundaries
+
+S08 and S10 active paths now have identity-bound persistent outboxes, stable request keys, atomic capacity holds and PostgreSQL job claims. Existing UI styles were retained; undefined loading bindings corrected; request controls now perform scoped commands. Sample dashboard activity, fixed growth and fake chart bars were removed. Financial summaries count completed states only; no local operation creates completed states.
+
+Release remains partial: no native Android/PIN/UUID/picker/offline/keyboard/accessibility screenshots; no native multi-connection PostgreSQL test or database-process restart demonstration. PGlite serializes transactions; embedded concurrent promises verify invariants but do not prove native concurrency. Real phone provider, evidence/storage/retention/production reviewer bootstrap remain open. No provider capability, real account verification/balance source, reservation freshness, settlement/ledger/refund/callback policy or production retry/SLA is established.
+
+The isolated preview resets on process exit. Native guarded database persists records but was not run. Owner-specific AsyncStorage holds account IDs, amount, retry key/error and cached typed identifiers; it holds no passwords, API tokens or KYC evidence. Native device storage/privacy/retention policy remains unverified. Failed entries are deliberately retained; there is no discard/edit UI for an uncertain outbox entry. Retry reuses its original payload/key. Legacy queue entries are untouched.
+
+Prototype constraints: same-network requests rejected; urgency does not reorder FIFO; public accounts start unverified; only synthetic fixture account/capacity records are operational. Request reads hydrate history/legs per row (bounded pages; optimize before scale). No production worker scheduler/monitoring or automatic reservation expiry. Unknown outcomes keep capacity held until an authorized reconciliation workflow exists. Before-funds cancellation/rejection releases once; account suspension blocks preparation and does not silently release holds.
+
 # Phase 2 disposition — current
 
 Local drafts, evidence uploads, immutable submissions and scoped review/corrections/rejection/approval now pass automated tests. S12/S13 active-path simulated behavior was replaced: no OTP acceptance or face-match claims. Main-agent review uses explicit grants/current assignment, with server authorization.

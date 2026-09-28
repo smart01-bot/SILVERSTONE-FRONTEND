@@ -1,3 +1,7 @@
+## Phase 3 UI wiring
+
+Existing StyleSheet definitions, brand, wizard and navigation are preserved. Existing network cards now save typed unverified identifiers; New Request selects an unambiguous synthetic verified account per network and displays its identifier. Offline banner/retry state distinguishes saved from submitted. Queue/card/detail controls use current versions and recorded server states; main-agent detail exposes both legs/history and next action. Accept means reserve, never paid. Unknown shows reconciliation needed. Dashboard placeholders and fake growth/chart removed. No native screenshot or usability acceptance is claimed.
+
 ## Phase 2 review status
 
 Existing style definitions, wizard order and brand tokens retained. Functional changes remove OTP/face-match simulation, add explicit draft persistence/resume and replace disconnected approval buttons with scoped detail/reason/correction actions and private image inspection. Pending/rejected/correction views show actual state and retained reviewer feedback. No fabricated metrics, fees or compliance claims added.

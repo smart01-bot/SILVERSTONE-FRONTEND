@@ -1,3 +1,5 @@
+import { requestStatusLabel } from '../../api/presentation';
+import { exchangeAction, formatTzs } from '../../api/exchanges';
 // src/screens/sub-agent/MyRequestsScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,7 +21,6 @@ import {
   onSnapshot, doc, updateDoc,
 } from '../../api/screenData';
 import { db } from '../../api/screenData';
-import { USE_MOCK } from '../../config/dev';
 
 const NETWORK_COLORS = {
   Voda:    '#E40000',
@@ -27,15 +28,6 @@ const NETWORK_COLORS = {
   Airtel:  '#FF0000',
   Halotel: '#D4A017',
 };
-
-const MOCK_REQUESTS = [
-  { id: 'r1', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 3_600_000) } },
-  { id: 'r2', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Yas',     amount: 75000,  status: 'pending',   createdAt: { toDate: () => new Date(Date.now() - 900_000)   } },
-  { id: 'r3', agentId: 'mock', sourceNetwork: 'Yas',     destNetwork: 'Halotel', amount: 300000, status: 'rejected',  createdAt: { toDate: () => new Date(Date.now() - 86_400_000) } },
-  { id: 'r4', agentId: 'mock', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 500000, status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 7_200_000)  } },
-  { id: 'r5', agentId: 'mock', sourceNetwork: 'Voda',    destNetwork: 'Yas',     amount: 200000, status: 'approved',  createdAt: { toDate: () => new Date(Date.now() - 1_800_000)  } },
-  { id: 'r6', agentId: 'mock', sourceNetwork: 'Airtel',  destNetwork: 'Voda',    amount: 90000,  status: 'completed', createdAt: { toDate: () => new Date(Date.now() - 43_200_000) } },
-];
 
 export default function MyRequestsScreen({ navigation }) {
   const { user }              = useAuth();
@@ -50,8 +42,8 @@ export default function MyRequestsScreen({ navigation }) {
 
   const FILTERS = [
     { key: 'all',       label: 'All'                 },
-    { key: 'pending',   label: tr('statusPending')   },
-    { key: 'approved',  label: tr('statusApproved')  },
+    { key: 'awaiting_review',   label: tr('statusPending')   },
+    { key: 'awaiting_source',  label: 'Reserved'  },
     { key: 'completed', label: tr('statusCompleted') },
     { key: 'rejected',  label: tr('statusRejected')  },
   ];
@@ -59,14 +51,6 @@ export default function MyRequestsScreen({ navigation }) {
   useEffect(() => {
     if (!user?.id) return;
 
-    // ── Mock mode ────────────────────────────────────────────────────────────
-    if (USE_MOCK) {
-      setRequests(MOCK_REQUESTS);
-      setLoading(false);
-      return;
-    }
-
-    // ── Live Firestore ────────────────────────────────────────────────────────
     const unsub = onSnapshot(
       query(
         collection(db, 'requests'),
@@ -106,7 +90,7 @@ export default function MyRequestsScreen({ navigation }) {
       {
         text: tr('confirm'), style: 'destructive',
         onPress: async () => {
-          try { await updateDoc(doc(db, 'requests', req.id), { status: 'cancelled' }); }
+          try { await exchangeAction(req,'cancel'); }
           catch (e) { Alert.alert(tr('error'), tr('error')); }
         },
       },
@@ -128,8 +112,8 @@ export default function MyRequestsScreen({ navigation }) {
   const statusColor = (status) => {
     switch (status) {
       case 'completed': return '#16A34A';
-      case 'pending':   return '#F59E0B';
-      case 'approved':  return '#0891B2';
+      case 'awaiting_review':   return '#F59E0B';
+      case 'awaiting_source':  return '#0891B2';
       case 'rejected':  return theme.danger;
       case 'cancelled': return theme.textDim;
       default:          return theme.textDim;
@@ -137,8 +121,8 @@ export default function MyRequestsScreen({ navigation }) {
   };
 
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const secs = Math.floor((Date.now() - Date.parse(ts)) / 1000);
     if (secs < 60)     return tr('justNow');
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
@@ -146,11 +130,7 @@ export default function MyRequestsScreen({ navigation }) {
     return `${Math.floor(secs / 86400)}d ago`;
   };
 
-  const fmt = (n) => {
-    if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `TZS ${(n / 1_000).toFixed(0)}k`;
-    return `TZS ${n}`;
-  };
+  const fmt = n => `TZS ${formatTzs(n)}`;
 
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
@@ -253,14 +233,14 @@ export default function MyRequestsScreen({ navigation }) {
                 <View style={[s.statusBadge, { backgroundColor: statusColor(req.status) + '20' }]}>
                   <View style={[s.statusDot, { backgroundColor: statusColor(req.status) }]} />
                   <Text style={[s.statusText, { color: statusColor(req.status) }]}>
-                    {req.status}
+                    {requestStatusLabel(req.status)}
                   </Text>
                 </View>
               </View>
 
               <Text style={[s.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
 
-              {req.status === 'pending' && (
+              {req.status === 'awaiting_review' && (
                 <TouchableOpacity
                   onPress={() => handleCancel(req)}
                   style={[s.actionBtn, { borderColor: theme.border }]}

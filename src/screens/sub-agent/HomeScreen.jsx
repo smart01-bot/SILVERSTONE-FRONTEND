@@ -1,3 +1,5 @@
+import { formatTzs } from '../../api/exchanges';
+import { requestStatusLabel } from '../../api/presentation';
 // src/screens/sub-agent/HomeScreen.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -27,19 +29,6 @@ const NETWORKS = {
   Airtel:  { color: '#FF0000', short: 'AIR' },
   Halotel: { color: '#D4A017', short: 'HAL' },
 };
-
-const FILLER_REQUESTS = [
-  { id: 'filler-1', sourceNetwork: 'Voda',    destNetwork: 'Airtel',  amount: 150000, status: 'completed', _filler: true },
-  { id: 'filler-2', sourceNetwork: 'Airtel',  destNetwork: 'Halotel', amount: 80000,  status: 'pending',   _filler: true },
-  { id: 'filler-3', sourceNetwork: 'Halotel', destNetwork: 'Voda',    amount: 200000, status: 'completed', _filler: true },
-];
-
-const FILLER_NETWORKS = [
-  { name: 'Voda',    color: '#E40000', volume: 350000 },
-  { name: 'Airtel',  color: '#FF0000', volume: 230000 },
-  { name: 'Halotel', color: '#D4A017', volume: 120000 },
-  { name: 'Yas',     color: '#0070B8', volume:  80000 },
-];
 
 // ─── Infinite carousel banner ─────────────────────────────────────────────────
 // Renders [S1, S2, S3, S1, S2, S3] — always advances forward.
@@ -162,7 +151,7 @@ function BannerCard({
               <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
                 <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
               </View>
-              <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(Number(latestCompleted.amount) || 0)}</Text>
+              <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(latestCompleted.amount)}</Text>
             </View>
             <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
             <View style={s.completedPill}>
@@ -274,18 +263,18 @@ export default function HomeScreen({ navigation }) {
       collection(db, 'requests'),
       where('agentId', '==', user.id),
       orderBy('createdAt', 'desc'),
-      limit(20)
+      limit(10000)
     );
     const unsub = onSnapshot(q, snap => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setRequests(docs);
       const today = new Date(); today.setHours(0, 0, 0, 0);
-      let total = 0, todayV = 0, tCount = 0, pending = 0;
+      let total = 0n, todayV = 0n, tCount = 0, pending = 0;
       docs.forEach(r => {
-        const amt = Number(r.amount) || 0;
-        total += amt;
-        if (r.status === 'pending') pending++;
-        if (r.createdAt?.toDate?.() >= today) { todayV += amt; tCount++; }
+        const amt = BigInt(r.amount || 0);
+        if(r.status==='completed') total += amt;
+        if (r.status === 'awaiting_review') pending++;
+        if (r.status==='completed' && new Date(r.createdAt) >= today) { todayV += amt; tCount++; }
       });
       setTotalVolume(total);
       setTodayVolume(todayV);
@@ -298,47 +287,41 @@ export default function HomeScreen({ navigation }) {
 
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 
-  const fmt = (n) => {
-    if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `TZS ${(n / 1_000).toFixed(0)}k`;
-    return `TZS ${n}`;
-  };
+  const fmt = n => `TZS ${formatTzs(n)}`;
 
   const statusColor = (status) => {
     switch (status) {
       case 'completed': return '#16A34A';
-      case 'pending':   return '#F59E0B';
-      case 'approved':  return '#0891B2';
+      case 'awaiting_review':   return '#F59E0B';
+      case 'awaiting_source':  return '#0891B2';
       case 'rejected':  return theme.danger;
       default:          return theme.textDim;
     }
   };
 
   const timeAgo = (ts) => {
-    if (!ts?.toDate) return '2h ago';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
+    if (!ts) return '';
+    const secs = Math.floor((Date.now() - Date.parse(ts)) / 1000);
     if (secs < 60)     return tr('justNow');
     if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
     if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
     if (secs < 172800) return tr('yesterday');
-    return ts.toDate().toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
+    return new Date(ts).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
   };
 
   const hasRealData     = requests.length > 0;
-  const displayRequests = hasRealData ? requests.slice(0, 4) : FILLER_REQUESTS;
+  const displayRequests = requests.slice(0, 4);
 
   const realNetworkBreakdown = Object.entries(NETWORKS).map(([name, meta]) => {
     const net = requests.filter(r => r.sourceNetwork === name && r.status === 'completed');
-    const vol = net.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const vol = net.reduce((s, r) => s + BigInt(r.amount || 0), 0n);
     return { name, ...meta, volume: vol };
   }).filter(n => n.volume > 0);
 
-  const displayNetworks = hasRealData ? realNetworkBreakdown : FILLER_NETWORKS;
-  const maxVolume       = Math.max(...displayNetworks.map(n => n.volume), 1);
+  const displayNetworks = realNetworkBreakdown;
+  const maxVolume       = Math.max(...displayNetworks.map(n => Number(n.volume)), 1);
 
-  const latestCompleted = hasRealData
-    ? requests.find(r => r.status === 'completed') ?? null
-    : FILLER_REQUESTS.find(r => r.status === 'completed');
+  const latestCompleted = requests.find(r => r.status === 'completed') ?? null;
 
   const reqId = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
 
@@ -436,7 +419,7 @@ export default function HomeScreen({ navigation }) {
                   </View>
                   <View style={s.netBarWrap}>
                     <View style={[s.netBarBg, { backgroundColor: theme.border }]}>
-                      <View style={[s.netBarFill, { backgroundColor: net.color, width: `${(net.volume / maxVolume) * 100}%` }]} />
+                      <View style={[s.netBarFill, { backgroundColor: net.color, width: `${(Number(net.volume) / maxVolume) * 100}%` }]} />
                     </View>
                   </View>
                   <Text style={[s.netAmount, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(net.volume)}</Text>
@@ -466,10 +449,10 @@ export default function HomeScreen({ navigation }) {
                       <Text style={[s.reqMeta, { color: theme.textDim }]} numberOfLines={1}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
                     </View>
                     <View style={s.reqRight}>
-                      <Text style={[s.reqAmount, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(Number(req.amount) || 0)}</Text>
+                      <Text style={[s.reqAmount, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(req.amount)}</Text>
                       <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
                         <Text style={[s.statusText, { color: statusColor(req.status) }]}>
-                          {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
+                          {requestStatusLabel(req.status)}
                         </Text>
                       </View>
                     </View>

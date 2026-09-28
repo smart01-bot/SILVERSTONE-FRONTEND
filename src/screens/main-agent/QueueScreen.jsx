@@ -1,3 +1,7 @@
+import RequestDetailModal from '../../components/RequestDetailModal';
+import { exchangeAction, formatTzs } from '../../api/exchanges';
+import { requestView } from '../../api/presentation';
+import { api } from '../../config/api';
 // src/screens/main-agent/QueueScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
@@ -69,6 +73,7 @@ export default function QueueScreen() {
   const { showLoader, hideLoader } = useLoader();
 
   const [requests,   setRequests]   = useState([]);
+  const [selectedRequest,setSelectedRequest]=useState(null);
   const [filter,     setFilter]     = useState('All');
   const [refreshing, setRefreshing] = useState(false);
   const [loading,    setLoading]    = useState(true);
@@ -78,67 +83,42 @@ export default function QueueScreen() {
     All:      tr('queue'),
     Urgent:   tr('markUrgent'),
     Pending:  tr('statusPending'),
-    Approved: tr('statusApproved'),
+    Approved: 'Reserved',
   };
 
   useEffect(() => {
     const unsub = onSnapshot(
-      query(collection(db, 'requests'), orderBy('createdAt', 'desc')),
+      query(collection(db, 'requests'), orderBy('createdAt', 'asc')),
       snap => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        docs.sort((a, b) => {
-          if (a.urgent && !b.urgent) return -1;
-          if (!a.urgent && b.urgent) return 1;
-          return 0;
-        });
         setRequests(docs);
         setLoading(false);
-      }
+      }, e=>{setLoading(false);Alert.alert("Unable to load queue",e.message);}
     );
     return unsub;
   }, []);
 
   const filtered = requests.filter(r => {
-    if (filter === 'All')      return r.status === 'pending' || r.status === 'approved';
-    if (filter === 'Urgent')   return r.status === 'pending' && r.urgent;
-    if (filter === 'Pending')  return r.status === 'pending';
-    if (filter === 'Approved') return r.status === 'approved';
+    if (filter === 'All')      return ['awaiting_review','awaiting_source','needs_attention'].includes(r.status);
+    if (filter === 'Urgent')   return r.status === 'awaiting_review' && r.urgent;
+    if (filter === 'Pending')  return r.status === 'awaiting_review';
+    if (filter === 'Approved') return r.status === 'awaiting_source';
     return true;
   });
 
-  const pendingCount  = requests.filter(r => r.status === 'pending').length;
-  const urgentCount   = requests.filter(r => r.status === 'pending' && r.urgent).length;
-  const approvedCount = requests.filter(r => r.status === 'approved').length;
+  const pendingCount  = requests.filter(r => r.status === 'awaiting_review').length;
+  const urgentCount   = requests.filter(r => r.status === 'awaiting_review' && r.urgent).length;
+  const approvedCount = requests.filter(r => r.status === 'awaiting_source').length;
 
-  const waitMins  = (ts) => { if (!ts?.toDate) return 0; return Math.floor((Date.now() - ts.toDate().getTime()) / 60000); };
+  const waitMins = ts => Math.max(0,Math.floor((Date.now()-Date.parse(ts))/60000));
   const waitColor = (m)  => { if (m < 5) return '#16A34A'; if (m < 15) return '#F59E0B'; return '#C8102E'; };
 
   const handleApprove = async (req) => {
     showLoader();
     try {
-      await updateDoc(doc(db, 'requests', req.id), { status: 'approved', approvedAt: Timestamp.now() });
-    } catch (e) { Alert.alert('Error', 'Failed to approve request.'); }
-    finally { showLoader(); }
-  };
-
-  const handleProcess = async (req) => {
-    Alert.alert(
-      'Process Transfer',
-      `Confirm transfer of TZS ${Number(req.amount).toLocaleString()} from ${req.sourceNetwork} to ${req.destNetwork}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm', style: 'destructive',
-          onPress: async () => {
-            showLoader();
-            try {
-              await updateDoc(doc(db, 'requests', req.id), { status: 'completed', processedAt: Timestamp.now() });
-            } catch (e) { Alert.alert('Error', 'Failed to process transfer.'); }
-            finally { showLoader(); }
-          },
-        },
-      ]
-    );
+      const result=await exchangeAction(req,'accept');setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
+    } catch (e) { Alert.alert('Error', e.message); }
+    finally { hideLoader(); }
   };
 
   const handleReject = (req) => {
@@ -148,18 +128,16 @@ export default function QueueScreen() {
         onPress: async () => {
           showLoader();
           try {
-            await updateDoc(doc(db, 'requests', req.id), {
-              status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
-            });
-          } catch (e) { Alert.alert('Error', 'Failed to reject request.'); }
-          finally { showLoader(); }
+            const result=await exchangeAction(req,'reject',reason);setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
+          } catch (e) { Alert.alert('Error', e.message); }
+          finally { hideLoader(); }
         },
       })),
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
+  const onRefresh = async () => {setRefreshing(true);try {const rows=[];let cursor=null;do{const result=await api.envelope('/requests'+(cursor?'?cursor='+cursor:''));rows.push(...result.data);cursor=result.page?.nextCursor;}while(cursor);setRequests(rows.map(requestView));}catch(e){Alert.alert('Error',e.message);}finally{setRefreshing(false);}};
 
   const emptyMessages = {
     All:      { title: tr('queueClear'),                                subtitle: tr('queueEmptyDesc') },
@@ -184,7 +162,7 @@ export default function QueueScreen() {
           <View>
             <Text style={s.headerTitle}>Queue</Text>
             <Text style={s.headerSub}>
-              {pendingCount} pending · {urgentCount} urgent · {approvedCount} approved
+              {pendingCount} pending · {urgentCount} urgent · {approvedCount} reserved
             </Text>
           </View>
           <View style={s.iconBtn}>
@@ -240,6 +218,7 @@ export default function QueueScreen() {
             const mins = waitMins(req.createdAt);
             return (
               <PressableScale
+                onPress={()=>setSelectedRequest(req)}
                 key={req.id}
                 scaleDown={0.98}
                 style={[s.card, {
@@ -276,7 +255,7 @@ export default function QueueScreen() {
                   <Text style={[s.route,  { color: theme.text }]}>{req.sourceNetwork}</Text>
                   <Ionicons name="arrow-forward" size={16} color={theme.textDim} />
                   <Text style={[s.route,  { color: theme.text }]}>{req.destNetwork}</Text>
-                  <Text style={[s.amount, { color: theme.primary }]}>TZS {Number(req.amount).toLocaleString()}</Text>
+                  <Text style={[s.amount, { color: theme.primary }]}>TZS {formatTzs(req.amount)}</Text>
                 </View>
 
                 <View style={s.phonesRow}>
@@ -284,20 +263,16 @@ export default function QueueScreen() {
                   <Text style={[s.phone, { color: theme.textDim }]}>To: {req.destPhone}</Text>
                 </View>
 
+                <Text style={{color:theme.textDim}}>{req.nextAction}</Text>
+                <Text style={{color:theme.textDim}}>#{req.id.slice(-8)} · Queue {req.queueSequence} · Fee TZS 0</Text>
                 <View style={s.actions}>
-                  {req.status === 'pending' && (
+                  {req.status === 'awaiting_review' && (
                     <TouchableOpacity onPress={() => handleApprove(req)} style={[s.btnOutline, { borderColor: '#0891B2' }]} activeOpacity={0.75}>
-                      {<Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Approve</Text>
+                      {<Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Accept and reserve</Text>
                       }
                     </TouchableOpacity>
                   )}
-                  {(req.status === 'pending' || req.status === 'approved') && (
-                    <TouchableOpacity onPress={() => handleProcess(req)} style={[s.btnFilled, { backgroundColor: '#C8102E' }]} activeOpacity={0.85}>
-                      {<Text style={s.btnFilledText}>Process</Text>
-                      }
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={() => handleReject(req)} style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
+                  <TouchableOpacity onPress={() => handleReject(req)} disabled={!['awaiting_review','awaiting_source'].includes(req.status)} style={[s.btnOutline, { borderColor: theme.border }]} activeOpacity={0.75}>
                     {<Text style={[s.btnOutlineText, { color: theme.textDim }]}>Reject</Text>
                     }
                   </TouchableOpacity>
@@ -307,6 +282,7 @@ export default function QueueScreen() {
           })
         )}
       </ScrollView>
+      <RequestDetailModal request={selectedRequest} visible={!!selectedRequest} role="main-agent" onClose={()=>{setSelectedRequest(null);onRefresh();}} />
     </SafeAreaView>
   );
 }
