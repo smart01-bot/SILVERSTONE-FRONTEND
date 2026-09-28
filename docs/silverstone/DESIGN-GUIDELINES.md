@@ -1,3 +1,9 @@
+## Phase 2 review status
+
+Existing style definitions, wizard order and brand tokens retained. Functional changes remove OTP/face-match simulation, add explicit draft persistence/resume and replace disconnected approval buttons with scoped detail/reason/correction actions and private image inspection. Pending/rejected/correction views show actual state and retained reviewer feedback. No fabricated metrics, fees or compliance claims added.
+
+Android screenshots, compact/normal-width, keyboard, larger text, dark/light and picker/SecureStore checks remain unperformed because no native environment is available. Follow the Phase 2 handoff checklist before accepting UI/device readiness. Source preservation and a successful Hermes export do not satisfy that visual gate.
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Design preservation and usability

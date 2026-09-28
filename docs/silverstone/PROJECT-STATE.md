@@ -1,27 +1,13 @@
-# Silverstone current state — Phase 1
+# Silverstone current state — Phase 2 local delivery
 
-Updated 27 September 2026, Africa/Dar_es_Salaam.
+All implementation remains on development in both repositories. Local-only authority: no push, main changes, deployments, live database changes or Firebase migration. Silverstone charges no service fee; payments remain disabled.
 
-## Branch and authority
+**Status: synthetic onboarding/API/client gate passes; full Phase 2 acceptance remains partial. Phase 3 has not started.**
 
-All work belongs on `development` in both repositories. Never modify or merge into main under phase authority. Current phase is local-only: no push, deployment, live database operation or Firebase migration. The user approved Expo → Express → PostgreSQL, Express authentication with revocable sessions, one assigned main-agent per sub-agent, and the proposed consistent API format. Payments stay disabled; preserve the existing UI and zero Silverstone service fee.
+Remote development is unchanged: frontend e92ad465429b54aa5c707d330e7d67badbeee631; backend 8002e9b8d2c5d9393bad5c1fec5898ea0393adf0. Phase 2 starts from unpublished Phase 1 frontend 66bf0e479f422421bc1732bef314ac156867d989 / backend 2bd0e2818ad6e1841c0b6df7fbce6fcd20fc0af2. Final local commits appear in the closing delivery header and recovery bundles.
 
-| Repository | Verified remote base / local parent |
-| --- | --- |
-| Frontend development | e92ad465429b54aa5c707d330e7d67badbeee631 |
-| Backend development | 8002e9b8d2c5d9393bad5c1fec5898ea0393adf0 |
+Implemented: authenticated versioned drafts, private validated PNG/JPEG evidence, immutable submissions, scoped explicitly granted manual review, correction/resubmission, approval/rejection reasons and reviewer audit, server access restrictions and frontend PIN transition. Existing wizard identity/styles preserved; no fake OTP/selfie result.
 
-Both bases were fetched and clean before editing. Changes since the earlier main audit were documentation-only. No AGENTS.md was found in applicable repository/ancestor paths. Local final commit IDs appear in the closing handoff artifact and chat; this document cannot contain its own final commit SHA. Remote branches have not received Phase 1.
+Verification: 26 backend tests, 9 frontend tests, backend syntax/import build, actual frontend HTTP onboarding journey, Android JS/Hermes export and diff checks pass. Native Android/PIN/screenshots and native PostgreSQL remain unverified. Real SMS provider, production private storage/retention/evidence policy, production reviewer provisioning and existing-user migration remain unresolved. Real applicants can save drafts, but phone verification blocks submission; only disposable synthetic fixtures carry clearly labelled test proof.
 
-## Result and gate
-
-Local foundation implemented; automated API/client and embedded PostgreSQL checks pass. Native Android execution and native PostgreSQL/Docker verification remain open, so full device/environment acceptance is not claimed.
-
-- New active backend graph: index.js → foundation/. No eager external connections or payment worker when imported; old broken legacy routes are unmounted.
-- Isolated, transactional ss_v1 schema with checksum migrations; synthetic tests preserve legacy/public fixture data.
-- Express login, registration of pending test accounts, current-state permission checks, scoped agent/request reads, strict tokens, rotating refresh and server logout.
-- Existing mobile login and status flows use the API and separate SecureStore keys; no active Firebase imports. PIN reset requires password reauthentication; pending/unknown/suspended states cannot enter dashboards.
-- Existing wizard layout remains, with preview labels and explicitly unavailable final submission. No false OTP/selfie verification, application submission or demo approval.
-- Exchange writes, review decisions, network-account edits, provider operations and offline replay remain unavailable. Legacy offline/Firebase data is preserved.
-
-See LOCAL-DEVELOPMENT.md in each repo and handoffs/PHASE-01-HANDOFF.md for commands, evidence and limitations. Phase 2 has not started. Password recovery delivery, complete onboarding and native verification remain blockers; do not treat synthetic API registration as completed KYC.
+Read handoffs/PHASE-02-HANDOFF.md and both LOCAL-DEVELOPMENT.md guides. Never interpret remote Phase 0, synthetic phone proof, image validation or manual review as live KYC/payment readiness.

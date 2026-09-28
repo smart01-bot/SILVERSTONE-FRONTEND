@@ -104,7 +104,7 @@ export default function AppNavigator() {
   if (!canOperate(profile)) {
     return (
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <AuthNavigator key={profile.applicationStatus} initialRoute={profile.applicationStatus === 'rejected' ? 'rejected' : 'pending'} />
+        <AuthNavigator key={profile.applicationStatus} initialRoute="pending" />
       </NavigationContainer>
     );
   }

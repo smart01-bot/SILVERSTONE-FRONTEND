@@ -13,7 +13,7 @@
  *   5. Security note above CTA: never share this code
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -25,16 +25,16 @@ import {
   ScrollView,
   TextInput,
   Animated,
-} from 'react-native';
+} from "react-native";
 // Note: Animated kept for shakeAnim on the otpRow — that stays native-only (translateX).
-import * as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
-import { spacing, radius, fonts } from '../../constants/theme';
-import PressableScale from '../../components/PressableScale';
-import { useHaptics } from '../../hooks/useHaptics';
+import * as Clipboard from "expo-clipboard";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../../context/ThemeContext";
+import { spacing, radius, fonts } from "../../constants/theme";
+import PressableScale from "../../components/PressableScale";
+import { useHaptics } from "../../hooks/useHaptics";
 
 const TOTAL_STEPS = 6;
 const STEP = 2;
@@ -47,315 +47,48 @@ function maskPhone(phone) {
 }
 
 export default function Step2OTP({ navigation, route }) {
-  const { phone } = route.params ?? {};
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const haptics = useHaptics();
-
-  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
-  const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
-  const [shakeAnim] = useState(new Animated.Value(0));
-
-  const inputRefs = useRef([]);
-
-  // ─── Countdown ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (resendSeconds <= 0) return;
-    const timer = setInterval(() => {
-      setResendSeconds((s) => {
-        if (s <= 1) { clearInterval(timer); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendSeconds]);
-
-  const isValid = true; // Preview only; no OTP verification is claimed.
-
-  // ─── Shake ──────────────────────────────────────────────────────────────────
-  function shake() {
-    haptics.error();
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 8,  duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 6,  duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0,  duration: 60, useNativeDriver: true }),
-    ]).start();
-  }
-
-  // ─── Digit input ────────────────────────────────────────────────────────────
-  function handleDigit(text, index) {
-    const digit = text.replace(/\D/g, '').slice(-1);
-    haptics.pin();
-    const next = [...otp];
-    next[index] = digit;
-    setOtp(next);
-    if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
-    if (digit && index === OTP_LENGTH - 1 && next.every((d) => d !== '')) handleVerify(next);
-  }
-
-  // ─── Backspace ──────────────────────────────────────────────────────────────
-  function handleKeyPress(e, index) {
-    if (e.nativeEvent.key === 'Backspace') {
-      haptics.light();
-      const next = [...otp];
-      if (next[index] !== '') {
-        next[index] = '';
-        setOtp(next);
-      } else if (index > 0) {
-        next[index - 1] = '';
-        setOtp(next);
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
-  }
-
-  // ─── Paste ──────────────────────────────────────────────────────────────────
-  async function handlePaste(index) {
-    try {
-      const text = await Clipboard.getStringAsync();
-      const digits = text.replace(/\D/g, '').slice(0, OTP_LENGTH);
-      if (digits.length > 0) {
-        haptics.selection();
-        const next = [...otp];
-        digits.split('').forEach((d, i) => { if (i < OTP_LENGTH) next[i] = d; });
-        setOtp(next);
-        const focusIdx = Math.min(digits.length, OTP_LENGTH - 1);
-        inputRefs.current[focusIdx]?.focus();
-        if (digits.length === OTP_LENGTH) handleVerify(next);
-      }
-    } catch (_) {}
-  }
-
-  // ─── Verify ─────────────────────────────────────────────────────────────────
-  function handleVerify(otpArr = otp) {
-    haptics.light();
-    navigation.navigate('Step3Personal', { phone, phoneVerified: false });
-  }
-
-  // ─── Resend ─────────────────────────────────────────────────────────────────
-  function handleResend() {
-    if (resendSeconds > 0) return;
-    haptics.medium();
-    setOtp(Array(OTP_LENGTH).fill(''));
-    setResendSeconds(RESEND_SECONDS);
-    inputRefs.current[0]?.focus();
-  }
-
   const s = makeStyles(theme, insets);
-
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
-      {/* ── Gradient header ── */}
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
         style={s.header}
       >
-        <View style={s.navRow}>
-          <TouchableOpacity
-            onPress={() => { haptics.light(); navigation.goBack(); }}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-          </TouchableOpacity>
-          <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${(STEP / TOTAL_STEPS) * 100}%` }]} />
-          </View>
-          <Text style={s.counter}>{STEP}/{TOTAL_STEPS}</Text>
-        </View>
-
-        <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
-        <Text style={s.title}>Phone verification{'\n'}preview</Text>
-
-        {/* 1. Subtitle + "Wrong number?" link */}
-        <View style={s.subtitleRow}>
-          <Text style={s.subtitle}>No SMS sent to {maskPhone(phone)}. </Text>
-          <TouchableOpacity
-            onPress={() => { haptics.light(); navigation.goBack(); }}
-            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-          >
-            <Text style={s.wrongNumber}>Wrong number?</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ color: "white", paddingVertical: 12 }}>
+            ← Back · 2/6
+          </Text>
+        </TouchableOpacity>
+        <Text style={s.title}>Phone verification</Text>
+        <Text style={s.subtitle}>{route.params?.phone}</Text>
       </LinearGradient>
-
-      {/* ── Body ── */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={s.body}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <View style={{ padding: 24, gap: 20 }}>
+        <Text style={{ color: theme.text, fontSize: 16 }}>
+          SMS verification is not available yet. No code has been sent.
+        </Text>
+        <Text style={{ color: theme.textDim }}>
+          You can save your application details. Submission will require phone
+          verification.
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Step3Personal", route.params)}
+          style={{
+            padding: 16,
+            backgroundColor: theme.primary,
+            borderRadius: 14,
+          }}
         >
-
-          {/* 4. SMS preview card */}
-          <View style={s.smsCard}>
-            <View style={s.smsHeader}>
-              <View style={s.smsSenderDot} />
-              <Text style={s.smsSender}>SILVRSTN</Text>
-              <Text style={s.smsTime}>Preview</Text>
-            </View>
-            <Text style={s.smsBody}>
-              SMS verification is not connected:{' '}
-              <Text style={s.smsCode}>██████</Text>
-              {'\n'}
-              <Text style={s.smsExpiry}>Continuing does not verify your phone.</Text>
-            </Text>
-          </View>
-
-          {/* 3. Digit preview strip */}
-          <View style={s.previewStrip}>
-            {Array(OTP_LENGTH).fill('').map((_, i) => (
-              <View key={i} style={s.previewCell}>
-                {otp[i] ? (
-                  <Text style={s.previewDigit}>{otp[i]}</Text>
-                ) : (
-                  <View style={s.previewDot} />
-                )}
-              </View>
-            ))}
-          </View>
-
-          {/* OTP boxes */}
-          <Animated.View style={[s.otpRow, { transform: [{ translateX: shakeAnim }] }]}>
-            {otp.map((digit, i) => (
-              <OtpBox
-                key={i}
-                value={digit}
-                ref={(ref) => (inputRefs.current[i] = ref)}
-                onChangeText={(text) => handleDigit(text, i)}
-                onKeyPress={(e) => handleKeyPress(e, i)}
-                onFocus={() => haptics.light()}
-                onLongPress={() => handlePaste(i)}
-                theme={theme}
-                filled={digit !== ''}
-              />
-            ))}
-          </Animated.View>
-
-          {/* 2. Progress dots */}
-          <View style={s.dotsRow}>
-            {otp.map((digit, i) => (
-              <View
-                key={i}
-                style={[
-                  s.dot,
-                  digit !== '' && { backgroundColor: theme.primary, transform: [{ scale: 1.25 }] },
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Resend row */}
-          <View style={s.resendRow}>
-            <TouchableOpacity onPress={handleResend} disabled={resendSeconds > 0}>
-              <Text style={[s.resendText, resendSeconds > 0 && s.resendDisabled]}>
-                {resendSeconds > 0
-                  ? `Preview 0:${String(resendSeconds).padStart(2, '0')}`
-                  : 'SMS unavailable'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => haptics.light()}>
-              <Text style={s.callMeText}>Calling unavailable</Text>
-            </TouchableOpacity>
-          </View>
-
-        </ScrollView>
-
-        {/* 5. Security note + CTA */}
-        <View style={[s.ctaWrapper, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-          <View style={s.securityNote}>
-            <Ionicons name="lock-closed" size={11} color={theme.textDim} />
-            <Text style={s.securityText}>
-              Never share this code with anyone, including Silverstone staff.
-            </Text>
-          </View>
-          <PressableScale scaleDown={0.97} onPress={() => handleVerify()} disabled={!isValid}>
-            <LinearGradient
-              colors={isValid ? [theme.gradPrimA, theme.gradPrimB] : ['#555', '#444']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={s.ctaButton}
-            >
-              <Text style={s.ctaText}>Continue preview</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: spacing.sm }} />
-            </LinearGradient>
-          </PressableScale>
-        </View>
-      </KeyboardAvoidingView>
+          <Text style={{ color: "white", textAlign: "center" }}>
+            Continue with draft →
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-// ─── OTP Box — no Animated API, plain useState for focus/fill state ───────────
-const OtpBox = React.forwardRef(function OtpBox(
-  { value, onChangeText, onKeyPress, onFocus, onLongPress, theme, filled },
-  ref
-) {
-  const [isFocused, setIsFocused] = useState(false);
-  const s = otpStyles(theme);
-
-  const borderColor = isFocused ? theme.primary : filled ? theme.primary : theme.border;
-  const borderWidth = isFocused || filled ? 2 : 1.5;
-
-  return (
-    <View style={[s.box, { borderColor, borderWidth }, filled && s.boxFilled]}>
-      <TextInput
-        ref={ref}
-        style={s.digit}
-        value={value}
-        onChangeText={onChangeText}
-        onKeyPress={onKeyPress}
-        onFocus={() => { setIsFocused(true); onFocus?.(); }}
-        onBlur={() => setIsFocused(false)}
-        onLongPress={onLongPress}
-        keyboardType="number-pad"
-        maxLength={1}
-        textAlign="center"
-        selectTextOnFocus
-        caretHidden
-      />
-    </View>
-  );
-});
-
-// ─── OTP Box styles (created once per theme reference, not per render) ────────
-const otpStylesCache = new WeakMap();
-function otpStyles(theme) {
-  if (otpStylesCache.has(theme)) return otpStylesCache.get(theme);
-  const s = StyleSheet.create({
-    box: {
-      width: 46,
-      height: 56,
-      borderRadius: radius.md,
-      backgroundColor: theme.surfaceAlt,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    boxFilled: {
-      backgroundColor: theme.primaryLight,
-    },
-    digit: {
-      fontFamily: fonts.display,
-      fontSize: 24,
-      color: theme.text,
-      width: '100%',
-      height: '100%',
-      textAlignVertical: 'center',
-    },
-  });
-  otpStylesCache.set(theme, s);
-  return s;
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 function makeStyles(theme, insets) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.bg },

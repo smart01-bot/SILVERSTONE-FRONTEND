@@ -1,35 +1,49 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Animated, StatusBar,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
-import { useLoader }      from '../../context/LoaderContext';
-import { useHaptics } from '../../hooks/useHaptics';
-import { useAuth } from '../../context/AuthContext';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+  StatusBar,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../../context/ThemeContext";
+import { useLoader } from "../../context/LoaderContext";
+import { useHaptics } from "../../hooks/useHaptics";
+import { api } from "../../config/api";
+import { useAuth } from "../../context/AuthContext";
 
 const TOTAL_STEPS = 6;
 const STEP = 6;
 
 const NETWORKS = {
-  Voda:    { label: 'M-Pesa',   color: '#00A651' },
-  Airtel:  { label: 'Airtel',   color: '#E20020' },
-  Yas:     { label: 'Yas Mixx', color: '#0057A8' },
-  Halotel: { label: 'Halotel',  color: '#F68B1F' },
+  Voda: { label: "M-Pesa", color: "#00A651" },
+  Airtel: { label: "Airtel", color: "#E20020" },
+  Yas: { label: "Yas Mixx", color: "#0057A8" },
+  Halotel: { label: "Halotel", color: "#F68B1F" },
 };
 
-const PARTICLE_COLORS = ['#E01535','#C8102E','#FF6B6B','#FF9F43','#FECA57','#48DBFB','#fff'];
-const PARTICLE_COUNT  = 18;
+const PARTICLE_COLORS = [
+  "#E01535",
+  "#C8102E",
+  "#FF6B6B",
+  "#FF9F43",
+  "#FECA57",
+  "#48DBFB",
+  "#fff",
+];
+const PARTICLE_COUNT = 18;
 
-function maskNida(nida = '') {
+function maskNida(nida = "") {
   if (nida.length < 4) return nida;
-  return '•'.repeat(nida.length - 4) + nida.slice(-4);
+  return "•".repeat(nida.length - 4) + nida.slice(-4);
 }
 
 function fmtFloat(n) {
-  if (!n) return '—';
+  if (!n) return "—";
   if (n >= 1_000_000) return `TSh ${(n / 1_000_000).toFixed(1)}M/day`;
   return `TSh ${(n / 1000).toFixed(0)}K/day`;
 }
@@ -41,40 +55,60 @@ function fmtFloat(n) {
 function Particles({ trigger }) {
   const particles = useRef(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      x:     new Animated.Value(0),
-      y:     new Animated.Value(0),
-      op:    new Animated.Value(0),
+      x: new Animated.Value(0),
+      y: new Animated.Value(0),
+      op: new Animated.Value(0),
       color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-      size:  6 + Math.random() * 6,
+      size: 6 + Math.random() * 6,
       angle: (360 / PARTICLE_COUNT) * i + (Math.random() * 20 - 10),
-      dist:  80 + Math.random() * 80,
-    }))
+      dist: 80 + Math.random() * 80,
+    })),
   ).current;
 
   useEffect(() => {
     if (!trigger) return;
-    particles.forEach(p => {
-      p.x.setValue(0); p.y.setValue(0); p.op.setValue(0);
+    particles.forEach((p) => {
+      p.x.setValue(0);
+      p.y.setValue(0);
+      p.op.setValue(0);
     });
     const rad = (deg) => deg * (Math.PI / 180);
 
     // Native driver — translate only
-    const translateAnims = particles.map(p => {
+    const translateAnims = particles.map((p) => {
       const tx = Math.cos(rad(p.angle)) * p.dist;
       const ty = Math.sin(rad(p.angle)) * p.dist - 40;
       return Animated.parallel([
-        Animated.spring(p.x, { toValue: tx, tension: 80, friction: 6, useNativeDriver: true }),
-        Animated.spring(p.y, { toValue: ty, tension: 80, friction: 6, useNativeDriver: true }),
+        Animated.spring(p.x, {
+          toValue: tx,
+          tension: 80,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+        Animated.spring(p.y, {
+          toValue: ty,
+          tension: 80,
+          friction: 6,
+          useNativeDriver: true,
+        }),
       ]);
     });
 
     // JS driver — opacity only
-    const opacityAnims = particles.map(p =>
+    const opacityAnims = particles.map((p) =>
       Animated.sequence([
-        Animated.timing(p.op, { toValue: 1, duration: 100, useNativeDriver: false }),
+        Animated.timing(p.op, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: false,
+        }),
         Animated.delay(500),
-        Animated.timing(p.op, { toValue: 0, duration: 400, useNativeDriver: false }),
-      ])
+        Animated.timing(p.op, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: false,
+        }),
+      ]),
     );
 
     Animated.stagger(18, translateAnims).start();
@@ -87,14 +121,22 @@ function Particles({ trigger }) {
     <View style={particleStyles.wrap} pointerEvents="none">
       {particles.map((p, i) => (
         // Outer: opacity only — JS driver
-        <Animated.View key={i} style={[particleStyles.opacityLayer, { opacity: p.op }]}>
+        <Animated.View
+          key={i}
+          style={[particleStyles.opacityLayer, { opacity: p.op }]}
+        >
           {/* Inner: transform only — native driver */}
           <Animated.View
-            style={[particleStyles.dot, {
-              width: p.size, height: p.size, borderRadius: p.size / 2,
-              backgroundColor: p.color,
-              transform: [{ translateX: p.x }, { translateY: p.y }],
-            }]}
+            style={[
+              particleStyles.dot,
+              {
+                width: p.size,
+                height: p.size,
+                borderRadius: p.size / 2,
+                backgroundColor: p.color,
+                transform: [{ translateX: p.x }, { translateY: p.y }],
+              },
+            ]}
           />
         </Animated.View>
       ))}
@@ -104,13 +146,16 @@ function Particles({ trigger }) {
 
 const particleStyles = StyleSheet.create({
   wrap: {
-    position: 'absolute',
-    bottom: 27, left: 0, right: 0,
-    alignItems: 'center', justifyContent: 'center',
+    position: "absolute",
+    bottom: 27,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 10,
   },
-  opacityLayer: { position: 'absolute' },
-  dot:          { position: 'absolute' },
+  opacityLayer: { position: "absolute" },
+  dot: { position: "absolute" },
 });
 
 function FieldRow({ label, value, mono }) {
@@ -124,56 +169,108 @@ function FieldRow({ label, value, mono }) {
     </View>
   );
 }
-const fieldStyles = (theme) => StyleSheet.create({
-  row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border, gap: 12,
-  },
-  label: { fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, flex: 0.45 },
-  value: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: theme.text, flex: 0.55, textAlign: 'right' },
-  mono:  { fontFamily: 'RobotoMono_400Regular', fontSize: 12 },
-});
+const fieldStyles = (theme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      gap: 12,
+    },
+    label: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: theme.textDim,
+      flex: 0.45,
+    },
+    value: {
+      fontSize: 13,
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+      flex: 0.55,
+      textAlign: "right",
+    },
+    mono: { fontFamily: "RobotoMono_400Regular", fontSize: 12 },
+  });
 
 export default function Step6Review({ navigation, route }) {
-  const { register } = useAuth();
+  const { refreshProfile } = useAuth();
+  const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
   const { showLoader, hideLoader } = useLoader();
-  const insets    = useSafeAreaInsets();
-  const haptics   = useHaptics();
+  const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
 
-  const [agreed, setAgreed]   = useState(false);
-  const [error, setError]     = useState('');
-  const [burst, setBurst]     = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState("");
+  const [burst, setBurst] = useState(false);
 
-  // Guard: AppNavigator tears down this component the moment Firebase auth
-  // state fires. Without this, handleSubmit continues running after unmount.
+  // AppNavigator replaces this screen when the server application status changes.
   const isMounted = useRef(true);
-  useEffect(() => () => { isMounted.current = false; }, []);
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+    },
+    [],
+  );
 
   const p = route.params ?? {};
+  const [documents, setDocuments] = useState([]);
+  useEffect(() => {
+    Promise.all((p.documentIds || []).map((id) => api.call(`/documents/${id}?metadata=1`)))
+      .then(setDocuments)
+      .catch((e) => setError(e.message));
+  }, [p.documentIds]);
 
   // ── Animations ────────────────────────────────────────────────────────────
-  const progressAnim = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
-  const heroAnim     = useRef(new Animated.Value(0)).current;
-  const card1Anim    = useRef(new Animated.Value(0)).current;
-  const card2Anim    = useRef(new Animated.Value(0)).current;
-  const termsAnim    = useRef(new Animated.Value(0)).current;
-  const checkAnim    = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(
+    new Animated.Value((STEP - 1) / TOTAL_STEPS),
+  ).current;
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  const card1Anim = useRef(new Animated.Value(0)).current;
+  const card2Anim = useRef(new Animated.Value(0)).current;
+  const termsAnim = useRef(new Animated.Value(0)).current;
+  const checkAnim = useRef(new Animated.Value(0)).current;
 
   // useNativeDriver: false — width
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: 1, duration: 600, useNativeDriver: false,
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: false,
     }).start();
   }, []);
 
   // useNativeDriver: true — translate / scale
   useEffect(() => {
     Animated.stagger(100, [
-      Animated.spring(heroAnim,  { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }),
-      Animated.spring(card1Anim, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }),
-      Animated.spring(card2Anim, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }),
-      Animated.spring(termsAnim, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }),
+      Animated.spring(heroAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 9,
+        useNativeDriver: true,
+      }),
+      Animated.spring(card1Anim, {
+        toValue: 1,
+        tension: 60,
+        friction: 9,
+        useNativeDriver: true,
+      }),
+      Animated.spring(card2Anim, {
+        toValue: 1,
+        tension: 60,
+        friction: 9,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 9,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
@@ -182,73 +279,118 @@ export default function Step6Review({ navigation, route }) {
     const next = !agreed;
     setAgreed(next);
     Animated.spring(checkAnim, {
-      toValue: next ? 1 : 0, tension: 80, friction: 7, useNativeDriver: true,
+      toValue: next ? 1 : 0,
+      tension: 80,
+      friction: 7,
+      useNativeDriver: true,
     }).start();
   };
 
   const handleSubmit = async () => {
-    if (!agreed) { haptics.error(); setError('Please accept the terms to continue.'); return; }
+    if (!agreed) {
+      haptics.error();
+      setError("Please confirm your information is accurate.");
+      return;
+    }
     haptics.medium();
 
-    setBurst(false);
-    setTimeout(() => setBurst(true), 10);
+    if (loading) return;
+    setLoading(true);
 
     showLoader();
-    setError('');
+    setError("");
 
     try {
-      await register(p);
+      await api.call("/applications/me/submit", {
+        method: "POST",
+        body: { expectedVersion: p.expectedVersion },
+      });
+      await refreshProfile();
+
 
       if (isMounted.current) haptics.success();
-      // AppNavigator detects profile.status === 'pending' and routes to
-      // PendingScreen automatically. Do not call navigation.reset here.
+      // AppNavigator routes the submitted application to the progress screen.
     } catch (e) {
       if (!isMounted.current) return;
       haptics.error();
-      const msg = e?.message ?? '';
-      if (msg.includes('email-already-in-use')) {
-        setError('An account with this email already exists. Try logging in instead.');
-      } else if (msg.includes('Missing credentials')) {
-        setError('Registration data is incomplete. Please go back and check your details.');
+      const msg = e?.message ?? "";
+      if (msg.includes("email-already-in-use")) {
+        setError(
+          "An account with this email already exists. Try logging in instead.",
+        );
+      } else if (msg.includes("Missing credentials")) {
+        setError(
+          "Registration data is incomplete. Please go back and check your details.",
+        );
       } else {
-        setError(e.message || 'Something went wrong. Please try again.');
+        setError(e.message || "Something went wrong. Please try again.");
       }
+    } finally {
       hideLoader();
+      setLoading(false);
     }
   };
 
   const headerProgress = progressAnim.interpolate({
-    inputRange: [0, 1], outputRange: ['0%', '100%'],
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
   });
 
   const reveal = (anim) => ({
     opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [24, 0] }) }],
+    transform: [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [24, 0],
+        }),
+      },
+    ],
   });
 
   const checkScale = checkAnim.interpolate({
-    inputRange: [0, 0.6, 1], outputRange: [0.8, 1.15, 1],
+    inputRange: [0, 0.6, 1],
+    outputRange: [0.8, 1.15, 1],
   });
 
   const s = styles(theme, insets);
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
 
-      <LinearGradient colors={[theme.gradPrimA, theme.gradPrimB]} style={s.header}>
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        style={s.header}
+      >
         <View style={s.navRow}>
-          <TouchableOpacity onPress={() => { haptics.light(); navigation.goBack(); }} style={s.backBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              haptics.light();
+              navigation.goBack();
+            }}
+            style={s.backBtn}
+          >
             <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={s.progressTrack}>
-            <Animated.View style={[s.progressFill, { width: headerProgress }]} />
+            <Animated.View
+              style={[s.progressFill, { width: headerProgress }]}
+            />
           </View>
-          <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
+          <Text style={s.stepCounter}>
+            {STEP}/{TOTAL_STEPS}
+          </Text>
         </View>
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
         <Text style={s.title}>Review & Submit</Text>
-        <Text style={s.subtitle}>Check everything before submitting your application.</Text>
+        <Text style={s.subtitle}>
+          Check everything before submitting your application.
+        </Text>
       </LinearGradient>
 
       <ScrollView
@@ -261,22 +403,30 @@ export default function Step6Review({ navigation, route }) {
             <Text style={s.heroMapIcon}>📍</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.heroName}>{p.businessName || '—'}</Text>
-            <Text style={s.heroArea}>{p.businessLocation || '—'}</Text>
+            <Text style={s.heroName}>{p.businessName || "—"}</Text>
+            <Text style={s.heroArea}>{p.businessLocation || "—"}</Text>
             {p.coordinates && (
-              <Text style={s.heroCoords}>{p.coordinates.lat}° · {p.coordinates.lng}°</Text>
+              <Text style={s.heroCoords}>
+                {p.coordinates.lat}° · {p.coordinates.lng}°
+              </Text>
             )}
           </View>
         </Animated.View>
 
         {p.networks && p.networks.length > 0 && (
           <Animated.View style={[s.netChips, reveal(heroAnim)]}>
-            {p.networks.map(id => {
-              const n = NETWORKS[id]; if (!n) return null;
+            {p.networks.map((id) => {
+              const n = NETWORKS[id];
+              if (!n) return null;
               return (
-                <View key={id} style={[s.netChip, { borderColor: n.color + '80' }]}>
+                <View
+                  key={id}
+                  style={[s.netChip, { borderColor: n.color + "80" }]}
+                >
                   <View style={[s.netDot, { backgroundColor: n.color }]} />
-                  <Text style={[s.netLabel, { color: n.color }]}>{n.label}</Text>
+                  <Text style={[s.netLabel, { color: n.color }]}>
+                    {n.label}
+                  </Text>
                 </View>
               );
             })}
@@ -286,36 +436,60 @@ export default function Step6Review({ navigation, route }) {
         <Animated.View style={reveal(card1Anim)}>
           <Text style={s.sectionTitle}>Personal</Text>
           <View style={s.card}>
-            <FieldRow label="Full Name" value={p.name || '—'} />
-            <FieldRow label="Phone"     value={p.phone || '—'} mono />
-            <FieldRow label="Email"     value={p.email || '—'} />
-            <FieldRow label="NIDA"      value={maskNida(p.nida || '')} mono />
+            <FieldRow label="Full Name" value={p.name || "—"} />
+            <FieldRow label="Phone" value={p.phone || "—"} mono />
+            <FieldRow label="Email" value={p.email || "—"} />
+            <FieldRow label="NIDA" value={maskNida(p.nida || "")} mono />
           </View>
         </Animated.View>
 
         <Animated.View style={reveal(card2Anim)}>
           <Text style={s.sectionTitle}>Business</Text>
           <View style={s.card}>
-            <FieldRow label="Till Name"   value={p.businessName || '—'} />
-            <FieldRow label="Location"    value={p.businessLocation || '—'} />
-            <FieldRow label="Float Cap."  value={fmtFloat(p.floatCapacity)} mono />
-            <FieldRow label="TIN"         value={p.businessTIN || '—'} mono />
-            <FieldRow label="Licence No." value={p.businessLicenceNumber || '—'} mono />
-            <FieldRow label="TIN Cert."   value={p.tinCertificateUrl ? '✅ Uploaded' : '—'} />
-            <FieldRow label="Lic. Cert."  value={p.licenceCertificateUrl ? '✅ Uploaded' : '—'} />
-            <FieldRow label="Identity"    value={p.selfieVerified ? '✅ Verified (97%)' : '—'} />
+            <FieldRow label="Till Name" value={p.businessName || "—"} />
+            <FieldRow label="Location" value={p.businessLocation || "—"} />
+            <FieldRow
+              label="Float Cap."
+              value={fmtFloat(p.floatCapacity)}
+              mono
+            />
+            <FieldRow label="TIN" value={p.businessTIN || "—"} mono />
+            <FieldRow
+              label="Licence No."
+              value={p.businessLicenceNumber || "—"}
+              mono
+            />
+            <FieldRow label="TIN Cert." value={"See saved evidence below"} />
+            <FieldRow label="Lic. Cert." value={"See saved evidence below"} />
+            {documents.map((d) => (
+              <FieldRow
+                key={d.id}
+                label={d.kind}
+                value={`${d.name} · saved privately`}
+              />
+            ))}
+            <FieldRow label="Identity" value={"Manual review required"} />
           </View>
         </Animated.View>
 
         <Animated.View style={[reveal(termsAnim), { marginTop: 4 }]}>
-          <TouchableOpacity style={s.termsRow} onPress={toggleAgree} activeOpacity={0.8}>
-            <Animated.View style={[s.checkbox, agreed && s.checkboxActive, { transform: [{ scale: checkScale }] }]}>
+          <TouchableOpacity
+            style={s.termsRow}
+            onPress={toggleAgree}
+            activeOpacity={0.8}
+          >
+            <Animated.View
+              style={[
+                s.checkbox,
+                agreed && s.checkboxActive,
+                { transform: [{ scale: checkScale }] },
+              ]}
+            >
               {agreed && <Text style={s.checkMark}>✓</Text>}
             </Animated.View>
             <Text style={s.termsText}>
-              I confirm all information is accurate and agree to Silverstone's{' '}
-              <Text style={s.termsLink}>Terms of Service</Text> and{' '}
-              <Text style={s.termsLink}>Privacy Policy</Text>.
+              I confirm this information is accurate and ready for my assigned
+              main-agent to review.
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -324,12 +498,22 @@ export default function Step6Review({ navigation, route }) {
 
         <View style={{ marginTop: 24 }}>
           <Particles trigger={burst} />
-          <TouchableOpacity onPress={handleSubmit} disabled={!agreed || loading} activeOpacity={0.85}>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={!agreed || loading}
+            activeOpacity={0.85}
+          >
             <LinearGradient
-              colors={agreed && !loading ? [theme.gradPrimA, theme.gradPrimB] : ['#555', '#444']}
+              colors={
+                agreed && !loading
+                  ? [theme.gradPrimA, theme.gradPrimB]
+                  : ["#555", "#444"]
+              }
               style={s.cta}
             >
-              <Text style={s.ctaText}>{loading ? 'Submitting…' : 'Submit Application →'}</Text>
+              <Text style={s.ctaText}>
+                {loading ? "Submitting…" : "Submit Application →"}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

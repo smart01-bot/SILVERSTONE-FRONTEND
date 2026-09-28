@@ -1,3 +1,7 @@
+## Current phase pointer — Phase 2
+
+Read PROJECT-STATE.md and handoffs/PHASE-02-HANDOFF.md for current local implementation. Older phase/proposal descriptions below remain historical. Both development branches contain unpublished local Phases 1–2; remote development still holds Phase 0. No live operation or Phase 3 started. Real phone verification and production evidence/storage policy remain unresolved; synthetic test success is not full onboarding acceptance.
+
 ## Phase 1 architecture approval — 27 September 2026
 
 The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.

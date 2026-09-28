@@ -1,3 +1,9 @@
+## Phase 2 current implementation boundary
+
+Local review now requires a reviewer_grants record (unrevoked), active/approved main-agent status and current assignment. No self-review, unassigned review, role promotion or client verification writes. Transactional decision audit identifies reviewer/revision/reason/time; document reads record access. Unsubmitted draft contents remain applicant-only.
+
+Disposable fixture bootstrap only: main@example.test authorized reviewer; pending@example.test assigned applicant with explicitly synthetic phone proof. This does not approve a production roster or provisioning policy. Production assignment/provisioning, required evidence/retention/terms, real OTP delivery and production private storage remain unresolved. Ordinary applicants can draft but cannot bypass the verification/assignment gate. See Phase 2 handoff before continuing.
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Assignment, review and external dependencies

@@ -1,276 +1,297 @@
-// src/screens/main-agent/ApprovalsScreen.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Alert, Linking,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
-import { useLoader }      from '../../context/LoaderContext';
-import { spacing, radius, fonts } from '../../constants/theme';
-import { SkeletonBox } from '../../components/SkeletonLoader';
-import EmptyState     from '../../components/EmptyState';
-import PressableScale from '../../components/PressableScale';
-import {
-  collection, query, where, onSnapshot,
-  doc, updateDoc, Timestamp,
-} from '../../api/screenData';
-import { db } from '../../api/screenData';
-
-function SkeletonAgentCard({ theme }) {
-  return (
-    <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-      <View style={[s.cardTop, { padding: spacing.md - 2 }]}>
-        <SkeletonBox width={52} height={52} borderRadius={26} />
-        <View style={{ flex: 1, gap: spacing.xs }}>
-          <SkeletonBox width={140} height={20} borderRadius={6} />
-          <SkeletonBox width={100} height={16} borderRadius={5} />
-        </View>
-        <SkeletonBox width={50} height={14} borderRadius={4} />
-      </View>
-      <View style={[s.details, { borderTopColor: theme.border, gap: spacing.sm - 2 }]}>
-        {[0,1,2].map(i => (
-          <View key={i} style={s.detailRow}>
-            <SkeletonBox width={60}  height={14} borderRadius={4} />
-            <SkeletonBox width={100} height={14} borderRadius={4} />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  TextInput,
+  Image,
+  Modal,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../../context/ThemeContext";
+import { spacing, radius, fonts } from "../../constants/theme";
+import { api } from "../../config/api";
 
 export default function ApprovalsScreen() {
-  const { theme, isDark } = useTheme();
-  const { showLoader, hideLoader } = useLoader();
-
-  const [agents,     setAgents]     = useState([]);
-  const [filter,     setFilter]     = useState('Pending');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(true);
-  
-  const FILTERS = ['Pending', 'Approved', 'Rejected'];
-
+  const { theme } = useTheme();
+  const [agents, setAgents] = useState([]),
+    [detail, setDetail] = useState(null),
+    [reason, setReason] = useState(""),
+    [corrections, setCorrections] = useState([]),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [evidence, setEvidence] = useState(null);
+  async function load() {
+    setError("");
+    try {
+      setAgents(await api.call("/review/applications"));
+    } catch (e) {
+      setError(e.message);
+    }
+  }
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'agents'), where('role', '==', 'sub-agent')),
-      snap => {
-        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      }
-    );
-    return unsub;
+    load();
   }, []);
-
-  const filtered     = agents.filter(a => a.status === filter.toLowerCase());
-  const pendingCount = agents.filter(a => a.status === 'pending').length;
-
-  const handleApprove = async (agent) => {
-    showLoader();
+  async function open(id) {
+    setError("");
+    setBusy(true);
     try {
-      await updateDoc(doc(db, 'agents', agent.id), { status: 'approved', approvedAt: Timestamp.now() });
+      setDetail(await api.call(`/review/applications/${id}`));
+      setReason("");
+      setCorrections([]);
     } catch (e) {
-      Alert.alert('Error', 'Failed to approve agent.');
+      setError(e.message);
     } finally {
-      hideLoader();
+      setBusy(false);
     }
-  };
-
-  const handleReject = (agent) => {
-    Alert.alert('Reject Application', 'Select a reason:', [
-      { text: 'Does not meet requirements', onPress: () => doReject(agent, 'Does not meet requirements') },
-      { text: 'Invalid documentation',      onPress: () => doReject(agent, 'Invalid documentation') },
-      { text: 'Duplicate application',      onPress: () => doReject(agent, 'Duplicate application') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
-  const doReject = async (agent, reason) => {
-    showLoader();
+  }
+  async function decide(decision) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
     try {
-      await updateDoc(doc(db, 'agents', agent.id), {
-        status: 'rejected', rejectionReason: reason, rejectedAt: Timestamp.now(),
+      await api.call(`/review/applications/${detail.agentId}/decisions`, {
+        method: "POST",
+        body: {
+          expectedVersion: detail.version,
+          decision,
+          reason,
+          fieldsToCorrect: corrections,
+        },
       });
+      setDetail(null);
+      await load();
     } catch (e) {
-      Alert.alert('Error', 'Failed to reject agent.');
+      setError(e.message);
+      if (e.status === 409) setDetail(null);
     } finally {
-      hideLoader();
+      setBusy(false);
     }
-  };
-
-  const handleViewDocs = (agent) => {
-    const urls = [
-      agent.selfieUrl,
-      agent.tinCertificateUrl,
-      agent.licenceCertificateUrl,
-    ].filter(Boolean);
-
-    if (urls.length === 0) {
-      Alert.alert('No documents', 'No documents have been uploaded for this agent yet.');
-      return;
+  }
+  async function viewDocument(id) {
+    setError("");
+    try {
+      setEvidence(await api.call(`/documents/${id}`));
+    } catch (e) {
+      setError(e.message);
     }
-
-    // Show available docs as options
-    const options = [];
-    if (agent.selfieUrl)              options.push({ text: 'Selfie / ID photo',    onPress: () => Linking.openURL(agent.selfieUrl) });
-    if (agent.tinCertificateUrl)      options.push({ text: 'TIN Certificate',      onPress: () => Linking.openURL(agent.tinCertificateUrl) });
-    if (agent.licenceCertificateUrl)  options.push({ text: 'Business Licence',     onPress: () => Linking.openURL(agent.licenceCertificateUrl) });
-    options.push({ text: 'Cancel', style: 'cancel' });
-
-    Alert.alert('View Documents', 'Select a document to open:', options);
+  }
+  const revision = detail?.revisions?.[0];
+  const fieldLabels = {
+    name: "Full name",
+    nida: "NIDA",
+    businessName: "Business name",
+    businessLocation: "Location",
+    businessTIN: "TIN",
+    businessLicenceNumber: "Licence",
+    networks: "Networks",
+    floatCapacity: "Float capacity",
+    coordinates: "Map location",
+    documentIds: "Documents",
   };
-
-  const daysAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const days = Math.floor((Date.now() - ts.toDate().getTime()) / 86400000);
-    if (days === 0) return 'TODAY';
-    if (days === 1) return 'YESTERDAY';
-    return `${days}D AGO`;
-  };
-
-  const avatarColor = (name) => {
-    const colors = ['#C8102E', '#0891B2', '#16A34A', '#7C3AED', '#F59E0B'];
-    return colors[(name?.charCodeAt(0) ?? 0) % colors.length];
-  };
-
-  const initials = (name) =>
-    name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
-
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
-
-  const emptyMessages = {
-    Pending:  { title: 'No pending applications', subtitle: 'New agent applications will appear here' },
-    Approved: { title: 'No approved agents yet',  subtitle: 'Approved applications will show here' },
-    Rejected: { title: 'No rejected applications',subtitle: 'Rejected applications will show here' },
-  };
-
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }}>
       <LinearGradient
         colors={[theme.gradPrimA, theme.gradPrimB]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
         style={s.header}
       >
-        <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>Agent Approvals</Text>
-        <Text style={s.headerSub}>Review applications & ID docs</Text>
-        {pendingCount > 0 && (
-          <View style={s.headerBadge}>
-            <Text style={s.headerBadgeText}>{pendingCount} pending</Text>
-          </View>
-        )}
+        <Text style={s.headerTitle}>Applications</Text>
+        <Text style={s.headerSub}>Review your assigned applicants</Text>
+        <Text style={s.headerBadgeText}>{agents.length} awaiting review</Text>
       </LinearGradient>
-
-      <View style={[s.filters, { backgroundColor: theme.bg }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={s.filterRow}>
-            {FILTERS.map(f => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                style={[s.pill, {
-                  backgroundColor: filter === f ? theme.primary : theme.surfaceAlt,
-                  borderColor:     filter === f ? theme.primary : theme.border,
-                }]}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>
-                  {f}{f === 'Pending' && pendingCount > 0 ? `  ${pendingCount}` : ''}
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.md, gap: 14 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: theme.primary }}>
+            {error}
+          </Text>
+        ) : null}
+        <TouchableOpacity disabled={busy} onPress={load}>
+          <Text style={{ color: theme.primary, paddingVertical: 12 }}>
+            Refresh applications
+          </Text>
+        </TouchableOpacity>
+        {!detail && agents.length === 0 && (
+          <Text style={{ color: theme.textDim }}>
+            No applications awaiting your review.
+          </Text>
+        )}
+        {!detail &&
+          agents.map((a) => (
+            <TouchableOpacity
+              disabled={busy}
+              key={a.id}
+              onPress={() => open(a.id)}
+              style={[
+                s.card,
+                {
+                  padding: 16,
+                  borderColor: theme.border,
+                  backgroundColor: theme.surfaceAlt,
+                },
+              ]}
+            >
+              <Text style={[s.agentName, { color: theme.text }]}>{a.name}</Text>
+              <Text style={{ color: theme.textDim }}>
+                Submitted · Open application →
+              </Text>
+            </TouchableOpacity>
+          ))}
+        {detail && (
+          <View
+            style={[
+              s.card,
+              {
+                padding: 16,
+                gap: 14,
+                borderColor: theme.border,
+                backgroundColor: theme.surfaceAlt,
+              },
+            ]}
+          >
+            <TouchableOpacity onPress={() => setDetail(null)}>
+              <Text style={{ color: theme.primary }}>
+                ← Back to applications
+              </Text>
+            </TouchableOpacity>
+            <Text style={[s.agentName, { color: theme.text }]}>
+              Submission {detail.version}
+            </Text>
+            <Text style={{ color: theme.textDim }}>
+              Phone: {detail.phone} ·{" "}
+              {detail.phoneVerification === "synthetic_fixture"
+                ? "Synthetic test fixture — not real verification"
+                : detail.phoneVerification}
+            </Text>
+            {Object.entries(revision?.data || {})
+              .filter(([key]) => key !== "documentIds")
+              .map(([key, value]) => (
+                <View key={key}>
+                  <Text style={{ color: theme.textDim }}>
+                    {fieldLabels[key] || key}
+                  </Text>
+                  <Text selectable style={{ color: theme.text }}>
+                    {typeof value === "object"
+                      ? JSON.stringify(value)
+                      : String(value)}
+                  </Text>
+                </View>
+              ))}
+            <Text style={{ color: theme.text, fontWeight: "bold" }}>
+              Private evidence
+            </Text>
+            {(revision?.data?.documentIds || []).map((id, i) => (
+              <TouchableOpacity key={id} onPress={() => viewDocument(id)}>
+                <Text style={{ color: theme.primary, paddingVertical: 10 }}>
+                  Open document {i + 1} →
                 </Text>
               </TouchableOpacity>
             ))}
+            <Text style={{ color: theme.text }}>Reason for decision</Text>
+            <TextInput
+              accessibilityLabel="Reason for decision"
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              maxLength={1000}
+              placeholder="Explain your decision or the corrections needed"
+              placeholderTextColor={theme.textDim}
+              style={{
+                minHeight: 90,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: theme.border,
+                borderRadius: 10,
+                color: theme.text,
+              }}
+            />
+            <Text style={{ color: theme.text }}>Fields needing correction</Text>
+            {Object.entries(fieldLabels).map(([field, label]) => (
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: corrections.includes(field) }}
+                key={field}
+                onPress={() =>
+                  setCorrections((c) =>
+                    c.includes(field)
+                      ? c.filter((f) => f !== field)
+                      : [...c, field],
+                  )
+                }
+              >
+                <Text style={{ color: theme.text, paddingVertical: 6 }}>
+                  {corrections.includes(field) ? "✓" : "○"} {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {["approved", "changes_requested", "rejected"].map((decision) => (
+              <TouchableOpacity
+                key={decision}
+                disabled={
+                  busy ||
+                  reason.trim().length < 3 ||
+                  (decision === "changes_requested" && !corrections.length)
+                }
+                onPress={() => decide(decision)}
+                style={{
+                  padding: 15,
+                  borderRadius: 12,
+                  backgroundColor: theme.primary,
+                  opacity: busy || reason.trim().length < 3 ? 0.45 : 1,
+                }}
+              >
+                <Text style={s.btnFilledText}>
+                  {decision === "approved"
+                    ? "Approve application"
+                    : decision === "rejected"
+                      ? "Reject application"
+                      : "Request corrections"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {detail.revisions.slice(1).map((r) => (
+              <Text key={r.id} style={{ color: theme.textDim }}>
+                Version {r.version}: {r.decision} — {r.reason}
+              </Text>
+            ))}
           </View>
-        </ScrollView>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
-      >
-        {loading ? (
-          <>
-            <SkeletonAgentCard theme={theme} />
-            <SkeletonAgentCard theme={theme} />
-            <SkeletonAgentCard theme={theme} />
-          </>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon="person-outline"
-            title={emptyMessages[filter].title}
-            subtitle={emptyMessages[filter].subtitle}
-          />
-        ) : (
-          filtered.map(agent => (
-            <PressableScale key={agent.id} scaleDown={0.98} style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              <View style={s.cardTop}>
-                <View style={[s.avatar, { backgroundColor: avatarColor(agent.name) + '20' }]}>
-                  <Text style={[s.avatarText, { color: avatarColor(agent.name) }]}>{initials(agent.name)}</Text>
-                </View>
-                <View style={s.agentInfo}>
-                  <Text style={[s.agentName, { color: theme.text }]}>{agent.name}</Text>
-                  <Text style={[s.agentSub,  { color: theme.textDim }]}>
-                    {agent.businessLocation} · {agent.networks?.length ?? 0} tills
-                  </Text>
-                  {agent.rejectionReason && (
-                    <Text style={s.rejectionReason}>{agent.rejectionReason}</Text>
-                  )}
-                </View>
-                <Text style={[s.daysAgo, { color: theme.textDim }]}>{daysAgo(agent.createdAt)}</Text>
-              </View>
-
-              <View style={[s.details, { borderTopColor: theme.border }]}>
-                {[
-                  { label: 'Phone',    value: agent.phone },
-                  { label: 'Business', value: agent.businessName },
-                  { label: 'Reg No',   value: agent.regNo },
-                  { label: 'TIN',      value: agent.businessTIN },
-                  { label: 'NIDA',     value: agent.nida ? `••••••••••••••••${agent.nida.slice(-4)}` : '—' },
-                ].map(row => (
-                  <View key={row.label} style={s.detailRow}>
-                    <Text style={[s.detailLabel, { color: theme.textDim }]}>{row.label}</Text>
-                    <Text style={[s.detailValue, { color: theme.text }]}>{row.value ?? '—'}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {agent.status === 'pending' && (
-                <View style={s.actions}>
-                  <TouchableOpacity
-                    onPress={() => handleViewDocs(agent)}
-                    style={[s.btnOutline, { borderColor: theme.border }]}
-                    activeOpacity={0.75}
-                  >
-                    <Ionicons name="document-outline" size={15} color={theme.textDim} style={{ marginRight: 4 }} />
-                    <Text style={[s.btnOutlineText, { color: theme.textDim }]}>View docs</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleApprove(agent)}
-                    style={[s.btnFilled, { backgroundColor: '#C8102E' }]}
-                    activeOpacity={0.85}
-                  >
-                    {<Text style={s.btnFilledText}>Approve</Text>
-                    }
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleReject(agent)}
-                    style={[s.btnOutline, { borderColor: '#C8102E' }]}
-                    activeOpacity={0.75}
-                  >
-                    {<Text style={[s.btnOutlineText, { color: '#C8102E' }]}>Reject</Text>
-                    }
-                  </TouchableOpacity>
-                </View>
-              )}
-            </PressableScale>
-          ))
         )}
       </ScrollView>
+      <Modal
+        visible={!!evidence}
+        onRequestClose={() => setEvidence(null)}
+        animationType="slide"
+      >
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: theme.bg, padding: 20 }}
+        >
+          <TouchableOpacity onPress={() => setEvidence(null)}>
+            <Text style={{ color: theme.primary, padding: 16 }}>
+              Close private document
+            </Text>
+          </TouchableOpacity>
+          <Text style={{ color: theme.text }}>{evidence?.name}</Text>
+          {evidence?.mime.startsWith("image/") ? (
+            <Image
+              resizeMode="contain"
+              source={{
+                uri: `data:${evidence.mime};base64,${evidence.base64}`,
+              }}
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <Text style={{ color: theme.text }}>
+              PDF saved privately. In-app PDF inspection is unavailable in this
+              build; request an image copy before approving.
+            </Text>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

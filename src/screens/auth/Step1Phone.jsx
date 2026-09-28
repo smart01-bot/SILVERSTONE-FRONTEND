@@ -119,7 +119,7 @@ export default function Step1Phone({ navigation }) {
 
         {/* Subtitle */}
         <Text style={s.subtitle}>
-          We'll text a 6-digit code to verify it's really yours.
+          Use your mobile number. Phone verification is currently unavailable; you can prepare a draft.
         </Text>
       </LinearGradient>
 

@@ -1,9 +1,5 @@
 # Silverstone shared context
 
-Canonical cross-repository documentation on the frontend development branch.
+Canonical shared source: frontend development, docs/silverstone. Start with PROJECT-STATE.md, PROJECT-CONTEXT.md, DECISIONS.md, API-CONTRACT.md, KNOWN-ISSUES.md, PERMISSIONS-AND-DEPENDENCIES.md, DESIGN-GUIDELINES.md and handoffs/PHASE-02-HANDOFF.md. IMPLEMENTATION-PLAN.md retains the overall phase sequence; EVIDENCE.md is the Phase 0 source index.
 
-Start with [PROJECT-STATE.md](PROJECT-STATE.md), then [PROJECT-CONTEXT.md](PROJECT-CONTEXT.md), [DECISIONS.md](DECISIONS.md), [API-CONTRACT.md](API-CONTRACT.md), [KNOWN-ISSUES.md](KNOWN-ISSUES.md), [PERMISSIONS-AND-DEPENDENCIES.md](PERMISSIONS-AND-DEPENDENCIES.md), [DESIGN-GUIDELINES.md](DESIGN-GUIDELINES.md), [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md), [Phase 0 handoff](handoffs/PHASE-00-HANDOFF.md) and [EVIDENCE.md](EVIDENCE.md).
-
-The Phase 0 text is preserved with publication annotations. References to absent development branches and no publication are historical. Branch setup is now authorized; remaining architecture proposals are not automatically approved. The embedded Phase 1 initiating message is a historical draft: use live development tips and current project state when starting Phase 1, keeping its local-only implementation authority unless the user grants more.
-
-Future phases update this state and add handoffs. Backend-specific implementation documents stay in the backend; its docs/SILVERSTONE-CONTEXT.md points here. Never use memory alone for source state. Neither main branch is an implementation target.
+Phases 1–2 are local and unpublished. Recover their exact commits from retained checkouts or the delivery bundles, not remote Phase 0 alone. Never modify main. Publication/live data/notifications/payments need separate explicit authorization. Next phase is not started; the closing delivery includes the pinned Phase 3 initiating message and partial-gate dependencies.

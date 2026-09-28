@@ -1,3 +1,11 @@
+# Phase 2 disposition — current
+
+Local drafts, evidence uploads, immutable submissions and scoped review/corrections/rejection/approval now pass automated tests. S12/S13 active-path simulated behavior was replaced: no OTP acceptance or face-match claims. Main-agent review uses explicit grants/current assignment, with server authorization.
+
+Open release blockers: real SMS verification (ordinary submission blocked), production storage/retention/evidence/terms policy and reviewer provisioning, native Android/PIN/device screenshots, native PostgreSQL concurrency/upgrade. PNG/JPEG only; PDF and malware/authority verification unavailable. First 100 submitted review results only; add pagination before scale. Unsaved edits are not durable; use Save draft/Next. Isolated preview database resets on server exit. Existing Firebase users/rules/live data and legacy modules remain untouched. Exchange mutations/payments disabled.
+
+See handoffs/PHASE-02-HANDOFF.md for evidence and precise limitations. Historical Phase 1/0 findings below are superseded only for the active local paths explicitly covered here.
+
 # Phase 1 disposition — 27 September 2026
 
 The Phase 0 findings below remain historical evidence. Current local dispositions:

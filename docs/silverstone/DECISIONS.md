@@ -1,3 +1,11 @@
+## Phase 2 implementation decisions — 27 September 2026
+
+User authorized local Phase 2 implementation/verification only on both development branches. No push/live changes/notifications/payments. Existing identity migration remains excluded.
+
+Local implementation choices: PostgreSQL private bytea evidence for isolated tests; PNG/JPEG only with bounded content validation; database reviewer grant plus current assignment; immutable submitted versions and decisions; reject terminal, corrections resubmittable. Existing wizard fields determine prototype evidence requirements only. Production evidence/retention, first-reviewer roster/bootstrap and storage selection remain OPEN, not approved by this implementation.
+
+No agreed OTP provider was found. Fail closed with unavailable delivery and block ordinary submission; synthetic fixture proof remains explicitly synthetic and test-only. Do not replace this with accepting arbitrary digits. Phase 2 full acceptance remains partial until dependency/device checks are closed.
+
 ## Phase 1 architecture approval — 27 September 2026
 
 The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.

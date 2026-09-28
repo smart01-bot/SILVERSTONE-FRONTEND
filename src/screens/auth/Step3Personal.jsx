@@ -1,14 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, KeyboardAvoidingView,
-  Platform, Animated, TouchableOpacity, StatusBar, TextInput,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
-import AnimatedInput from '../../components/AnimatedInput';
-import { useHaptics } from '../../hooks/useHaptics';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  TouchableOpacity,
+  StatusBar,
+  TextInput,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../config/api";
+import { saveDraft, wizardParams, syncWizard } from "../../api/onboarding";
+import { useTheme } from "../../context/ThemeContext";
+import AnimatedInput from "../../components/AnimatedInput";
+import { useHaptics } from "../../hooks/useHaptics";
 
 const TOTAL_STEPS = 6;
 const STEP = 3;
@@ -21,39 +32,72 @@ function NidaBoxes({ digits, hasError, isComplete, theme }) {
   useEffect(() => {
     if (isComplete) {
       Animated.sequence([
-        Animated.timing(flashAnim, { toValue: 1, duration: 180, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(flashAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: false,
+        }),
+        Animated.timing(flashAnim, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: false,
+        }),
       ]).start();
     }
   }, [isComplete]);
 
-  const flashOpacity = flashAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.18] });
+  const flashOpacity = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.18],
+  });
 
-  const groups = [0, 1, 2, 3].map(g => digits.slice(g * 5, (g + 1) * 5));
+  const groups = [0, 1, 2, 3].map((g) => digits.slice(g * 5, (g + 1) * 5));
   const ns = nidaStyles(theme);
 
   return (
     <View>
       <Animated.View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, {
-          borderRadius: 14,
-          backgroundColor: '#22C55E',
-          opacity: flashOpacity,
-          zIndex: 2,
-        }]}
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            borderRadius: 14,
+            backgroundColor: "#22C55E",
+            opacity: flashOpacity,
+            zIndex: 2,
+          },
+        ]}
       />
-      <View style={[ns.groupRow, hasError && ns.groupRowErr, isComplete && ns.groupRowDone]}>
+      <View
+        style={[
+          ns.groupRow,
+          hasError && ns.groupRowErr,
+          isComplete && ns.groupRowDone,
+        ]}
+      >
         {groups.map((group, gi) => (
           <React.Fragment key={gi}>
             <View style={ns.group}>
-              {[0, 1, 2, 3, 4].map(bi => {
-                const char   = group[bi] ?? null;
+              {[0, 1, 2, 3, 4].map((bi) => {
+                const char = group[bi] ?? null;
                 const filled = char !== null;
                 return (
-                  <View key={bi} style={[ns.box, filled && ns.boxFilled, isComplete && ns.boxComplete]}>
-                    <Text style={[ns.digit, !filled && ns.digitEmpty, isComplete && ns.digitComplete]}>
-                      {filled ? char : '·'}
+                  <View
+                    key={bi}
+                    style={[
+                      ns.box,
+                      filled && ns.boxFilled,
+                      isComplete && ns.boxComplete,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        ns.digit,
+                        !filled && ns.digitEmpty,
+                        isComplete && ns.digitComplete,
+                      ]}
+                    >
+                      {filled ? char : "·"}
                     </Text>
                   </View>
                 );
@@ -67,154 +111,259 @@ function NidaBoxes({ digits, hasError, isComplete, theme }) {
   );
 }
 
-const nidaStyles = (theme) => StyleSheet.create({
-  groupRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: theme.border,
-    borderRadius: 14, backgroundColor: theme.surfaceAlt,
-    paddingHorizontal: 10, paddingVertical: 14, gap: 4,
-  },
-  groupRowErr:  { borderColor: '#E01535' },
-  groupRowDone: { borderColor: '#22C55E' },
-  group: { flex: 1, flexDirection: 'row', gap: 3 },
-  sep:   { width: 1, height: 20, backgroundColor: theme.border, marginHorizontal: 4 },
-  box: { flex: 1, height: 30, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  boxFilled:   { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
-  boxComplete: { borderColor: '#22C55E50', backgroundColor: '#22C55E0D' },
-  digit:         { fontFamily: 'RobotoMono_400Regular', fontSize: 13, color: theme.text, lineHeight: 16 },
-  digitEmpty:    { color: theme.muted, fontSize: 9 },
-  digitComplete: { color: '#16A34A' },
-});
+const nidaStyles = (theme) =>
+  StyleSheet.create({
+    groupRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 14,
+      backgroundColor: theme.surfaceAlt,
+      paddingHorizontal: 10,
+      paddingVertical: 14,
+      gap: 4,
+    },
+    groupRowErr: { borderColor: "#E01535" },
+    groupRowDone: { borderColor: "#22C55E" },
+    group: { flex: 1, flexDirection: "row", gap: 3 },
+    sep: {
+      width: 1,
+      height: 20,
+      backgroundColor: theme.border,
+      marginHorizontal: 4,
+    },
+    box: {
+      flex: 1,
+      height: 30,
+      borderRadius: 5,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    boxFilled: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    boxComplete: { borderColor: "#22C55E50", backgroundColor: "#22C55E0D" },
+    digit: {
+      fontFamily: "RobotoMono_400Regular",
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 16,
+    },
+    digitEmpty: { color: theme.muted, fontSize: 9 },
+    digitComplete: { color: "#16A34A" },
+  });
 
 export default function Step3Personal({ navigation, route }) {
+  const { user, register } = useAuth();
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
   const { theme } = useTheme();
-  const insets    = useSafeAreaInsets();
-  const haptics   = useHaptics();
-  const nidaRef   = useRef(null);
+  const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
+  const nidaRef = useRef(null);
 
-  const [name,            setName]            = useState('');
-  const [email,           setEmail]           = useState('');
-  const [nida,            setNida]            = useState('');
-  const [password,        setPassword]        = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPwd,         setShowPwd]         = useState(false);
-  const [showCPwd,        setShowCPwd]        = useState(false);
+  const [name, setName] = useState(route.params?.name || "");
+  const [email, setEmail] = useState(route.params?.email || "");
+  const [nida, setNida] = useState(route.params?.nida || "");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [showCPwd, setShowCPwd] = useState(false);
 
-  const [nameErr,  setNameErr]  = useState('');
-  const [emailErr, setEmailErr] = useState('');
-  const [nidaErr,  setNidaErr]  = useState('');
-  const [pwdErr,   setPwdErr]   = useState('');
+  const [nameErr, setNameErr] = useState("");
+  const [emailErr, setEmailErr] = useState("");
+  const [nidaErr, setNidaErr] = useState("");
+  const [pwdErr, setPwdErr] = useState("");
 
   // ── Animated values ────────────────────────────────────────────────────────
-  const progressAnim = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
+  const progressAnim = useRef(
+    new Animated.Value((STEP - 1) / TOTAL_STEPS),
+  ).current;
 
   // Separate opacity (JS) and translate (native) for each field to avoid mixed driver crash
   const fieldAnims = useRef(
     Array.from({ length: 6 }, () => ({
-      opacity:   new Animated.Value(0),
+      opacity: new Animated.Value(0),
       translate: new Animated.Value(0),
-    }))
+    })),
   ).current;
 
   // useNativeDriver: false — progress bar width
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: STEP / TOTAL_STEPS, duration: 600, useNativeDriver: false,
+      toValue: STEP / TOTAL_STEPS,
+      duration: 600,
+      useNativeDriver: false,
     }).start();
   }, []);
 
   // Stagger: opacity (JS driver) and translate (native driver) fired independently
   useEffect(() => {
-    Animated.stagger(80,
-      fieldAnims.map(f =>
-        Animated.timing(f.opacity, { toValue: 1, duration: 300, useNativeDriver: false })
-      )
+    Animated.stagger(
+      80,
+      fieldAnims.map((f) =>
+        Animated.timing(f.opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ),
     ).start();
 
-    Animated.stagger(80,
-      fieldAnims.map(f =>
-        Animated.spring(f.translate, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true })
-      )
+    Animated.stagger(
+      80,
+      fieldAnims.map((f) =>
+        Animated.spring(f.translate, {
+          toValue: 1,
+          tension: 70,
+          friction: 9,
+          useNativeDriver: true,
+        }),
+      ),
     ).start();
   }, []);
 
   const handleNidaChange = (text) => {
-    const digits = text.replace(/\D/g, '').slice(0, 20);
+    const digits = text.replace(/\D/g, "").slice(0, 20);
     setNida(digits);
-    if (nidaErr) setNidaErr('');
+    if (nidaErr) setNidaErr("");
     if (digits.length === 20) haptics.success();
   };
 
-  const pwdStrength = password.length === 0 ? -1 : password.length < 6 ? 0 : password.length < 10 ? 1 : 2;
-  const pwdColors   = ['#C8102E', '#F59E0B', '#16A34A'];
-  const pwdWidths   = ['33%', '66%', '100%'];
+  const pwdStrength =
+    password.length === 0
+      ? -1
+      : password.length < 6
+        ? 0
+        : password.length < 10
+          ? 1
+          : 2;
+  const pwdColors = ["#C8102E", "#F59E0B", "#16A34A"];
+  const pwdWidths = ["33%", "66%", "100%"];
 
   const nidaComplete = nida.length === 20;
-  const emailValid   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const nameValid    = name.trim().length >= 3;
-  const pwdValid     = password.length >= 6;
-  const pwdMatch     = password === confirmPassword;
-  const canProceed   = nameValid && emailValid && nidaComplete && pwdValid && pwdMatch;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const nameValid = name.trim().length >= 3;
+  const pwdValid = !!user || (password.length >= 12 && password.length <= 72);
+  const pwdMatch = !!user || password === confirmPassword;
+  const canProceed =
+    nameValid && emailValid && nidaComplete && pwdValid && pwdMatch;
 
   const validate = () => {
     let ok = true;
-    if (!nameValid)    { setNameErr('Enter your full name (at least 3 characters)'); ok = false; }
-    if (!emailValid)   { setEmailErr('Enter a valid email address'); ok = false; }
-    if (!pwdValid)     { setPwdErr('Password must be at least 6 characters'); ok = false; }
-    else if (!pwdMatch){ setPwdErr('Passwords do not match'); ok = false; }
-    if (!nidaComplete) { setNidaErr('NIDA number must be exactly 20 digits'); ok = false; }
+    if (!nameValid) {
+      setNameErr("Enter your full name (at least 3 characters)");
+      ok = false;
+    }
+    if (!emailValid) {
+      setEmailErr("Enter a valid email address");
+      ok = false;
+    }
+    if (!pwdValid) {
+      setPwdErr("Password must be 12–72 characters");
+      ok = false;
+    } else if (!pwdMatch) {
+      setPwdErr("Passwords do not match");
+      ok = false;
+    }
+    if (!nidaComplete) {
+      setNidaErr("NIDA number must be exactly 20 digits");
+      ok = false;
+    }
     return ok;
   };
 
-  const handleNext = () => {
-    if (!validate()) { haptics.error(); return; }
-    haptics.medium();
-    setTimeout(() => haptics.success(), 120);
-    navigation.navigate('Step4Business', {
+  const handleNext = async () => {
+    if (saving || !validate()) return;
+    setSaving(true);
+    setSaveError("");
+    const params = {
       ...route.params,
       name: name.trim(),
       email: email.trim(),
       nida,
-      password,
-    });
+    };
+    try {
+      if (!user) await register({ ...params, password });
+      else {
+        const saved = await saveDraft(api, params);
+        navigation.navigate("Step4Business", syncWizard(navigation, saved));
+      }
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // slide: outer Animated.View = opacity (JS), inner = translateY (native)
   const slideOuter = (index) => ({ opacity: fieldAnims[index].opacity });
   const slideInner = (index) => ({
-    transform: [{
-      translateY: fieldAnims[index].translate.interpolate({
-        inputRange: [0, 1], outputRange: [20, 0],
-      }),
-    }],
+    transform: [
+      {
+        translateY: fieldAnims[index].translate.interpolate({
+          inputRange: [0, 1],
+          outputRange: [20, 0],
+        }),
+      },
+    ],
   });
 
   const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 1], outputRange: ['0%', '100%'],
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
   });
 
   const s = styles(theme, insets);
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
 
-      <LinearGradient colors={[theme.gradPrimA, theme.gradPrimB]} style={s.header}>
+      <LinearGradient
+        colors={[theme.gradPrimA, theme.gradPrimB]}
+        style={s.header}
+      >
         <View style={s.navRow}>
-          <TouchableOpacity onPress={() => { haptics.light(); navigation.goBack(); }} style={s.backBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              haptics.light();
+              navigation.goBack();
+            }}
+            style={s.backBtn}
+          >
             <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={s.progressTrack}>
             <Animated.View style={[s.progressFill, { width: progressWidth }]} />
           </View>
-          <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
+          <Text style={s.stepCounter}>
+            {STEP}/{TOTAL_STEPS}
+          </Text>
         </View>
+        {saveError ? (
+          <Text accessibilityRole="alert" style={{ color: "white" }}>
+            {saveError}
+          </Text>
+        ) : null}
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
         <Text style={s.title}>Personal Details</Text>
-        <Text style={s.subtitle}>We need to verify your identity against national records.</Text>
+        <Text style={s.subtitle}>
+          We need to verify your identity against national records.
+        </Text>
       </LinearGradient>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           style={s.scroll}
           contentContainerStyle={s.scrollContent}
@@ -227,7 +376,10 @@ export default function Step3Personal({ navigation, route }) {
               <AnimatedInput
                 label="Full Name"
                 value={name}
-                onChangeText={(t) => { setName(t); if (nameErr) setNameErr(''); }}
+                onChangeText={(t) => {
+                  setName(t);
+                  if (nameErr) setNameErr("");
+                }}
                 placeholder="As on your national ID"
                 error={nameErr}
                 autoCapitalize="words"
@@ -241,8 +393,12 @@ export default function Step3Personal({ navigation, route }) {
             <Animated.View style={slideInner(1)}>
               <AnimatedInput
                 label="Email Address"
+                editable={!user}
                 value={email}
-                onChangeText={(t) => { setEmail(t); if (emailErr) setEmailErr(''); }}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  if (emailErr) setEmailErr("");
+                }}
                 placeholder="you@example.com"
                 error={emailErr}
                 keyboardType="email-address"
@@ -252,74 +408,108 @@ export default function Step3Personal({ navigation, route }) {
             </Animated.View>
           </Animated.View>
 
-          {/* Password */}
-          <Animated.View style={[{ marginTop: 16 }, slideOuter(2)]}>
-            <Animated.View style={slideInner(2)}>
-              <View style={s.pwdWrap}>
-                <AnimatedInput
-                  label="Create Password"
-                  value={password}
-                  onChangeText={(t) => { setPassword(t); if (pwdErr) setPwdErr(''); }}
-                  placeholder="Min 6 characters"
-                  secureTextEntry={!showPwd}
-                  autoCapitalize="none"
-                  returnKeyType="next"
-                  inputStyle={{ paddingRight: 44 }}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPwd(v => !v)}
-                  style={s.eyeBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name={showPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9090A0" />
-                </TouchableOpacity>
-              </View>
-              {password.length > 0 && (
-                <View style={s.strengthBar}>
-                  <View style={[s.strengthFill, { width: pwdWidths[pwdStrength], backgroundColor: pwdColors[pwdStrength] }]} />
-                </View>
-              )}
-            </Animated.View>
-          </Animated.View>
+          {!user && (
+            <>
+              {/* Password */}
+              <Animated.View style={[{ marginTop: 16 }, slideOuter(2)]}>
+                <Animated.View style={slideInner(2)}>
+                  <View style={s.pwdWrap}>
+                    <AnimatedInput
+                      label="Create Password"
+                      value={password}
+                      onChangeText={(t) => {
+                        setPassword(t);
+                        if (pwdErr) setPwdErr("");
+                      }}
+                      placeholder="12–72 characters"
+                      secureTextEntry={!showPwd}
+                      autoCapitalize="none"
+                      returnKeyType="next"
+                      inputStyle={{ paddingRight: 44 }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPwd((v) => !v)}
+                      style={s.eyeBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name={showPwd ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color="#9090A0"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {password.length > 0 && (
+                    <View style={s.strengthBar}>
+                      <View
+                        style={[
+                          s.strengthFill,
+                          {
+                            width: pwdWidths[pwdStrength],
+                            backgroundColor: pwdColors[pwdStrength],
+                          },
+                        ]}
+                      />
+                    </View>
+                  )}
+                </Animated.View>
+              </Animated.View>
 
-          {/* Confirm Password */}
-          <Animated.View style={[{ marginTop: 16 }, slideOuter(3)]}>
-            <Animated.View style={slideInner(3)}>
-              <View style={s.pwdWrap}>
-                <AnimatedInput
-                  label="Confirm Password"
-                  value={confirmPassword}
-                  onChangeText={(t) => { setConfirmPassword(t); if (pwdErr) setPwdErr(''); }}
-                  placeholder="Repeat password"
-                  secureTextEntry={!showCPwd}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  inputStyle={{ paddingRight: 44 }}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowCPwd(v => !v)}
-                  style={s.eyeBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name={showCPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9090A0" />
-                </TouchableOpacity>
-              </View>
-              {pwdErr ? <Text style={s.errText}>{pwdErr}</Text> : null}
-            </Animated.View>
-          </Animated.View>
-
+              {/* Confirm Password */}
+              <Animated.View style={[{ marginTop: 16 }, slideOuter(3)]}>
+                <Animated.View style={slideInner(3)}>
+                  <View style={s.pwdWrap}>
+                    <AnimatedInput
+                      label="Confirm Password"
+                      value={confirmPassword}
+                      onChangeText={(t) => {
+                        setConfirmPassword(t);
+                        if (pwdErr) setPwdErr("");
+                      }}
+                      placeholder="Repeat password"
+                      secureTextEntry={!showCPwd}
+                      autoCapitalize="none"
+                      returnKeyType="done"
+                      inputStyle={{ paddingRight: 44 }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowCPwd((v) => !v)}
+                      style={s.eyeBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name={showCPwd ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color="#9090A0"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {pwdErr ? <Text style={s.errText}>{pwdErr}</Text> : null}
+                </Animated.View>
+              </Animated.View>
+            </>
+          )}
           {/* NIDA */}
           <Animated.View style={[{ marginTop: 16 }, slideOuter(4)]}>
             <Animated.View style={slideInner(4)}>
               <View style={s.nidaHeader}>
                 <Text style={s.inputLabel}>NIDA Number</Text>
-                {nidaComplete
-                  ? <Text style={s.greenTick}>✓ Complete</Text>
-                  : <Text style={s.nidaCount}>{nida.length} / 20</Text>
-                }
+                {nidaComplete ? (
+                  <Text style={s.greenTick}>✓ Complete</Text>
+                ) : (
+                  <Text style={s.nidaCount}>{nida.length} / 20</Text>
+                )}
               </View>
-              <TouchableOpacity activeOpacity={1} onPress={() => nidaRef.current?.focus()}>
-                <NidaBoxes digits={nida} hasError={!!nidaErr} isComplete={nidaComplete} theme={theme} />
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => nidaRef.current?.focus()}
+              >
+                <NidaBoxes
+                  digits={nida}
+                  hasError={!!nidaErr}
+                  isComplete={nidaComplete}
+                  theme={theme}
+                />
               </TouchableOpacity>
               <TextInput
                 ref={nidaRef}
@@ -336,23 +526,41 @@ export default function Step3Personal({ navigation, route }) {
 
           {/* Shield callout — opacity (JS) outer, scale (native) inner */}
           <Animated.View style={[s.shield, slideOuter(5)]}>
-            <Animated.View style={[{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, {
-              transform: [{
-                scale: fieldAnims[5].translate.interpolate({
-                  inputRange: [0, 1], outputRange: [0.94, 1],
-                }),
-              }],
-            }]}>
+            <Animated.View
+              style={[
+                { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+                {
+                  transform: [
+                    {
+                      scale: fieldAnims[5].translate.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.94, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
               <Text style={s.shieldIcon}>🛡️</Text>
               <Text style={s.shieldText}>
-                Your NIDA number is verified against the national registry. This usually takes about 5 seconds.
+                Your NIDA number is verified against the national registry. This
+                usually takes about 5 seconds.
               </Text>
             </Animated.View>
           </Animated.View>
 
-          <TouchableOpacity onPress={handleNext} disabled={!canProceed} activeOpacity={0.85} style={{ marginTop: 32 }}>
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={!canProceed || saving}
+            activeOpacity={0.85}
+            style={{ marginTop: 32 }}
+          >
             <LinearGradient
-              colors={canProceed ? [theme.gradPrimA, theme.gradPrimB] : ['#555', '#444']}
+              colors={
+                canProceed
+                  ? [theme.gradPrimA, theme.gradPrimB]
+                  : ["#555", "#444"]
+              }
               style={s.cta}
             >
               <Text style={s.ctaText}>Continue</Text>

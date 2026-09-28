@@ -1,186 +1,303 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
-  StatusBar, Dimensions,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
-import { useHaptics } from '../../hooks/useHaptics';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  StatusBar,
+  Dimensions,
+  Image,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as DocumentPicker from "expo-document-picker";
+import { api } from "../../config/api";
+import { uploadDocument } from "../../api/documents";
+import { saveDraft, wizardParams, syncWizard } from "../../api/onboarding";
+import { useTheme } from "../../context/ThemeContext";
+import { useHaptics } from "../../hooks/useHaptics";
 
 const TOTAL_STEPS = 6;
 const STEP = 5;
-const { width: W } = Dimensions.get('window');
+const { width: W } = Dimensions.get("window");
 const OVAL_W = W * 0.62;
 const OVAL_H = OVAL_W * 1.28;
 const BRACKET_SIZE = 28;
 
 const BRACKETS = [
-  { top: -4,    left: -4,  borderTopWidth: 3,    borderLeftWidth: 3,  borderBottomWidth: 0, borderRightWidth: 0 },
-  { top: -4,    right: -4, borderTopWidth: 3,    borderRightWidth: 3, borderBottomWidth: 0, borderLeftWidth: 0  },
-  { bottom: -4, left: -4,  borderBottomWidth: 3, borderLeftWidth: 3,  borderTopWidth: 0,    borderRightWidth: 0 },
-  { bottom: -4, right: -4, borderBottomWidth: 3, borderRightWidth: 3, borderTopWidth: 0,    borderLeftWidth: 0  },
+  {
+    top: -4,
+    left: -4,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomWidth: 0,
+    borderRightWidth: 0,
+  },
+  {
+    top: -4,
+    right: -4,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+  },
+  {
+    bottom: -4,
+    left: -4,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+  },
+  {
+    bottom: -4,
+    right: -4,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderTopWidth: 0,
+    borderLeftWidth: 0,
+  },
 ];
 
 export default function Step5Selfie({ navigation, route }) {
   const { theme } = useTheme();
-  const insets  = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const haptics = useHaptics();
 
-  const [phase,   setPhase]   = useState('idle');
+  const [phase, setPhase] = useState("idle");
+  const [photo, setPhoto] = useState(null);
+  const [error, setError] = useState("");
   const [scanPct, setScanPct] = useState(0);
 
-  const progressAnim   = useRef(new Animated.Value((STEP - 1) / TOTAL_STEPS)).current;
-  const scanProgress   = useRef(new Animated.Value(0)).current;
-  const frameGlow      = useRef(new Animated.Value(0)).current;
-  const checkAnim      = useRef(new Animated.Value(0)).current;
-  const scanLineAnim   = useRef(new Animated.Value(0)).current;
-  const pulseAnim      = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(
+    new Animated.Value((STEP - 1) / TOTAL_STEPS),
+  ).current;
+  const scanProgress = useRef(new Animated.Value(0)).current;
+  const frameGlow = useRef(new Animated.Value(0)).current;
+  const checkAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const silhouetteAnim = useRef(new Animated.Value(1)).current;
 
   // Per-bracket translate anims — native driver only
-  const bracketAnims = useRef(BRACKETS.map(() => new Animated.Value(0))).current;
+  const bracketAnims = useRef(
+    BRACKETS.map(() => new Animated.Value(0)),
+  ).current;
 
   // useNativeDriver: false — progress bar width
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: STEP / TOTAL_STEPS, duration: 600, useNativeDriver: false,
+      toValue: STEP / TOTAL_STEPS,
+      duration: 600,
+      useNativeDriver: false,
     }).start();
   }, []);
 
   useEffect(() => {
-    if (phase === 'scanning') {
-      Animated.stagger(40, bracketAnims.map(a =>
-        Animated.spring(a, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true })
-      )).start();
+    if (phase === "scanning") {
+      Animated.stagger(
+        40,
+        bracketAnims.map((a) =>
+          Animated.spring(a, {
+            toValue: 1,
+            tension: 120,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ),
+      ).start();
 
       Animated.timing(silhouetteAnim, {
-        toValue: 0, duration: 400, useNativeDriver: true,
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
       }).start();
 
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(scanLineAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
-          Animated.timing(scanLineAnim, { toValue: 0, duration: 0,    useNativeDriver: true }),
-        ])
+          Animated.timing(scanLineAnim, {
+            toValue: 1,
+            duration: 1800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scanLineAnim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
       );
       loop.start();
       return () => loop.stop();
     }
 
-    if (phase === 'idle') {
-      bracketAnims.forEach(a => a.setValue(0));
+    if (phase === "idle") {
+      bracketAnims.forEach((a) => a.setValue(0));
       silhouetteAnim.setValue(1);
     }
   }, [phase]);
 
   useEffect(() => {
-    if (phase === 'idle') {
+    if (phase === "idle") {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.04, duration: 1000, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1.0,  duration: 1000, useNativeDriver: true }),
-        ])
+          Animated.timing(pulseAnim, {
+            toValue: 1.04,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1.0,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]),
       );
       loop.start();
       return () => loop.stop();
     }
   }, [phase]);
 
-  const startScan = () => {
-    haptics.medium();
-    setPhase('scanning');
-    scanProgress.setValue(0);
-    setScanPct(0);
-
-    const id = scanProgress.addListener(({ value }) => setScanPct(Math.round(value * 100)));
-
-    Animated.timing(scanProgress, {
-      toValue: 1, duration: 3200, useNativeDriver: false,
-    }).start(() => {
-      scanProgress.removeListener(id);
-      haptics.success();
-      setPhase('done');
-
-      // JS driver — color interpolation
-      Animated.timing(frameGlow, { toValue: 1, duration: 400, useNativeDriver: false }).start();
-
-      // Native driver — scale only, separate view from frameGlow
-      Animated.spring(checkAnim, { toValue: 1, tension: 80, friction: 7, useNativeDriver: true }).start();
-    });
+  const startScan = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/jpeg", "image/png"],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled) {
+        setPhoto(result.assets[0]);
+        setPhase("done");
+      }
+    } catch (e) {
+      setError(e.message);
+    }
   };
-
-  const handleNext = () => {
-    haptics.medium();
-    setTimeout(() => haptics.success(), 120);
-    navigation.navigate('Step6Review', { ...route.params, selfieVerified: false });
+  const handleNext = async () => {
+    setError("");
+    setPhase("scanning");
+    try {
+      let ids = [...(route.params?.documentIds || [])];
+      if (photo) {
+        const uploaded = await uploadDocument(photo, "selfie");
+        const kept = [];
+        for (const id of ids) {
+          const doc = await api.call(`/documents/${id}?metadata=1`);
+          if (doc.kind !== "selfie") kept.push(id);
+        }
+        ids = [...kept, uploaded.id];
+      }
+      const saved = await saveDraft(api, { ...route.params, documentIds: ids });
+      const params = syncWizard(navigation, saved);
+      navigation.navigate("Step6Review", params);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPhase(photo ? "done" : "idle");
+    }
   };
 
   const headerProgress = progressAnim.interpolate({
-    inputRange: [0, 1], outputRange: ['0%', '100%'],
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
   });
 
   const scanLineY = scanLineAnim.interpolate({
-    inputRange: [0, 1], outputRange: [0, OVAL_H],
+    inputRange: [0, 1],
+    outputRange: [0, OVAL_H],
   });
 
   // frameColor is JS driver — applied only to ovalBorder (separate view from oval's transform)
   const frameColor = frameGlow.interpolate({
-    inputRange:  [0, 1],
-    outputRange: ['rgba(255,255,255,0.6)', 'rgba(34,197,94,1)'],
+    inputRange: [0, 1],
+    outputRange: ["rgba(255,255,255,0.6)", "rgba(34,197,94,1)"],
   });
 
   const checkScale = checkAnim.interpolate({
-    inputRange: [0, 0.6, 1], outputRange: [0, 1.2, 1],
+    inputRange: [0, 0.6, 1],
+    outputRange: [0, 1.2, 1],
   });
 
   // Bracket translate — native driver, applied only to transform (no borderColor on same view)
   const bracketTranslate = (i) => {
     const dirs = [
-      { x: [0,  8], y: [0,  8] },
-      { x: [0, -8], y: [0,  8] },
-      { x: [0,  8], y: [0, -8] },
+      { x: [0, 8], y: [0, 8] },
+      { x: [0, -8], y: [0, 8] },
+      { x: [0, 8], y: [0, -8] },
       { x: [0, -8], y: [0, -8] },
     ];
     return [
-      { translateX: bracketAnims[i].interpolate({ inputRange: [0,1], outputRange: dirs[i].x }) },
-      { translateY: bracketAnims[i].interpolate({ inputRange: [0,1], outputRange: dirs[i].y }) },
+      {
+        translateX: bracketAnims[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: dirs[i].x,
+        }),
+      },
+      {
+        translateY: bracketAnims[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: dirs[i].y,
+        }),
+      },
     ];
   };
 
   // bracketColor is a plain JS string — not animated, so no driver conflict
-  const bracketColor = phase === 'done' ? '#22C55E' : '#fff';
+  const bracketColor = phase === "done" ? "#22C55E" : "#fff";
 
   const s = styles(theme, insets);
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
 
-      <LinearGradient colors={['#0A0A12', '#1A0508', '#0A0A12']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient
+        colors={["#0A0A12", "#1A0508", "#0A0A12"]}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={s.navRow}>
-          <TouchableOpacity onPress={() => { haptics.light(); navigation.goBack(); }} style={s.backBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              haptics.light();
+              navigation.goBack();
+            }}
+            style={s.backBtn}
+          >
             <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={s.progressTrack}>
-            <Animated.View style={[s.progressFill, { width: headerProgress }]} />
+            <Animated.View
+              style={[s.progressFill, { width: headerProgress }]}
+            />
           </View>
-          <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
+          <Text style={s.stepCounter}>
+            {STEP}/{TOTAL_STEPS}
+          </Text>
         </View>
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
         <Text style={s.title}>Selfie preview</Text>
         <Text style={s.subtitle}>
-          {phase === 'done' ? 'Preview complete. Identity is not verified.' : 'Camera capture is not connected in this preview.'}
+          Choose a clear selfie photo for manual review. Uploading a photo does
+          not verify your identity.
         </Text>
       </View>
 
       <View style={s.ovalWrap}>
         {/* Oval outer: transform (native driver) — no color/opacity props here */}
-        <Animated.View style={[s.oval, {
-          transform: phase === 'idle' ? [{ scale: pulseAnim }] : [],
-        }]}>
+        <Animated.View
+          style={[
+            s.oval,
+            {
+              transform: phase === "idle" ? [{ scale: pulseAnim }] : [],
+            },
+          ]}
+        >
           {/* ovalBorder: borderColor (JS driver) — separate child view, no transform */}
           <Animated.View style={[s.ovalBorder, { borderColor: frameColor }]} />
 
@@ -197,20 +314,20 @@ export default function Step5Selfie({ navigation, route }) {
           ))}
 
           {/* Silhouette: opacity (native driver — same value as silhouetteAnim which is native) */}
-          <Animated.Text style={[s.silhouette, { opacity: silhouetteAnim }]}>👤</Animated.Text>
-
-          {phase === 'scanning' && (
-            <Animated.View style={[s.scanLine, { transform: [{ translateY: scanLineY }] }]}>
-              <LinearGradient
-                colors={['transparent', 'rgba(224,21,53,0.6)', 'transparent']}
-                style={{ flex: 1, height: 3 }}
-              />
-            </Animated.View>
+          {photo ? (
+            <Image
+              source={{ uri: photo.uri }}
+              style={{ width: OVAL_W, height: OVAL_H }}
+            />
+          ) : (
+            <Text style={s.silhouette}>👤</Text>
           )}
 
-          {phase === 'done' && (
+          {phase === "done" && (
             /* checkAnim is native driver — scale only on this view, no opacity/color */
-            <Animated.View style={[s.checkWrap, { transform: [{ scale: checkScale }] }]}>
+            <Animated.View
+              style={[s.checkWrap, { transform: [{ scale: checkScale }] }]}
+            >
               <View style={s.checkCircle}>
                 <Text style={s.checkIcon}>✓</Text>
               </View>
@@ -220,54 +337,53 @@ export default function Step5Selfie({ navigation, route }) {
       </View>
 
       <View style={s.chips}>
-        {['Eyes open', 'No hat', 'Good light'].map(c => (
+        {["Eyes open", "No hat", "Good light"].map((c) => (
           <View key={c} style={s.chip}>
             <Text style={s.chipText}>{c}</Text>
           </View>
         ))}
       </View>
 
-      {phase === 'scanning' && (
-        <View style={s.progressWrap}>
-          <View style={s.progressBg}>
-            <Animated.View style={[s.progressScan, {
-              width: scanProgress.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] }),
-            }]} />
-          </View>
-          <Text style={s.progressPct}>
-            <Text style={s.progressNum}>{scanPct}</Text>%
+      {phase === "done" && (
+        <View style={s.doneBadge}>
+          <View style={s.doneDot} />
+          <Text style={s.doneText}>
+            Photo selected · awaiting manual review
           </Text>
         </View>
       )}
 
-      {phase === 'done' && (
-        <View style={s.doneBadge}>
-          <View style={s.doneDot} />
-          <Text style={s.doneText}>Face matched · 97% confidence</Text>
-        </View>
-      )}
-
       <View style={[s.bottom, { paddingBottom: insets.bottom + 16 }]}>
-        {phase === 'idle' && (
+        {phase !== "scanning" && (
           <TouchableOpacity onPress={startScan} activeOpacity={0.85}>
-            <LinearGradient colors={[theme.gradPrimA, theme.gradPrimB]} style={s.cta}>
-              <Text style={s.ctaText}>Preview this step</Text>
+            <LinearGradient
+              colors={[theme.gradPrimA, theme.gradPrimB]}
+              style={s.cta}
+            >
+              <Text style={s.ctaText}>Choose a selfie photo</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
-        {phase === 'scanning' && (
+        {phase === "scanning" && (
           <View style={[s.cta, s.ctaScanning]}>
-            <Text style={s.ctaText}>Previewing…</Text>
+            <Text style={s.ctaText}>Saving photo…</Text>
           </View>
         )}
-        {phase === 'done' && (
+        {phase !== "scanning" && (
           <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
-            <LinearGradient colors={['#16A34A', '#15803D']} style={s.cta}>
-              <Text style={s.ctaText}>Continue  →</Text>
+            <LinearGradient colors={["#16A34A", "#15803D"]} style={s.cta}>
+              <Text style={s.ctaText}>Continue →</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
-        <Text style={s.note}>🔒 Your biometric data is never stored or shared</Text>
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: "white" }}>
+            {error}
+          </Text>
+        ) : null}
+        <Text style={s.note}>
+          Your photo is stored privately for your assigned reviewer.
+        </Text>
       </View>
     </View>
   );

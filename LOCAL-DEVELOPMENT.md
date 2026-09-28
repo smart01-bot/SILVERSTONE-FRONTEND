@@ -1,3 +1,15 @@
+# Silverstone frontend — Phase 2 local onboarding
+
+This section supersedes historical preview-only descriptions below. Use development and the isolated backend; no live accounts/data. Existing UI/branding remains. Drafts are saved server-side by Next/Save draft after creating credentials; passwords are not stored in drafts. Sign in and Resume saved draft to restore. Unsaved edits are not durable.
+
+Use pending@example.test with the synthetic password from the backend guide to exercise the full test-only journey, and main@example.test for explicitly authorized assigned review. Ordinary new accounts lack genuine phone verification/assignment and cannot submit. Never describe fixture proof as SMS verification. Choose synthetic PNG/JPEG certificates/selfie up to 2 MiB; PDF is unsupported. The image picker selects files; this is not live camera/liveness verification.
+
+Run npm test and EXPO_PUBLIC_API_URL=http://10.0.2.2:8800/api/v1 npm run build:check. expo-file-system ~17.0.1 is now an explicit dependency (already supplied transitively by Expo). Reinstall from the updated lockfile when applying these changes to another checkout. Android export validates JavaScript/Hermes only. Native UI/PIN/storage/picker/screenshots remain open; see docs/silverstone/handoffs/PHASE-02-HANDOFF.md.
+
+The isolated backend resets when stopped; drafts survive app sessions while it runs. Persistent guarded local PostgreSQL is an alternative pending native verification. No plaintext local draft cache or public KYC URL is created by the application.
+
+## Historical Phase 1 setup (onboarding limitations superseded above)
+
 # Silverstone frontend — Phase 1 local setup
 
 Use `development`. Preserve existing UI and assets. The active app now uses Express; it does not authenticate to or read/write Firebase. Legacy Firebase configuration, rules, installed dependency and existing remote users/data are preserved for a separately authorized migration decision.

@@ -1,3 +1,24 @@
+## Phase 2 implemented contract — local only
+
+This section supersedes the Phase 1 unavailability notes for onboarding below. Other proposed endpoints remain unimplemented. All routes require a current session. Owner routes deny main-agent/suspended/closed identities; editing requires pending + draft/changes_requested.
+
+| Route relative to /api/v1 | Behavior |
+| --- | --- |
+| GET /applications/me | Own status, version, draft data, registered email/phone, phoneVerification source, immutable revisions/decisions |
+| PUT /applications/me/draft | {expectedVersion,data}; strict allowlist, optimistic concurrency, server version increment |
+| POST /applications/me/phone-verification | 503 PHONE_PROVIDER_UNAVAILABLE; no simulated delivery or verification |
+| POST /applications/me/submit | {expectedVersion}; validate fields, owned evidence kinds, assigned main-agent and trusted phone record; append immutable snapshot and set submitted/pending |
+| POST /documents | {kind,name,mime,base64}; authenticated PNG/JPEG only, 2 MiB/16M pixels, private database bytes, deduplicate owner+kind+hash; no client verified flag |
+| GET /documents/:id | Private image bytes in base64 to owner or explicitly granted currently assigned reviewer; reviewer only sees evidence linked to submitted revisions; no-store and access audit |
+| GET /documents/:id?metadata=1 | Same scope, without file bytes |
+| GET /review/applications | Active approved main-agent + unrevoked reviewer_grants record; first 100 assigned submitted/pending applicants |
+| GET /review/applications/:agentId | Same scope; submitted history only, never unsent draft content |
+| POST /review/applications/:agentId/decisions | {expectedVersion,decision,reason,fieldsToCorrect?}; approved/rejected/changes_requested, reason 3–1000 chars, correction fields required for changes_requested; one decision/revision; transactional activation only for approved |
+
+Draft data keys: name, nida, businessName, businessLocation, coordinates {lat,lng}, networks (canonical codes), floatCapacity (whole-TZS string), businessTIN, businessLicenceNumber, documentIds. No password, role, assignment, status or verification field. Prototype evidence kinds tin/licence/selfie are launch-policy dependent. Rejected is terminal for applicant edits; request-corrections reopens the existing draft.
+
+Phone sources provider/synthetic_fixture are distinct. No active provider adapter exists; only isolated bootstrap writes synthetic_fixture. Private database storage is the local implementation, not a claim that production object storage is configured. Approval is a recorded human decision, not proof of external identity checks. PDF is unsupported. 409 APPLICATION_CHANGED protects stale/concurrent saves/reviews; PHONE_VERIFICATION_REQUIRED and ASSIGNMENT_REQUIRED block submission. The full gate remains partial; see PHASE-02-HANDOFF.
+
 ## Phase 1 architecture approval — 27 September 2026
 
 The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.

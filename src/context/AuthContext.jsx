@@ -8,6 +8,7 @@ import React, {
 import { AppState, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { api, onInvalidSession } from "../config/api";
+import { applicationFields } from "../api/onboarding";
 import { agentView } from "../api/presentation";
 
 const AuthContext = createContext({});
@@ -85,10 +86,23 @@ export function AuthProvider({ children }) {
     const expected = ++generation.current;
     return apply(await api.login(email, password), true, expected);
   }
-  async function register() {
-    throw new Error(
-      "Application submission is not available yet. Your details remain on this screen.",
-    );
+  async function register(params) {
+    const expected = ++generation.current;
+    const agent = await api.register({
+      email: params.email,
+      password: params.password,
+      name: params.name,
+      phone: params.phone,
+    });
+    try {
+      await api.call("/applications/me/draft", {
+        method: "PUT",
+        body: { expectedVersion: 0, data: applicationFields(params) },
+      });
+    } finally {
+      // Account creation succeeded even if the following save failed. Never create it twice.
+      await apply(agent, false, expected);
+    }
   }
   async function logout() {
     try {
@@ -99,7 +113,12 @@ export function AuthProvider({ children }) {
     }
   }
   async function savePin(pin) {
-    if (!user || !/^\d{4}$/.test(pin))
+    if (
+      !user ||
+      profile?.accountStatus !== "active" ||
+      profile?.applicationStatus !== "approved" ||
+      !/^\d{4}$/.test(pin)
+    )
       throw new Error("Enter a four-digit PIN.");
     await SecureStore.setItemAsync(pinKey(user.id), pin);
     setProfile((previous) => ({ ...previous, pinSet: true }));
