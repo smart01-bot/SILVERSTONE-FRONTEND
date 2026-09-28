@@ -16,8 +16,8 @@ import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, onSnapshot,
   doc, updateDoc, Timestamp,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+} from '../../api/screenData';
+import { db } from '../../api/screenData';
 
 function SkeletonAgentCard({ theme }) {
   return (
@@ -74,7 +74,7 @@ export default function ApprovalsScreen() {
     } catch (e) {
       Alert.alert('Error', 'Failed to approve agent.');
     } finally {
-      showLoader();
+      hideLoader();
     }
   };
 
@@ -96,7 +96,7 @@ export default function ApprovalsScreen() {
     } catch (e) {
       Alert.alert('Error', 'Failed to reject agent.');
     } finally {
-      showLoader();
+      hideLoader();
     }
   };
 

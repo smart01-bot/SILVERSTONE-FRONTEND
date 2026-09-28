@@ -113,7 +113,7 @@ export default function Step5Selfie({ navigation, route }) {
   const handleNext = () => {
     haptics.medium();
     setTimeout(() => haptics.success(), 120);
-    navigation.navigate('Step6Review', { ...route.params, selfieVerified: true });
+    navigation.navigate('Step6Review', { ...route.params, selfieVerified: false });
   };
 
   const headerProgress = progressAnim.interpolate({
@@ -170,9 +170,9 @@ export default function Step5Selfie({ navigation, route }) {
           <Text style={s.stepCounter}>{STEP}/{TOTAL_STEPS}</Text>
         </View>
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
-        <Text style={s.title}>Identity Scan</Text>
+        <Text style={s.title}>Selfie preview</Text>
         <Text style={s.subtitle}>
-          {phase === 'done' ? 'Face matched successfully.' : 'Look directly at the camera in a well-lit area.'}
+          {phase === 'done' ? 'Preview complete. Identity is not verified.' : 'Camera capture is not connected in this preview.'}
         </Text>
       </View>
 
@@ -251,13 +251,13 @@ export default function Step5Selfie({ navigation, route }) {
         {phase === 'idle' && (
           <TouchableOpacity onPress={startScan} activeOpacity={0.85}>
             <LinearGradient colors={[theme.gradPrimA, theme.gradPrimB]} style={s.cta}>
-              <Text style={s.ctaText}>Start Face Scan</Text>
+              <Text style={s.ctaText}>Preview this step</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
         {phase === 'scanning' && (
           <View style={[s.cta, s.ctaScanning]}>
-            <Text style={s.ctaText}>Scanning…</Text>
+            <Text style={s.ctaText}>Previewing…</Text>
           </View>
         )}
         {phase === 'done' && (

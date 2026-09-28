@@ -15,8 +15,6 @@ import { fonts, spacing, radius } from '../../constants/theme';
 import AnimatedInput  from '../../components/AnimatedInput';
 import PressableScale from '../../components/PressableScale';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
-import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
 
 const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
 const NETWORK_COLORS = {
@@ -28,8 +26,9 @@ const NETWORK_COLORS = {
 
 export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
+  const { showLoader, hideLoader } = useLoader();
   const { theme, tr }     = useTheme();
-  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.uid, profile?.name);
+  const { isOnline, syncedCount, enqueue } = useOfflineQueue(user?.id, profile?.name);
 
   const prefill = route?.params?.prefill;
 
@@ -70,53 +69,7 @@ export default function NewRequestScreen({ navigation, route }) {
   };
 
   const handleSubmit = async () => {
-    const err = validate();
-    if (err) { setError(err); return; }
-    setError('');
-    showLoader();
-
-    const requestData = {
-      agentId:       user.uid,
-      agentName:     profile?.name ?? 'Agent',
-      sourceNetwork, destNetwork, sourcePhone, destPhone,
-      amount:        Number(amount.replace(/,/g, '')),
-      urgent,
-    };
-
-    try {
-      if (!isOnline) {
-        // Offline — persist to AsyncStorage queue; sync fires automatically on reconnect
-        await enqueue(requestData);
-        navigation.replace('RequestSuccess', {
-          queuePosition: null,
-          sourceNetwork, destNetwork,
-          amount: requestData.amount,
-          queued: true,
-        });
-        return;
-      }
-
-      // Online — write directly to Firestore
-      const q    = query(collection(db, 'requests'), where('status', '==', 'pending'));
-      const snap = await getDocs(q);
-      const pos  = snap.size + 1;
-      await addDoc(collection(db, 'requests'), {
-        ...requestData,
-        status:        'pending',
-        queuePosition: pos,
-        createdAt:     Timestamp.now(),
-      });
-      navigation.replace('RequestSuccess', {
-        queuePosition: pos,
-        sourceNetwork, destNetwork,
-        amount: requestData.amount,
-        queued: false,
-      });
-    } catch (e) {
-      setError(tr('error'));
-    } finally {
-      hideLoader();
-    }
+    setError('Exchange submission is not available yet. No request or payment was created.');
   };
 
   const NetworkPicker = ({ label, selected, onSelect }) => (

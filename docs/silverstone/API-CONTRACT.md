@@ -1,3 +1,34 @@
+## Phase 1 architecture approval — 27 September 2026
+
+The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.
+
+Authority: local implementation and verification on `development` in both repositories. Preserve the UI and charge no Silverstone service fee. Use isolated synthetic accounts; keep payments disabled. Do not delete, migrate or access existing Firebase users/data. Existing-user migration and live changes are separate. No push, main changes or deployment.
+
+## Implemented Phase 1 surface
+
+Canonical prefix `/api/v1`; JSON camelCase, UUID IDs, whole-TZS decimal strings, ISO UTC dates, `{data}` success and `{error:{code,message,fieldErrors,requestId}}` errors. Account, application and request states are distinct. This is local-only; network codes do not imply provider support.
+
+| Route | Implemented behavior |
+| --- | --- |
+| POST /auth/register | Allow only email/password/name/phone; creates pending sub-agent and draft application status. No evidence/submission/approval. |
+| POST /auth/login | Email/password, returns accessToken/refreshToken/agent. Pending and suspended can view own status. Closed accounts denied. |
+| POST /auth/refresh | Rotate hashed refresh credentials; reuse revokes session. |
+| POST /auth/logout | Authenticated server session revocation. |
+| POST /auth/reauthenticate | Check current password for device PIN reset; issues no new credential. |
+| GET /me | Current identity, role, accountStatus, applicationStatus, assignment summary. PIN is device-local, not a server approval field. |
+| PATCH /me | Active approved account; name only. Role/status/assignment rejected. |
+| GET /networks | Authenticated registry codes and display names. |
+| GET /agents; GET /agents/:id | Active approved main-agent gets assigned sub-agents; detail also permits own active account. No global admin access. |
+| GET /requests; GET /requests/:id | Active approved owner or request's recorded main-agent only. Read-only foundation. |
+| POST /auth/recovery; POST /auth/reset | 503 RECOVERY_UNAVAILABLE; no token leaks or simulated delivery. |
+| Exchange mutations / transfers / agent review mutations | Unavailable; no workers or provider calls. |
+
+Lists use `limit` (1–100, default 100) and an opaque-to-client UUID cursor ordered by ID. Agent DTO: id, email, name, phone, role, accountStatus, applicationStatus, mainAgentId, createdAt. Request DTO: id, subAgentId, mainAgentId, sourceNetwork, destinationNetwork, amountTzs, currency, status, createdAt. Server derives read scope from the current authenticated account; no client owner selector grants access.
+
+Session access lifetime 15 minutes; server session absolute lifetime seven days; issuer silverstone-api, audience silverstone-mobile, algorithm HS256, purpose access. Secrets and refresh-token hashes never appear in DTOs. Local error 413 covers payloads exceeding 32 KiB. Unknown/unmounted routes return 404. `/health` checks database connectivity and reports paymentsEnabled false.
+
+The remaining contract below is the longer-term target. Only the routes above are implemented. KYC submission/review, network-account records, PIN recovery delivery, exchange commands, reservations and durable processing are future work; D09/D10 remain proposed.
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Database and API direction — proposed v1

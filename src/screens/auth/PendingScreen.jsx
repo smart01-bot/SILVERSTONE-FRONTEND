@@ -8,18 +8,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth }  from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
-import { getAuth } from 'firebase/auth';
+import { useLoader } from '../../context/LoaderContext';
 
-const TARGET_PCT   = 60;
-const ANIMATE_FROM = 25;
+const TARGET_PCT   = 0;
+const ANIMATE_FROM = 0;
 const RING_SIZE    = 168;
 const RING_BORDER  = 10;
 
 const STEPS = [
-  { label: 'Application submitted', sub: 'Just now',             done: true,  active: false },
-  { label: 'Identity check',        sub: 'Done',                 done: true,  active: false },
-  { label: 'Main-agent review',     sub: 'In progress',          done: false, active: true  },
-  { label: 'Account activated',     sub: 'Usually within 4 hrs', done: false, active: false },
+  { label: 'Account saved', sub: 'Application not submitted',             done: true,  active: false },
+  { label: 'Identity check',        sub: 'Not completed',        done: false,  active: false },
+  { label: 'Main-agent review',     sub: 'Not started',          done: false, active: true  },
+  { label: 'Account activated',     sub: 'After approval', done: false, active: false },
 ];
 
 // ── Orbiting dot ─────────────────────────────────────────────────────────────
@@ -62,7 +62,10 @@ const orbitStyles = StyleSheet.create({
 
 export default function PendingScreen({ navigation }) {
   const { theme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, profile, refreshProfile } = useAuth();
+  const { hideLoader } = useLoader();
+  const [refreshError, setRefreshError] = useState('');
+  useEffect(() => { hideLoader(); }, []);
   const insets  = useSafeAreaInsets();
   const haptics = useHaptics();
 
@@ -76,8 +79,7 @@ export default function PendingScreen({ navigation }) {
   const stepsTranslate = useRef(STEPS.map(() => new Animated.Value(0))).current;
   const stepsOpacity   = useRef(STEPS.map(() => new Animated.Value(0))).current;
 
-  const auth  = getAuth();
-  const phone = auth.currentUser?.phoneNumber ?? '+255 ••• ••• •••';
+  const phone = profile?.phone ?? '+255 ••• ••• •••';
   const maskedPhone = phone.replace(/(\+255\s?\d{3})\s?\d{3}\s?(\d{3})/, '$1 ••• $2');
 
   // JS driver — width, opacity
@@ -171,16 +173,16 @@ export default function PendingScreen({ navigation }) {
               </View>
             </View>
             <View style={s.ringCenter}>
-              <Text style={s.ringPct}>{pctDisplay}%</Text>
-              <Text style={s.ringLabel}>VERIFIED</Text>
+              <Text style={s.ringPct}>—</Text>
+              <Text style={s.ringLabel}>PENDING</Text>
             </View>
           </View>
         </View>
 
         <View style={s.textBlock}>
-          <Text style={s.headline}>You're under review.</Text>
+          <Text style={s.headline}>{profile?.accountStatus === 'suspended' ? 'Account suspended.' : 'Account awaiting approval.'}</Text>
           <Text style={s.subtext}>
-            You can close the app — we'll send you an SMS the moment you're cleared to log in.
+            Operational access is restricted. Application submission and review will be available in a later update.
           </Text>
         </View>
 
@@ -213,19 +215,17 @@ export default function PendingScreen({ navigation }) {
         </View>
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 20 }]}>
-          <Text style={s.footerText}>SMS will be sent to</Text>
+          <Text style={s.footerText}>Registered phone</Text>
           <Text style={s.footerPhone}>{maskedPhone}</Text>
 
           <TouchableOpacity
             style={s.demoBtn}
-            onPress={() => {
-              haptics.light();
-              navigation.reset({ index: 0, routes: [{ name: 'PinSetup' }] });
-            }}
+            onPress={() => { setRefreshError(''); refreshProfile().catch(e => setRefreshError(e.message)); }}
           >
-            <Text style={s.demoBtnText}>Simulate approval (demo) →</Text>
+            <Text style={s.demoBtnText}>Refresh account status →</Text>
           </TouchableOpacity>
 
+          {refreshError ? <Text style={s.footerText}>{refreshError}</Text> : null}
           <TouchableOpacity
             style={s.signOutBtn}
             onPress={() => { haptics.light(); logout(); }}

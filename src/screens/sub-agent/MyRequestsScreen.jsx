@@ -17,8 +17,8 @@ import RequestDetailModal      from '../../components/RequestDetailModal';
 import {
   collection, query, where, orderBy,
   onSnapshot, doc, updateDoc,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+} from '../../api/screenData';
+import { db } from '../../api/screenData';
 import { USE_MOCK } from '../../config/dev';
 
 const NETWORK_COLORS = {
@@ -57,7 +57,7 @@ export default function MyRequestsScreen({ navigation }) {
   ];
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     // ── Mock mode ────────────────────────────────────────────────────────────
     if (USE_MOCK) {
@@ -70,7 +70,7 @@ export default function MyRequestsScreen({ navigation }) {
     const unsub = onSnapshot(
       query(
         collection(db, 'requests'),
-        where('agentId', '==', user.uid),
+        where('agentId', '==', user.id),
         orderBy('createdAt', 'desc')
       ),
       snap => {
@@ -80,7 +80,7 @@ export default function MyRequestsScreen({ navigation }) {
       () => setLoading(false)
     );
     return unsub;
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const filtered = requests
     .filter(r => filter === 'all' || r.status === filter)

@@ -4,7 +4,7 @@ import {
   View, Text, TouchableOpacity,
   StyleSheet, StatusBar, SafeAreaView,
   KeyboardAvoidingView,
-  Platform, ScrollView, Image,
+  Platform, ScrollView, Image, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons }       from '@expo/vector-icons';
@@ -15,7 +15,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import AnimatedInput      from '../../components/AnimatedInput';
 
 export default function LoginScreen({ navigation, route }) {
-  const { login }              = useAuth();
+  const { login, resetPassword }              = useAuth();
   const { theme, isDark }      = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
@@ -33,8 +33,7 @@ export default function LoginScreen({ navigation, route }) {
     showLoader();
     try {
       await login(email.trim(), password);
-      // Don't hideLoader() on success — overlay stays up while AppNavigator
-      // switches underneath. PinEntryScreen / PinSetupScreen will fade it out.
+      hideLoader();
     } catch (e) {
       setError(
         e.message
@@ -116,7 +115,7 @@ export default function LoginScreen({ navigation, route }) {
               <Text style={s.btnText}>Sign In</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => {}} style={s.forgotWrap}>
+            <TouchableOpacity onPress={() => resetPassword(email.trim()).catch(e => Alert.alert('Password recovery', e.message))} style={s.forgotWrap}>
               <Text style={[s.forgot, { color: theme.primary }]}>Forgot password?</Text>
             </TouchableOpacity>
 

@@ -13,8 +13,8 @@ import { fonts, spacing, radius } from '../../constants/theme';
 import { SkeletonBox, SkeletonCard, SkeletonNetRow } from '../../components/SkeletonLoader';
 import {
   collection, query, where, orderBy, limit, onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+} from '../../api/screenData';
+import { db } from '../../api/screenData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_H       = 210;
@@ -269,10 +269,10 @@ export default function HomeScreen({ navigation }) {
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     const q = query(
       collection(db, 'requests'),
-      where('agentId', '==', user.uid),
+      where('agentId', '==', user.id),
       orderBy('createdAt', 'desc'),
       limit(20)
     );
@@ -294,7 +294,7 @@ export default function HomeScreen({ navigation }) {
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
 

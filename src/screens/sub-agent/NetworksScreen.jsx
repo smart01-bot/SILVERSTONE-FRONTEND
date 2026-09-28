@@ -10,8 +10,8 @@ import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { doc, updateDoc } from '../../api/screenData';
+import { db } from '../../api/screenData';
 
 const NETWORKS = [
   { name: 'Voda',    wallet: 'M-Pesa',       color: '#E40000', short: 'VOD' },
@@ -56,7 +56,7 @@ export default function NetworksScreen({ navigation }) {
     }
     showLoader();
     try {
-      await updateDoc(doc(db, 'agents', user.uid), {
+      await updateDoc(doc(db, 'agents', user.id), {
         agentPhoneNumbers: phones,
         networks:          active,
       });

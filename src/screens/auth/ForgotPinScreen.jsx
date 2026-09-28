@@ -14,7 +14,7 @@ import { spacing, radius, fonts } from '../../constants/theme';
 import AnimatedInput      from '../../components/AnimatedInput';
 
 export default function ForgotPinScreen({ onBack, onComplete }) {
-  const { user, login, resetPin } = useAuth();
+  const { user, resetPin } = useAuth();
   const { theme, isDark } = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
@@ -27,8 +27,7 @@ export default function ForgotPinScreen({ onBack, onComplete }) {
     setError('');
     showLoader();
     try {
-      await login(user.email, password);
-      await resetPin();
+      await resetPin(password);
       onComplete?.();
     } catch (e) {
       setError('Incorrect password. Please try again.');

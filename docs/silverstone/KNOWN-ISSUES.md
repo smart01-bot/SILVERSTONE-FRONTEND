@@ -1,3 +1,27 @@
+# Phase 1 disposition — 27 September 2026
+
+The Phase 0 findings below remain historical evidence. Current local dispositions:
+
+| Findings | Phase 1 disposition |
+| --- | --- |
+| S01/S02 startup/schema | Active foundation graph and ss_v1 migrations pass checks. Legacy source still has incompatible imports/schema and is deliberately unmounted; do not run it. |
+| S03/S04 authorization | Active API rejects privileged registration fields; checks current account/application status, roles and object scope. Negative tests pass. |
+| S05 recovery/sessions | Strict access-token validation, refresh replay revocation and server logout tested. Password recovery is unavailable (503) until real delivery exists. |
+| S06 Firebase | No active app path uses Firebase. Existing remote users, data and deployed rules are untouched; their historical exposure is not fixed by this local work. |
+| S07 loader/identity | NewRequest loader binding fixed; active user IDs use id. Exchange submission explicitly unavailable. |
+| S08 offline | Legacy queue is neither read, replayed nor deleted; durable identity-bound submission remains Phase 3. |
+| S09 PIN | Unlock callbacks clear sessionLocked; password reauthentication used for local PIN reset. Device/biometric verification remains open. |
+| S10/S11 queue/payment | Legacy worker/payment routes unmounted. No fake completion. No provider execution. |
+| S12/S13 onboarding | Preview labels no longer claim verified identity; final wizard submission and review remain unavailable. Private evidence/drafts/submission are Phase 2. |
+| S14/S15 setup/tests | Current setup guides and isolated checks provided; legacy unsafe tests excluded from npm test. Native PostgreSQL/Docker not executed. |
+| S16 metrics | No active backend revenue endpoint. Full accurate exchange display/aggregation remains Phase 3. |
+| S17 integration | Existing screen reads use API adapter; unsupported writes fail. Active graph contains no Firebase imports. |
+| S18 DB TLS | Current foundation permits only explicitly named loopback dev/test databases. Legacy connection configuration remains unmounted; production TLS configuration is not claimed. |
+
+New limitations: process-local rate limiting; no native app/screenshots/device proof; no actual legacy-schema migration; full KYC and password recovery unavailable. PGlite is embedded PostgreSQL, not an external server or provider sandbox. Phase 1 does not establish operational readiness.
+
+## Historical Phase 0 findings
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Known issues and audit revalidation

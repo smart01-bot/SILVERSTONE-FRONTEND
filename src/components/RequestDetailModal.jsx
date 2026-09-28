@@ -89,7 +89,7 @@ export default function RequestDetailModal({
   const handleApprove = async () => {
     showLoader();
     try {
-      await updateRequestStatus(request.id, 'approved', user.uid);
+      await updateRequestStatus(request.id, 'approved', user.id);
       onClose();
     } catch (e) {
       Alert.alert('Error', e.message);
@@ -101,7 +101,7 @@ export default function RequestDetailModal({
   const handleProcess = async () => {
     showLoader();
     try {
-      await createTransaction(request, user.uid);
+      await createTransaction(request, user.id);
       onClose();
     } catch (e) {
       Alert.alert('Error', e.message);
@@ -122,7 +122,7 @@ export default function RequestDetailModal({
           onPress: async () => {
             showLoader();
             try {
-              await updateRequestStatus(request.id, 'rejected', user.uid);
+              await updateRequestStatus(request.id, 'rejected', user.id);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);
@@ -147,7 +147,7 @@ export default function RequestDetailModal({
           onPress: async () => {
             showLoader();
             try {
-              await updateRequestStatus(request.id, 'rejected', user.uid);
+              await updateRequestStatus(request.id, 'rejected', user.id);
               onClose();
             } catch (e) {
               Alert.alert('Error', e.message);

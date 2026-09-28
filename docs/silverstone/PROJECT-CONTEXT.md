@@ -1,3 +1,9 @@
+## Phase 1 architecture approval — 27 September 2026
+
+The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.
+
+Authority: local implementation and verification on `development` in both repositories. Preserve the UI and charge no Silverstone service fee. Use isolated synthetic accounts; keep payments disabled. Do not delete, migrate or access existing Firebase users/data. Existing-user migration and live changes are separate. No push, main changes or deployment.
+
 ## Mandatory branch policy — all phases
 
 Confirmed by the user on 27 September 2026: all Silverstone phases must be implemented on `development` in BOTH `smart01-bot/SILVERSTONE-FRONTEND` and `smart01-bot/SILVERSTONE-BACKEND`. All phase code, fixes, tests, documentation and handoffs belong on those branches. Any authorized publication of phase work must target `development` only.

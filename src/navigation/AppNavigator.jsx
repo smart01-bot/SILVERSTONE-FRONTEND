@@ -1,8 +1,9 @@
 // src/navigation/AppNavigator.jsx
 import React, { useEffect, useState } from 'react';
 import { createNavigationContainerRef } from '@react-navigation/native';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { canOperate } from '../api/presentation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenLoader } from '../components/Loader';
@@ -20,7 +21,7 @@ import ForgotPinScreen from '../screens/auth/ForgotPinScreen';
 export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
-  const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists } = useAuth();
+  const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists, connectionError, retryConnection } = useAuth();
   const { theme, isDark } = useTheme();
 
   const [pinExists,   setPinExists]   = useState(false);
@@ -46,7 +47,7 @@ export default function AppNavigator() {
       setPinExists(exists);
       setChecking(false);
     });
-  }, [user?.uid, profile?.pinSet, profile?.status]);
+  }, [user?.id, profile?.pinSet, profile?.status]);
 
   useEffect(() => {
     if (sessionLocked) {
@@ -77,6 +78,13 @@ export default function AppNavigator() {
     return <ScreenLoader />;
   }
 
+  if (connectionError) {
+    return <View style={[styles.center, {flex:1,backgroundColor:theme.bg,padding:24}]}>
+      <Text style={{color:theme.text}}>{connectionError}</Text>
+      <TouchableOpacity onPress={retryConnection}><Text style={{color:theme.primary,padding:16}}>Try again</Text></TouchableOpacity>
+    </View>;
+  }
+
   // No user — go straight to RoleSelect (Splash already showed at top)
   if (!user) {
     return (
@@ -93,10 +101,10 @@ export default function AppNavigator() {
   }
 
   // Pending or rejected
-  if (profile.status === 'pending' || profile.status === 'rejected') {
+  if (!canOperate(profile)) {
     return (
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <AuthNavigator initialRoute={profile.status} />
+        <AuthNavigator key={profile.applicationStatus} initialRoute={profile.applicationStatus === 'rejected' ? 'rejected' : 'pending'} />
       </NavigationContainer>
     );
   }
@@ -156,12 +164,13 @@ export default function AppNavigator() {
                 onBack={() => setShowForgot(false)}
                 onComplete={() => {
                   setShowForgot(false);
-                  setPinVerified(true);
+                  setPinVerified(false);
+                  unlockSession();
                 }}
               />
             : <PinEntryScreen
                 isSessionUnlock
-                onSuccess={() => setPinVerified(true)}
+                onSuccess={() => { setPinVerified(true); unlockSession(); }}
                 onForgotPin={() => setShowForgot(true)}
               />
           }

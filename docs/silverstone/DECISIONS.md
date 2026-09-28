@@ -1,3 +1,9 @@
+## Phase 1 architecture approval — 27 September 2026
+
+The user explicitly approved Expo → Express → PostgreSQL; Express authentication with revocable sessions; one assigned main-agent per sub-agent; and the proposed consistent API representation (D06, D07, D08 and D11). These supersede earlier proposed/unapproved wording for those decisions. D09 payment sequencing and D10 durable worker design remain proposals for later phases.
+
+Authority: local implementation and verification on `development` in both repositories. Preserve the UI and charge no Silverstone service fee. Use isolated synthetic accounts; keep payments disabled. Do not delete, migrate or access existing Firebase users/data. Existing-user migration and live changes are separate. No push, main changes or deployment.
+
 ## Mandatory branch policy — all phases
 
 Confirmed by the user on 27 September 2026: all Silverstone phases must be implemented on `development` in BOTH `smart01-bot/SILVERSTONE-FRONTEND` and `smart01-bot/SILVERSTONE-BACKEND`. All phase code, fixes, tests, documentation and handoffs belong on those branches. Any authorized publication of phase work must target `development` only.
@@ -16,19 +22,21 @@ All proposals dated 27 September 2026. “Confirmed” means directly required b
 | --- | --- | --- | --- |
 | D01 | Confirmed | No Silverstone service fee | Product requirement; provider fees unknown |
 | D02 | Confirmed | Preserve brand and registration wizard; pending authentication without operations | Product requirement |
-| D03 | Proposed | Frontend development from verified main; selectively adapt wizard work | main already includes the wizard; feature branch has contract regressions and broad component rewrites |
-| D04 | Proposed | Backend development from verified main | Alternate branch has no unique commits and is three behind |
-| D05 | Proposed | Canonical cross-repo docs in frontend docs/silverstone; backend pointer | One editable source of truth |
-| D06 | Proposed | Root Expo app → Express → PostgreSQL, Supabase host/private storage | Fits current app and relational two-leg models; hosting/access unverified |
-| D07 | Proposed | Harden Express as single authentication authority | Reuses backend bcrypt and integration work; requires explicit existing-user migration plan |
-| D08 | Proposed | One active main-agent assignment per sub-agent; restricted reviewers | Prevent global review and cross-agent leakage |
+| D03 | Approved | Frontend development from verified main; selectively adapt wizard work | main already includes the wizard; feature branch has contract regressions and broad component rewrites |
+| D04 | Approved | Backend development from verified main | Alternate branch has no unique commits and is three behind |
+| D05 | Approved | Canonical cross-repo docs in frontend docs/silverstone; backend pointer | One editable source of truth |
+| D06 | Approved | Root Expo app → Express → PostgreSQL, Supabase host/private storage | Fits current app and relational two-leg models; hosting/access unverified |
+| D07 | Approved | Harden Express as single authentication authority | Reuses backend bcrypt and integration work; requires explicit existing-user migration plan |
+| D08 | Approved | One active main-agent assignment per sub-agent; restricted reviewers | Prevent global review and cross-agent leakage |
 | D09 | Proposed | Main-agent accepts and reserves destination capacity before source collection | Avoid knowingly collecting funds without a destination plan; provider/operating policy must confirm |
 | D10 | Proposed | PostgreSQL durable jobs/outbox, leased workers; optional Redis | Recover work after worker/Redis failure without losing financial state |
-| D11 | Proposed | Versioned camelCase API, UUIDs, integer whole-TZS strings | Remove current shape drift and floating-point ambiguity; provider precision remains an external question |
+| D11 | Approved | Versioned camelCase API, UUIDs, integer whole-TZS strings | Remove current shape drift and floating-point ambiguity; provider precision remains an external question |
 | D12 | Open | Existing users/documents and schema migration | Owner must provide authorized non-sensitive inventory; do not assume empty database |
 | D13 | Open | Evidence requirements, retention, reviewers and first main-agent bootstrap | Product/partner policy; no invented compliance claims |
 | D14 | Open | Provider support, charges, limits, reversals and manual confirmation | No working provider execution verified |
 | D15 | Open | Native Android source versus reproducible prebuild ownership | Compare native config/plugin changes before adopting; no automatic upgrade or regeneration |
+
+## Historical Phase 0 rationale (superseded where noted above)
 
 ## Base selection and wizard preservation
 

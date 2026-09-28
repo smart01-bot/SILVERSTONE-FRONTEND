@@ -8,9 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader }      from '../../context/LoaderContext';
 import { useHaptics } from '../../hooks/useHaptics';
-import { db } from '../../config/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '../../context/AuthContext';
 
 const TOTAL_STEPS = 6;
 const STEP = 6;
@@ -137,6 +135,7 @@ const fieldStyles = (theme) => StyleSheet.create({
 });
 
 export default function Step6Review({ navigation, route }) {
+  const { register } = useAuth();
   const { theme } = useTheme();
   const { showLoader, hideLoader } = useLoader();
   const insets    = useSafeAreaInsets();
@@ -198,38 +197,7 @@ export default function Step6Review({ navigation, route }) {
     setError('');
 
     try {
-      const auth = getAuth();
-
-      if (!p.email || !p.password) throw new Error('Missing credentials');
-      const cred = await createUserWithEmailAndPassword(auth, p.email, p.password);
-
-      // Component may have unmounted while awaiting — bail silently
-      if (!isMounted.current) return;
-
-      const uid = cred.user.uid;
-
-      await setDoc(doc(db, 'agents', uid), {
-        uid,
-        name:                  p.name ?? '',
-        phone:                 p.phone ?? '',
-        email:                 p.email ?? '',
-        nida:                  p.nida ?? '',
-        businessName:          p.businessName ?? '',
-        businessLocation:      p.businessLocation ?? '',
-        coordinates:           p.coordinates ?? null,
-        networks:              p.networks ?? [],
-        floatCapacity:         p.floatCapacity ?? 0,
-        businessTIN:           p.businessTIN ?? '',
-        businessLicenceNumber: p.businessLicenceNumber ?? '',
-        tinCertificateUrl:     p.tinCertificateUrl ?? null,
-        licenceCertificateUrl: p.licenceCertificateUrl ?? null,
-        selfieVerified:        p.selfieVerified ?? false,
-        role:              'sub-agent',
-        status:            'pending',
-        pinSet:            false,
-        agentPhoneNumbers: {},
-        createdAt:         serverTimestamp(),
-      });
+      await register(p);
 
       if (isMounted.current) haptics.success();
       // AppNavigator detects profile.status === 'pending' and routes to
@@ -243,7 +211,7 @@ export default function Step6Review({ navigation, route }) {
       } else if (msg.includes('Missing credentials')) {
         setError('Registration data is incomplete. Please go back and check your details.');
       } else {
-        setError('Something went wrong. Please try again.');
+        setError(e.message || 'Something went wrong. Please try again.');
       }
       hideLoader();
     }

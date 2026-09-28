@@ -14,8 +14,8 @@ import EmptyState     from '../../components/EmptyState';
 import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, orderBy, onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+} from '../../api/screenData';
+import { db } from '../../api/screenData';
 
 function SkeletonTransferRow({ theme, last }) {
   return (

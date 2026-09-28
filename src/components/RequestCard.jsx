@@ -7,8 +7,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { doc, updateDoc } from '../api/screenData';
+import { db } from '../api/screenData';
 import StatusBadge from './StatusBadge';
 import NetworkBadge from './NetworkBadge';
 import * as Clipboard from 'expo-clipboard';

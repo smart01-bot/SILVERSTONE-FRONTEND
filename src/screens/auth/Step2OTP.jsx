@@ -1,6 +1,6 @@
 /**
  * Step2OTP.jsx
- * Sub-agent registration · Step 2 of 6 — Verify OTP
+ * Sub-agent registration · Step 2 of 6 — OTP preview
  *
  * Navigation params: { phone } — full number string e.g. "+255754218904"
  * On success:        navigation.navigate('Step3Personal', { phone })
@@ -70,7 +70,7 @@ export default function Step2OTP({ navigation, route }) {
     return () => clearInterval(timer);
   }, [resendSeconds]);
 
-  const isValid = otp.every((d) => d !== '');
+  const isValid = true; // Preview only; no OTP verification is claimed.
 
   // ─── Shake ──────────────────────────────────────────────────────────────────
   function shake() {
@@ -130,9 +130,8 @@ export default function Step2OTP({ navigation, route }) {
 
   // ─── Verify ─────────────────────────────────────────────────────────────────
   function handleVerify(otpArr = otp) {
-    if (!otpArr.every((d) => d !== '')) return;
-    haptics.success();
-    navigation.navigate('Step3Personal', { phone });
+    haptics.light();
+    navigation.navigate('Step3Personal', { phone, phoneVerified: false });
   }
 
   // ─── Resend ─────────────────────────────────────────────────────────────────
@@ -171,11 +170,11 @@ export default function Step2OTP({ navigation, route }) {
         </View>
 
         <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
-        <Text style={s.title}>Enter the 6-digit{'\n'}code</Text>
+        <Text style={s.title}>Phone verification{'\n'}preview</Text>
 
         {/* 1. Subtitle + "Wrong number?" link */}
         <View style={s.subtitleRow}>
-          <Text style={s.subtitle}>Sent to {maskPhone(phone)}. </Text>
+          <Text style={s.subtitle}>No SMS sent to {maskPhone(phone)}. </Text>
           <TouchableOpacity
             onPress={() => { haptics.light(); navigation.goBack(); }}
             hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
@@ -201,13 +200,13 @@ export default function Step2OTP({ navigation, route }) {
             <View style={s.smsHeader}>
               <View style={s.smsSenderDot} />
               <Text style={s.smsSender}>SILVRSTN</Text>
-              <Text style={s.smsTime}>Just now</Text>
+              <Text style={s.smsTime}>Preview</Text>
             </View>
             <Text style={s.smsBody}>
-              Your Silverstone verification code is:{' '}
+              SMS verification is not connected:{' '}
               <Text style={s.smsCode}>██████</Text>
               {'\n'}
-              <Text style={s.smsExpiry}>Expires in 10 minutes. Do not share.</Text>
+              <Text style={s.smsExpiry}>Continuing does not verify your phone.</Text>
             </Text>
           </View>
 
@@ -259,12 +258,12 @@ export default function Step2OTP({ navigation, route }) {
             <TouchableOpacity onPress={handleResend} disabled={resendSeconds > 0}>
               <Text style={[s.resendText, resendSeconds > 0 && s.resendDisabled]}>
                 {resendSeconds > 0
-                  ? `Resend in 0:${String(resendSeconds).padStart(2, '0')}`
-                  : 'Resend code'}
+                  ? `Preview 0:${String(resendSeconds).padStart(2, '0')}`
+                  : 'SMS unavailable'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => haptics.light()}>
-              <Text style={s.callMeText}>Call me instead</Text>
+              <Text style={s.callMeText}>Calling unavailable</Text>
             </TouchableOpacity>
           </View>
 
@@ -285,7 +284,7 @@ export default function Step2OTP({ navigation, route }) {
               end={{ x: 1, y: 0 }}
               style={s.ctaButton}
             >
-              <Text style={s.ctaText}>Verify</Text>
+              <Text style={s.ctaText}>Continue preview</Text>
               <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: spacing.sm }} />
             </LinearGradient>
           </PressableScale>

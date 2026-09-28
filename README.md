@@ -1,3 +1,5 @@
+> Current local foundation setup: [LOCAL-DEVELOPMENT.md](LOCAL-DEVELOPMENT.md). The historical content below is not the Phase 1 API contract.
+
 # Float System Management Platform - Frontend Documentation
 
 ![React](https://img.shields.io/badge/React-v18.x-blue)

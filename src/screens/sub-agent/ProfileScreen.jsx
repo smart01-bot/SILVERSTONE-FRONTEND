@@ -9,8 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth }  from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { doc, updateDoc } from '../../api/screenData';
+import { db } from '../../api/screenData';
 import Constants from 'expo-constants';
 
 const NETWORK_COLORS = {
@@ -42,7 +42,7 @@ export default function ProfileScreen({ navigation }) {
     if (!editing) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'agents', user.uid), { [editing]: editValue.trim() });
+      await updateDoc(doc(db, 'agents', user.id), { [editing]: editValue.trim() });
       setEditing(null);
     } catch (e) {
       Alert.alert('Error', 'Failed to save changes.');
