@@ -1,3 +1,4 @@
+import { recordedTime, reservationLabel } from '../api/operations';
 import { api } from '../config/api';
 import { requestView } from '../api/presentation';
 import { legLabel, nextActionLabel, workflowError } from '../api/workflowState';
@@ -269,7 +270,7 @@ export default function RequestDetailModal({
               role === 'main-agent' && request.agentName
                 ? ['Agent', request.agentName]
                 : null,
-              ['Submitted',    timeAgo(request.createdAt, lang)],
+              ['Submitted (UTC)', recordedTime(request.createdAt)],
               request.processedAt
                 ? ['Processed', timeAgo(request.processedAt, lang)]
                 : null,
@@ -293,8 +294,8 @@ export default function RequestDetailModal({
           <Text style={{color:theme.textDim}}>Provider unavailable. Do not send funds.</Text>
           {request.providerEvidence?.map(evidence => <Text key={evidence.id} style={{color:theme.textDim}}>{providerEvidenceLabel(evidence)}</Text>)}
           {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{legLabel(leg)}</Text>)}
-          {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{event.event}: {event.reason}</Text>)}
-          {request.reservation && <Text style={{color:theme.textDim}}>Reservation: {request.reservation.status}. A reservation is not a payment.</Text>}
+          {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{recordedTime(event.createdAt)} · {event.event}: {event.reason}</Text>)}
+          {request.reservation && <Text style={{color:theme.textDim}}>{reservationLabel(request.reservation)}</Text>}
           {error ? <Text accessibilityRole="alert" style={{color:theme.text}}>{error}</Text> : null}
           <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled:loading,busy:loading}} disabled={loading} onPress={refresh} style={{minHeight:48,justifyContent:'center'}}><Text style={{color:theme.primary}}>{loading ? 'Please wait…' : 'Refresh request details'}</Text></TouchableOpacity>
           {/* Actions */}

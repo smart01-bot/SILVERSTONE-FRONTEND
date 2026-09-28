@@ -1,3 +1,7 @@
+## Phase 6 contract
+
+All /api/v1 responses now carry Cache-Control: no-store, including authentication, exchanges and errors. No routes, DTO fields, financial commands or schema changed. Unresolved filtering derives from already-scoped request status, unknown legs and reconciliationRequired evidence. Existing authorization/idempotency rules remain unchanged. No audit, owner assignment, pause or resolution endpoint added.
+
 ## Phase 5 contract status
 
 No API or schema changes. Existing paginated requests are now fetched by the My Requests refresh control; incomplete-page failures preserve the previous screen list. Reviewer uses existing status/version to disable stale or non-submitted decisions. New Request validates the existing positive whole-TZS BIGINT string range exactly before enqueueing. Server authorization remains decisive.

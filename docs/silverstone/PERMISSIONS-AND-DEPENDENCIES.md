@@ -1,3 +1,7 @@
+## Phase 6 authority and dependencies
+
+Local development implementation/tests/commits only in both repositories. D16–D20 in OPERATIONS.md require explicit approval before policy-dependent controls; none adopted. No push, main change, deployment, live DB/Firebase action, real notifications, provider/sandbox calls or payment. No extra audit/KYC/operations access granted. Both Phase 5 and Phase 6 remain unpublished; separate named authorization required to push both development branches. Phase 7 not authorized.
+
 ## Phase 5 authority
 
 Local implementation/verification and local commits on development in both repositories only. Backend changes are documentation only. No pushes, main edits, deployment, live database/Firebase actions, real notification or payment. Prior publication authority does not extend to Phase 5. Separate authorization must name development in both repositories. Native acceptance and earlier external policy/evidence gates remain unresolved. No new policy selection was necessary.

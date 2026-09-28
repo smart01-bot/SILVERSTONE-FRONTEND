@@ -1,3 +1,7 @@
+## Phase 6 source delta
+
+Existing styles/assets/fonts/navigation/wizard preserved. Added an Unresolved pill to each existing request list, held amount text and recorded UTC timestamps. Queue age remains visible, with undocumented 5/15-minute severity colours replaced by existing neutral tokens. My Requests preserves amount strings. No screenshots or device acceptance claimed; 360/412 widths, enlarged text, TalkBack and light/dark review remain open. New copy English pending reviewed Swahili.
+
 ## Phase 5 visual delta and acceptance
 
 Source-level review only: original brand assets, colors/fonts, navigation and wizard order retained. Changed visual areas: explicit error/loading/retry text in request lists/reviews; clearer request detail/state/fees text; selected-file save label; separate save notices; auto-growing input containers; 48-point quick/retry/correction targets; review keyboard avoidance. Existing gradients/cards/animations retained. RequestDetailModal's StyleSheet remains unchanged; close control gets hit slop. These are reviewable source changes, not screenshot-accepted changes.

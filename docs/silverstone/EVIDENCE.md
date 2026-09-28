@@ -1,3 +1,7 @@
+## Phase 6 evidence
+
+Baseline independently passed 50 backend/19 frontend tests, backend build, four actual-client HTTP scripts and Android JS/Hermes export. New operations tests exercise embedded snapshot restore/fencing/replay/privacy and frontend uncertainty/precision/time handling. The exact final results and limitations are in PHASE-06-HANDOFF.md. No native screenshot, PostgreSQL process recovery, real provider or durable backup evidence exists.
+
 ## Phase 5 verification
 
 Baseline 50 backend/15 frontend tests; final 50 backend/19 frontend tests. Both gates passed backend build, all four actual-client HTTP scripts and Android JS/Hermes export. See handoffs/PHASE-05-HANDOFF.md for exact scope. New actual-screen handler harness is injected JS state, not native rendering. Android before/after screenshots, compact/normal widths, keyboard, enlarged text, TalkBack, EN/SW and dark/light acceptance remain unverified. No native tooling available; no fabricated visual/provider evidence.

@@ -1,3 +1,7 @@
+## Phase 6 decisions remain OPEN
+
+D16 exception ownership/escalation; D17 reconciliation evidence/compensation; D18 scoped pause; D19 privacy/retention/audit scope; D20 backup destination/custody/RPO/RTO. These are concrete proposals in OPERATIONS.md, not approvals. Existing participants are not incident owners. No policy-dependent mutation implemented. D09/D10 preserved. Independent read-only presentation and no-store header require no new operating-policy adoption.
+
 ## Phase 5 decisions
 
 No new policy/design approval inferred. Local refinement only; existing D09/D10/identity/authorization/idempotency remain unchanged. Read errors do not imply empty successful data. Reviewer conflicts retain screen inputs, require explicit reload and cannot act on a non-submitted revision. Unknown outbox entries retain the original key/payload. No automatic conflict merge, overwrite, discard or payment retry introduced.

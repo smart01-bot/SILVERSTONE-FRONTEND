@@ -1,3 +1,4 @@
+import { needsReconciliation, requestAge, reservationLabel } from '../../api/operations';
 import { loadRequests, workflowError } from '../../api/workflowState';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { exchangeAction, formatTzs } from '../../api/exchanges';
@@ -80,7 +81,7 @@ export default function QueueScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading,    setLoading]    = useState(true);
   
-  const FILTERS = ['All', 'Urgent', 'Pending', 'Approved'];
+  const FILTERS = ['All', 'Unresolved', 'Urgent', 'Pending', 'Approved'];
   const FILTER_LABELS = {
     All:      tr('queue'),
     Urgent:   tr('markUrgent'),
@@ -102,7 +103,8 @@ export default function QueueScreen() {
   }, []);
 
   const filtered = requests.filter(r => {
-    if (filter === 'All')      return ['awaiting_review','awaiting_source','needs_attention'].includes(r.status);
+    if (filter === 'Unresolved') return needsReconciliation(r);
+    if (filter === 'All') return needsReconciliation(r) || ['awaiting_review','awaiting_source'].includes(r.status);
     if (filter === 'Urgent')   return r.status === 'awaiting_review' && r.urgent;
     if (filter === 'Pending')  return r.status === 'awaiting_review';
     if (filter === 'Approved') return r.status === 'awaiting_source';
@@ -113,8 +115,7 @@ export default function QueueScreen() {
   const urgentCount   = requests.filter(r => r.status === 'awaiting_review' && r.urgent).length;
   const approvedCount = requests.filter(r => r.status === 'awaiting_source').length;
 
-  const waitMins = ts => Math.max(0,Math.floor((Date.now()-Date.parse(ts))/60000));
-  const waitColor = (m)  => { if (m < 5) return '#16A34A'; if (m < 15) return '#F59E0B'; return '#C8102E'; };
+  // Age is descriptive; escalation deadlines and severity thresholds are not approved.
 
   const handleApprove = async (req) => {
     showLoader();
@@ -143,6 +144,7 @@ export default function QueueScreen() {
   const onRefresh = async () => { if(refreshing)return; setRefreshing(true); try {setRequests((await loadRequests(api)).map(requestView));setLoadError('');} catch(e){setLoadError(workflowError(e));} finally{setRefreshing(false);setLoading(false);} };
 
   const emptyMessages = {
+    Unresolved: { title: 'No unresolved outcomes in loaded requests', subtitle: 'This does not verify settlement or provider readiness.' },
     All:      { title: tr('queueClear'),                                subtitle: tr('queueEmptyDesc') },
     Urgent:   { title: `${tr('statusPending')} — ${tr('markUrgent')}`,  subtitle: tr('noPendingDesc') },
     Pending:  { title: tr('statusPending'),                             subtitle: tr('noPendingDesc') },
@@ -222,7 +224,6 @@ export default function QueueScreen() {
           />
         ) : (
           filtered.map(req => {
-            const mins = waitMins(req.createdAt);
             return (
               <PressableScale
                 onPress={()=>setSelectedRequest(req)}
@@ -243,7 +244,7 @@ export default function QueueScreen() {
                     </View>
                     <View>
                       <Text style={[s.agentName, { color: theme.text }]}>{req.agentName ?? 'Agent'}</Text>
-                      <Text style={[s.agentSub,  { color: theme.textDim }]}>Waiting {mins} min</Text>
+                      <Text style={[s.agentSub,  { color: theme.textDim }]}>{requestAge(req.createdAt)}</Text>
                     </View>
                   </View>
                   <View style={s.cardTopRight}>
@@ -252,8 +253,8 @@ export default function QueueScreen() {
                         <Text style={s.urgentText}>URGENT</Text>
                       </View>
                     )}
-                    <View style={[s.waitBadge, { backgroundColor: waitColor(mins) + '20' }]}>
-                      <Text style={[s.waitText, { color: waitColor(mins) }]}>{mins}m</Text>
+                    <View style={[s.waitBadge, { backgroundColor: theme.surfaceAlt }]}>
+                      <Text style={[s.waitText, { color: theme.textDim }]}>{needsReconciliation(req) ? 'Unresolved' : 'Open'}</Text>
                     </View>
                   </View>
                 </View>
@@ -271,6 +272,7 @@ export default function QueueScreen() {
                 </View>
 
                 <Text style={{color:theme.textDim}}>{req.nextAction}</Text>
+                {req.reservation && <Text style={{color:theme.textDim}}>{reservationLabel(req.reservation)}</Text>}
                 <Text style={{color:theme.textDim}}>#{req.id.slice(-8)} · Queue {req.queueSequence} · Fee TZS 0</Text>
                 <View style={s.actions}>
                   {req.status === 'awaiting_review' && (

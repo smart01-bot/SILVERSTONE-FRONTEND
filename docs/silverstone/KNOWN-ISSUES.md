@@ -1,3 +1,7 @@
+## Phase 6 current boundaries
+
+Read-only unresolved filters, exact held amounts/history timestamps and API cache protection implemented. D16–D20 remain open; cases are not assigned to an approved incident owner. No escalation/SLA, scoped pause, financial reconciliation, alert delivery or durable backup acceptance. Embedded close/load is not native crash recovery. Document-access audit has no immutable trigger; privileged DB role hardening remains open. Suspension restricts outstanding-obligation reads until a scoped operations role is approved. Native visual/localization gates and all earlier external gates remain unresolved. See OPERATIONS.md.
+
 ## Phase 5 current boundaries
 
 Fixed timer-only My Requests refresh, hidden read failures, lost review input on 409, unclear synthetic leg/reservation copy and ignored saved English preference. Improved targeted accessible controls and keyboard accommodation. Native screenshots/Android compact and normal widths, keyboard, larger text, TalkBack, dark/light, offline/reconnect and app-kill acceptance remain UNVERIFIED. No native tools available. Selected documents and unsaved wizard input are not durable until Save/Next succeeds. Draft conflicts preserve current mounted input but do not automatically merge competing versions; compare before reopening (which can replace unsaved input). Reviewer reason/corrections survive in-screen conflict/reload, not process death. New workflow text remains English pending reviewed Swahili copy. This is not full accessibility/localization certification.

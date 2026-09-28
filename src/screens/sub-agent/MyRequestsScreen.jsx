@@ -1,3 +1,4 @@
+import { needsReconciliation, reservationLabel } from '../../api/operations';
 import { api } from '../../config/api';
 import { requestView } from '../../api/presentation';
 import { loadRequests, workflowError } from '../../api/workflowState';
@@ -46,6 +47,7 @@ export default function MyRequestsScreen({ navigation }) {
 
   const FILTERS = [
     { key: 'all',       label: 'All'                 },
+    { key: 'unresolved', label: 'Unresolved' },
     { key: 'awaiting_review',   label: tr('statusPending')   },
     { key: 'awaiting_source',  label: 'Reserved'  },
     { key: 'completed', label: tr('statusCompleted') },
@@ -72,7 +74,7 @@ export default function MyRequestsScreen({ navigation }) {
   }, [user?.id]);
 
   const filtered = requests
-    .filter(r => filter === 'all' || r.status === filter)
+    .filter(r => filter === 'all' || (filter === 'unresolved' ? needsReconciliation(r) : r.status === filter))
     .sort((a, b) => {
       if (a.urgent && !b.urgent) return -1;
       if (!a.urgent && b.urgent) return 1;
@@ -243,7 +245,7 @@ export default function MyRequestsScreen({ navigation }) {
 
               <View style={s.midRow}>
                 <Text style={[s.amount, { color: theme.primary }]}>
-                  {fmt(Number(req.amount) || 0)}
+                  {fmt(req.amount)}
                 </Text>
                 <View style={[s.statusBadge, { backgroundColor: statusColor(req.status) + '20' }]}>
                   <View style={[s.statusDot, { backgroundColor: statusColor(req.status) }]} />
@@ -254,6 +256,8 @@ export default function MyRequestsScreen({ navigation }) {
               </View>
 
               <Text style={[s.time, { color: theme.textDim }]}>{timeAgo(req.createdAt)}</Text>
+              {needsReconciliation(req) && <Text style={{color:theme.text}}>Outcome unresolved. Do not send funds or start another payment.</Text>}
+              {req.reservation && <Text style={{color:theme.textDim}}>{reservationLabel(req.reservation)}</Text>}
 
               {req.status === 'awaiting_review' && (
                 <TouchableOpacity

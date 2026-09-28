@@ -1,3 +1,11 @@
+# Phase 6 — Operations (local, PARTIAL)
+
+28 September 2026, Africa/Dar_es_Salaam. Independent visibility/privacy/embedded-restore work implemented. Full Operations gate remains PARTIAL: exception ownership/escalation, reconciliation authority, pause scope, retention and backup policy are OPEN (D16–D20, proposed only). No real alerts or operations role configured. Provider gate BLOCKED; Phase 5 native/visual gate PARTIAL. Phase 7 not started. Nothing pushed.
+
+Required Phase 5 local bases recovered exactly, both clean on development: frontend d810a4963a652a520951b71fb6adb35c87060434; backend c6e654c5f2081f0c8dca0ef24e1b6a08ca000a3c. Remote development verified at published Phase 4 frontend 6d841de96272e44c21022b021784e90bb3ab57e8 and backend a10e9fcf7f8dd0be8eda28a3fe237641440d2245. No applicable AGENTS.md. No unrelated changes. Both local Phases 5–6 must be recovered before continuation; exact final pins are in delivery.
+
+Implemented existing-screen Unresolved filters, exact reserved amounts, timestamped request history, descriptive age without invented escalation thresholds and API no-store protection. Fixed My Requests integer-amount rounding. Disposable embedded snapshot restoration preserves uncertainty/holds, records and fencing; it is not a durable production backup or native process/concurrency acceptance. See OPERATIONS.md and handoffs/PHASE-06-HANDOFF.md for scope, evidence, proposals and recovery.
+
 # Phase 5 — frontend refinement (local only)
 
 28 September 2026, Africa/Dar_es_Salaam. Independent local implementation complete; **Phase 5 acceptance PARTIAL** pending observed Android journeys and visual review. Prior provider gate remains BLOCKED. Phase 6 not started.
