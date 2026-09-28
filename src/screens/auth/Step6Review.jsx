@@ -1,3 +1,4 @@
+import { workflowError } from '../../api/workflowState';
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -222,7 +223,7 @@ export default function Step6Review({ navigation, route }) {
   useEffect(() => {
     Promise.all((p.documentIds || []).map((id) => api.call(`/documents/${id}?metadata=1`)))
       .then(setDocuments)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(workflowError(e)));
   }, [p.documentIds]);
 
   // ── Animations ────────────────────────────────────────────────────────────
@@ -323,7 +324,7 @@ export default function Step6Review({ navigation, route }) {
           "Registration data is incomplete. Please go back and check your details.",
         );
       } else {
-        setError(e.message || "Something went wrong. Please try again.");
+        setError(workflowError(e));
       }
     } finally {
       hideLoader();
@@ -474,6 +475,8 @@ export default function Step6Review({ navigation, route }) {
 
         <Animated.View style={[reveal(termsAnim), { marginTop: 4 }]}>
           <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{checked:agreed}}
             style={s.termsRow}
             onPress={toggleAgree}
             activeOpacity={0.8}
@@ -494,12 +497,14 @@ export default function Step6Review({ navigation, route }) {
           </TouchableOpacity>
         </Animated.View>
 
-        {error ? <Text style={s.errText}>{error}</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={s.errText}>{error}</Text> : null}
 
         <View style={{ marginTop: 24 }}>
           <Particles trigger={burst} />
           <TouchableOpacity
             onPress={handleSubmit}
+            accessibilityRole="button"
+            accessibilityState={{disabled:!agreed || loading,busy:loading}}
             disabled={!agreed || loading}
             activeOpacity={0.85}
           >

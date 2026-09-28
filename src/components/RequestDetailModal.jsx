@@ -1,3 +1,6 @@
+import { api } from '../config/api';
+import { requestView } from '../api/presentation';
+import { legLabel, nextActionLabel, workflowError } from '../api/workflowState';
 import { exchangeAction, formatTzs } from '../api/exchanges';
 import { providerChargeLabel, providerEvidenceLabel } from '../api/providerEvidence';
 // src/components/RequestDetailModal.jsx
@@ -29,11 +32,21 @@ function NetDot({ network, size = 10 }) {
 }
 
 export default function RequestDetailModal({
-  request, visible, onClose, role = 'sub-agent', onRetry,
+  request: initialRequest, visible, onClose, role = 'sub-agent', onRetry,
 }) {
   const { theme, lang } = useTheme();
   const { showLoader, hideLoader } = useLoader();
   const [loading,setLoading]=useState(false);
+  const [request, setRequest] = useState(initialRequest);
+  const [error, setError] = useState('');
+  useEffect(() => { setRequest(initialRequest); setError(''); }, [initialRequest, visible]);
+  const refresh = async () => {
+    if (loading || !request) return;
+    setLoading(true);
+    try { setRequest(requestView(await api.call(`/requests/${request.id}`))); setError(''); }
+    catch(e) { setError(workflowError(e)); }
+    finally { setLoading(false); }
+  };
   const { user }        = useAuth();
 
   const translateY     = useRef(new Animated.Value(600)).current;
@@ -94,7 +107,7 @@ export default function RequestDetailModal({
       await exchangeAction(request,'accept');
       onClose();
     } catch (e) {
-      Alert.alert('Error', e.message);
+      setError(workflowError(e));
     } finally {
       setLoading(false);hideLoader();
     }
@@ -105,7 +118,7 @@ export default function RequestDetailModal({
       ...['Insufficient capacity','Incorrect account details','Duplicate request'].map(reason=>({text:reason,onPress:async()=>{
         setLoading(true);showLoader();
         try {await exchangeAction(request,'reject',reason);onClose();}
-        catch(e){Alert.alert('Error',e.message);}
+        catch(e){setError(workflowError(e));}
         finally{setLoading(false);hideLoader();}
       }})),{text:'Keep request',style:'cancel'},
     ]);
@@ -126,7 +139,7 @@ export default function RequestDetailModal({
               await exchangeAction(request,'cancel');
               onClose();
             } catch (e) {
-              Alert.alert('Error', e.message);
+              setError(workflowError(e));
             } finally {
               setLoading(false);hideLoader();
             }
@@ -153,7 +166,7 @@ export default function RequestDetailModal({
       </Animated.View>
 
       {/* Sheet */}
-      <Animated.View style={[
+      <Animated.View accessibilityViewIsModal style={[
         styles.sheet,
         { backgroundColor: theme.surface, transform: [{ translateY }] },
       ]}>
@@ -172,6 +185,7 @@ export default function RequestDetailModal({
               Request Details
             </Text>
             <TouchableOpacity
+              accessibilityRole="button" accessibilityLabel="Close request details" hitSlop={8}
               onPress={onClose}
               style={[styles.closeBtn, {
                 backgroundColor: theme.surfaceAlt,
@@ -274,12 +288,15 @@ export default function RequestDetailModal({
             ))}
           </View>
 
-          <Text style={{color:theme.textDim}}>{request.nextAction}</Text>
+          <Text style={{color:theme.textDim}}>{nextActionLabel(request)}</Text>
           <Text style={{color:theme.textDim}}>Silverstone fee: TZS 0 · {providerChargeLabel(request.provider)}</Text>
           <Text style={{color:theme.textDim}}>Provider unavailable. Do not send funds.</Text>
           {request.providerEvidence?.map(evidence => <Text key={evidence.id} style={{color:theme.textDim}}>{providerEvidenceLabel(evidence)}</Text>)}
-          {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{leg.type}: {leg.status}</Text>)}
+          {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{legLabel(leg)}</Text>)}
           {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{event.event}: {event.reason}</Text>)}
+          {request.reservation && <Text style={{color:theme.textDim}}>Reservation: {request.reservation.status}. A reservation is not a payment.</Text>}
+          {error ? <Text accessibilityRole="alert" style={{color:theme.text}}>{error}</Text> : null}
+          <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled:loading,busy:loading}} disabled={loading} onPress={refresh} style={{minHeight:48,justifyContent:'center'}}><Text style={{color:theme.primary}}>{loading ? 'Please wait…' : 'Refresh request details'}</Text></TouchableOpacity>
           {/* Actions */}
           <View style={styles.actions}>
             {role === 'sub-agent' && request.status === 'rejected' && (
@@ -287,7 +304,7 @@ export default function RequestDetailModal({
                 onPress={() => { onClose(); onRetry?.(request); }}
                 style={[styles.actionBtn, { backgroundColor: theme.primary }]}
               >
-                <Text style={styles.actionBtnText}>Retry Request</Text>
+                <Text style={styles.actionBtnText}>Prepare a new request</Text>
               </TouchableOpacity>
             )}
             {role === 'sub-agent' && request.status === 'awaiting_review' && (

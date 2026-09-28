@@ -1,3 +1,4 @@
+import { loadRequests, workflowError } from '../../api/workflowState';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { exchangeAction, formatTzs } from '../../api/exchanges';
 import { requestView } from '../../api/presentation';
@@ -72,6 +73,7 @@ export default function QueueScreen() {
   const { theme, isDark, tr } = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
+  const [loadError, setLoadError] = useState('');
   const [requests,   setRequests]   = useState([]);
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [filter,     setFilter]     = useState('All');
@@ -91,9 +93,10 @@ export default function QueueScreen() {
       query(collection(db, 'requests'), orderBy('createdAt', 'asc')),
       snap => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setLoadError('');
         setRequests(docs);
         setLoading(false);
-      }, e=>{setLoading(false);Alert.alert("Unable to load queue",e.message);}
+      }, e=>{setLoading(false);setLoadError(workflowError(e));}
     );
     return unsub;
   }, []);
@@ -117,7 +120,7 @@ export default function QueueScreen() {
     showLoader();
     try {
       const result=await exchangeAction(req,'accept');setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
-    } catch (e) { Alert.alert('Error', e.message); }
+    } catch (e) { Alert.alert('Error', workflowError(e)); }
     finally { hideLoader(); }
   };
 
@@ -129,7 +132,7 @@ export default function QueueScreen() {
           showLoader();
           try {
             const result=await exchangeAction(req,'reject',reason);setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
-          } catch (e) { Alert.alert('Error', e.message); }
+          } catch (e) { Alert.alert('Error', workflowError(e)); }
           finally { hideLoader(); }
         },
       })),
@@ -137,7 +140,7 @@ export default function QueueScreen() {
     ]);
   };
 
-  const onRefresh = async () => {setRefreshing(true);try {const rows=[];let cursor=null;do{const result=await api.envelope('/requests'+(cursor?'?cursor='+cursor:''));rows.push(...result.data);cursor=result.page?.nextCursor;}while(cursor);setRequests(rows.map(requestView));}catch(e){Alert.alert('Error',e.message);}finally{setRefreshing(false);}};
+  const onRefresh = async () => { if(refreshing)return; setRefreshing(true); try {setRequests((await loadRequests(api)).map(requestView));setLoadError('');} catch(e){setLoadError(workflowError(e));} finally{setRefreshing(false);setLoading(false);} };
 
   const emptyMessages = {
     All:      { title: tr('queueClear'),                                subtitle: tr('queueEmptyDesc') },
@@ -201,13 +204,17 @@ export default function QueueScreen() {
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
       >
+        {loadError ? <View accessibilityLiveRegion="polite" style={{padding: 12}}>
+          <Text style={{color: theme.text}}>{loadError} Existing results may be out of date.</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled: refreshing, busy: refreshing}} disabled={refreshing} onPress={onRefresh} style={{minHeight:48, justifyContent:'center'}}><Text style={{color:theme.primary}}>Retry loading requests</Text></TouchableOpacity>
+        </View> : null}
         {loading ? (
           <>
             <SkeletonQueueCard theme={theme} />
             <SkeletonQueueCard theme={theme} />
             <SkeletonQueueCard theme={theme} />
           </>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && !loadError ? (
           <EmptyState
             icon="checkmark-circle-outline"
             title={emptyMessages[filter].title}

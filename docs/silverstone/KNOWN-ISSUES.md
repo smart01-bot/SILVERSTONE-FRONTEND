@@ -1,3 +1,9 @@
+## Phase 5 current boundaries
+
+Fixed timer-only My Requests refresh, hidden read failures, lost review input on 409, unclear synthetic leg/reservation copy and ignored saved English preference. Improved targeted accessible controls and keyboard accommodation. Native screenshots/Android compact and normal widths, keyboard, larger text, TalkBack, dark/light, offline/reconnect and app-kill acceptance remain UNVERIFIED. No native tools available. Selected documents and unsaved wizard input are not durable until Save/Next succeeds. Draft conflicts preserve current mounted input but do not automatically merge competing versions; compare before reopening (which can replace unsaved input). Reviewer reason/corrections survive in-screen conflict/reload, not process death. New workflow text remains English pending reviewed Swahili copy. This is not full accessibility/localization certification.
+
+Real OTP, provider integration, production evidence/retention/reviewer bootstrap, native PostgreSQL concurrency/process restart and existing-user migration remain blocked/unverified. No Phase 6 operations implemented.
+
 ## Phase 4 current boundaries
 
 Disabled provider contract and synthetic-only durable evidence model now exist. The external gate remains BLOCKED: no selected provider, approved sandbox account/scope, verified agent-float entitlement/network identifiers, actual balance/reservation policy, tariff/limits, callback protocol/replay guarantee, settlement dictionary, reversal/refund or real reconciliation policy. Public documentation is discovery only.

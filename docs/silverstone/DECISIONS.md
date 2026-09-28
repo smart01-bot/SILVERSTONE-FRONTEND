@@ -1,3 +1,7 @@
+## Phase 5 decisions
+
+No new policy/design approval inferred. Local refinement only; existing D09/D10/identity/authorization/idempotency remain unchanged. Read errors do not imply empty successful data. Reviewer conflicts retain screen inputs, require explicit reload and cannot act on a non-submitted revision. Unknown outbox entries retain the original key/payload. No automatic conflict merge, overwrite, discard or payment retry introduced.
+
 ## Phase 4 local choices — no new provider/policy approval
 
 D09/D10 remain approved. D14 remains OPEN: no provider selected, no agent-float entitlement, tariff, sandbox scope or manual-settlement authority inferred. Official public discovery is recorded in PROVIDER-EVIDENCE.md. Independent implementation uses a disabled adapter plus an embedded-only synthetic protocol; real callback authentication remains unimplemented/disabled. One synthetic source attempt per leg is conservative and not a provider retry guarantee. Synthetic evidence never becomes real settlement. This does not approve ledger/refund/reconciliation policy or production operation.

@@ -1,3 +1,4 @@
+import { workflowError } from '../../api/workflowState';
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -170,10 +171,11 @@ export default function Step5Selfie({ navigation, route }) {
         setPhase("done");
       }
     } catch (e) {
-      setError(e.message);
+      setError(workflowError(e));
     }
   };
   const handleNext = async () => {
+    if (phase === "scanning") return;
     setError("");
     setPhase("scanning");
     try {
@@ -191,7 +193,7 @@ export default function Step5Selfie({ navigation, route }) {
       const params = syncWizard(navigation, saved);
       navigation.navigate("Step6Review", params);
     } catch (e) {
-      setError(e.message);
+      setError(workflowError(e));
     } finally {
       setPhase(photo ? "done" : "idle");
     }
@@ -348,7 +350,7 @@ export default function Step5Selfie({ navigation, route }) {
         <View style={s.doneBadge}>
           <View style={s.doneDot} />
           <Text style={s.doneText}>
-            Photo selected · awaiting manual review
+            Photo selected · save before manual review
           </Text>
         </View>
       )}

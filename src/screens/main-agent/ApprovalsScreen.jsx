@@ -1,3 +1,4 @@
+import { workflowError } from '../../api/workflowState';
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -9,6 +10,8 @@ import {
   TextInput,
   Image,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
@@ -23,33 +26,37 @@ export default function ApprovalsScreen() {
     [corrections, setCorrections] = useState([]),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
+    [listLoading, setListLoading] = useState(true),
+    [stale, setStale] = useState(false),
+    [documentLoading, setDocumentLoading] = useState(false),
     [evidence, setEvidence] = useState(null);
   async function load() {
+    setListLoading(true);
     setError("");
     try {
       setAgents(await api.call("/review/applications"));
     } catch (e) {
-      setError(e.message);
-    }
+      setError(workflowError(e));
+    } finally { setListLoading(false); }
   }
   useEffect(() => {
     load();
   }, []);
-  async function open(id) {
+  async function open(id, preserveInput = false) {
     setError("");
     setBusy(true);
     try {
       setDetail(await api.call(`/review/applications/${id}`));
-      setReason("");
-      setCorrections([]);
+      setStale(false);
+      if (!preserveInput) { setReason(""); setCorrections([]); }
     } catch (e) {
-      setError(e.message);
+      setError(workflowError(e));
     } finally {
       setBusy(false);
     }
   }
   async function decide(decision) {
-    if (busy) return;
+    if (busy || stale || detail?.status !== "submitted") return;
     setBusy(true);
     setError("");
     try {
@@ -65,19 +72,21 @@ export default function ApprovalsScreen() {
       setDetail(null);
       await load();
     } catch (e) {
-      setError(e.message);
-      if (e.status === 409) setDetail(null);
+      setError(workflowError(e));
+      if (e.status === 409) setStale(true);
     } finally {
       setBusy(false);
     }
   }
   async function viewDocument(id) {
+    if (documentLoading) return;
+    setDocumentLoading(true);
     setError("");
     try {
       setEvidence(await api.call(`/documents/${id}`));
     } catch (e) {
-      setError(e.message);
-    }
+      setError(workflowError(e));
+    } finally { setDocumentLoading(false); }
   }
   const revision = detail?.revisions?.[0];
   const fieldLabels = {
@@ -102,6 +111,7 @@ export default function ApprovalsScreen() {
         <Text style={s.headerSub}>Review your assigned applicants</Text>
         <Text style={s.headerBadgeText}>{agents.length} awaiting review</Text>
       </LinearGradient>
+      <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView
         contentContainerStyle={{ padding: spacing.md, gap: 14 }}
         keyboardShouldPersistTaps="handled"
@@ -111,12 +121,14 @@ export default function ApprovalsScreen() {
             {error}
           </Text>
         ) : null}
-        <TouchableOpacity disabled={busy} onPress={load}>
+        <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled:busy || listLoading,busy:listLoading}} disabled={busy || listLoading} onPress={load}>
           <Text style={{ color: theme.primary, paddingVertical: 12 }}>
             Refresh applications
           </Text>
         </TouchableOpacity>
-        {!detail && agents.length === 0 && (
+        {listLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading applications…</Text>}
+        {documentLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading private document…</Text>}
+        {!detail && !listLoading && !error && agents.length === 0 && (
           <Text style={{ color: theme.textDim }}>
             No applications awaiting your review.
           </Text>
@@ -162,6 +174,8 @@ export default function ApprovalsScreen() {
             <Text style={[s.agentName, { color: theme.text }]}>
               Submission {detail.version}
             </Text>
+            <Text accessibilityLiveRegion="polite" style={{color:theme.text}}>Application: {detail.status?.replaceAll('_', ' ')}{revision?.reason ? ` — ${revision.reason}` : ''}</Text>
+            {revision?.reviewerId && <Text selectable style={{color:theme.textDim}}>Reviewer: {revision.reviewerId} · {revision.reviewedAt}</Text>}
             <Text style={{ color: theme.textDim }}>
               Phone: {detail.phone} ·{" "}
               {detail.phoneVerification === "synthetic_fixture"
@@ -192,6 +206,8 @@ export default function ApprovalsScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
+            {stale && <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => open(detail.agentId, true)} style={{minHeight:48,justifyContent:'center'}}><Text style={{color:theme.primary}}>Reload application, then review again. Reason and correction choices will be kept.</Text></TouchableOpacity>}
+            <Text style={{color:theme.textDim}}>A reason of at least 3 characters is required. Select fields when requesting corrections.</Text>
             <Text style={{ color: theme.text }}>Reason for decision</Text>
             <TextInput
               accessibilityLabel="Reason for decision"
@@ -215,6 +231,7 @@ export default function ApprovalsScreen() {
               <TouchableOpacity
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: corrections.includes(field) }}
+                style={{minHeight:48,justifyContent:"center"}}
                 key={field}
                 onPress={() =>
                   setCorrections((c) =>
@@ -232,8 +249,10 @@ export default function ApprovalsScreen() {
             {["approved", "changes_requested", "rejected"].map((decision) => (
               <TouchableOpacity
                 key={decision}
+                accessibilityRole="button"
+                accessibilityState={{disabled:busy || stale || detail.status !== "submitted" || reason.trim().length < 3 || (decision === "changes_requested" && !corrections.length),busy}}
                 disabled={
-                  busy ||
+                  busy || stale || detail.status !== "submitted" ||
                   reason.trim().length < 3 ||
                   (decision === "changes_requested" && !corrections.length)
                 }
@@ -242,7 +261,7 @@ export default function ApprovalsScreen() {
                   padding: 15,
                   borderRadius: 12,
                   backgroundColor: theme.primary,
-                  opacity: busy || reason.trim().length < 3 ? 0.45 : 1,
+                  opacity: busy || stale || detail.status !== "submitted" || reason.trim().length < 3 || (decision === "changes_requested" && !corrections.length) ? 0.45 : 1,
                 }}
               >
                 <Text style={s.btnFilledText}>
@@ -262,6 +281,7 @@ export default function ApprovalsScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
       <Modal
         visible={!!evidence}
         onRequestClose={() => setEvidence(null)}
@@ -278,6 +298,7 @@ export default function ApprovalsScreen() {
           <Text style={{ color: theme.text }}>{evidence?.name}</Text>
           {evidence?.mime.startsWith("image/") ? (
             <Image
+              accessible accessibilityLabel="Private applicant document"
               resizeMode="contain"
               source={{
                 uri: `data:${evidence.mime};base64,${evidence.base64}`,
@@ -286,8 +307,7 @@ export default function ApprovalsScreen() {
             />
           ) : (
             <Text style={{ color: theme.text }}>
-              PDF saved privately. In-app PDF inspection is unavailable in this
-              build; request an image copy before approving.
+              This document cannot be displayed. Only PNG/JPEG evidence is supported; review an accessible image before approving.
             </Text>
           )}
         </SafeAreaView>

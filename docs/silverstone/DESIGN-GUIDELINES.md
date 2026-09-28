@@ -1,3 +1,9 @@
+## Phase 5 visual delta and acceptance
+
+Source-level review only: original brand assets, colors/fonts, navigation and wizard order retained. Changed visual areas: explicit error/loading/retry text in request lists/reviews; clearer request detail/state/fees text; selected-file save label; separate save notices; auto-growing input containers; 48-point quick/retry/correction targets; review keyboard avoidance. Existing gradients/cards/animations retained. RequestDetailModal's StyleSheet remains unchanged; close control gets hit slop. These are reviewable source changes, not screenshot-accepted changes.
+
+Native tooling is unavailable, so before/after screenshots and device visual acceptance are UNVERIFIED. Do not synthesize a browser/mock screenshot as Android evidence. Capture both baseline `6d841de` and Phase 5 at 360/412 logical widths, default/enlarged font, light/dark, keyboard open, TalkBack and EN/SW settings using synthetic data before closing the gate. Existing translations preserved; new English workflow strings need human-reviewed Swahili copy.
+
 ## Phase 4 detail copy
 
 RequestDetailModal retains its existing StyleSheet byte-for-byte. It distinguishes Silverstone fee TZS 0 from unknown provider charges, says provider unavailable/do not send funds, and labels every synthetic evidence state as no real payment verified. Missing/unrecognized evidence cannot display paid status. Registration, navigation, assets and other screen layouts are unchanged. Android export and syntax checks pass; native screenshots, compact width/large text, keyboard, screen-reader and dark/light checks remain open.

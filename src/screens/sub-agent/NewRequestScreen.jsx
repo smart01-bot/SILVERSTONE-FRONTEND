@@ -1,3 +1,4 @@
+import { validateAmount } from '../../api/workflowState';
 import { api } from '../../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkAccounts } from '../../api/exchanges';
@@ -31,7 +32,7 @@ export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { showLoader, hideLoader } = useLoader();
   const { theme, tr }     = useTheme();
-  const { isOnline, syncedCount, enqueue, syncQueue, pendingCount, queueError } = useOfflineQueue(user?.id, profile?.name);
+  const { isOnline, syncing, syncedCount, enqueue, syncQueue, pendingCount, queueError } = useOfflineQueue(user?.id, profile?.name);
 
   const [accounts,setAccounts] = useState([]);
   const [loading,setLoading] = useState(false);
@@ -54,6 +55,7 @@ export default function NewRequestScreen({ navigation, route }) {
   const [amount,        setAmount]        = useState(prefill?.amount ? String(prefill.amount) : '');
   const [urgent,        setUrgent]        = useState(false);
   const [error,         setError]         = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(()=>{setSourcePhone(selectedAccount(sourceNetwork)?.identifier||'');setDestPhone(selectedAccount(destNetwork)?.identifier||'');setSubmitted(false);},[sourceNetwork,destNetwork,accounts]);
   useEffect(()=>setSubmitted(false),[amount,urgent]);
@@ -76,8 +78,7 @@ export default function NewRequestScreen({ navigation, route }) {
     if (!sourcePhone)   return tr('sourcePhone')   + ' ' + tr('error');
     if (!destPhone)     return tr('destPhone')     + ' ' + tr('error');
     if (!amount)        return tr('amount')        + ' ' + tr('error');
-    if (Number(amount.replace(/,/g, '')) <= 0) return tr('error');
-    return null;
+    return validateAmount(amount.replace(/,/g, ''));
   };
 
   const handleSubmit = async () => {
@@ -86,12 +87,12 @@ export default function NewRequestScreen({ navigation, route }) {
     const source=selectedAccount(sourceNetwork),destination=selectedAccount(destNetwork);
     if(!source||!destination){setError('Verified test accounts are required. Connect to load your accounts.');return;}
     if(source.networkCode===destination.networkCode){setError('Choose two different networks.');return;}
-    busy.current=true;setLoading(true);showLoader();
+    busy.current=true;setLoading(true);setError('');setNotice('');showLoader();
     try {
       await enqueue({sourceAccountId:source.id,destinationAccountId:destination.id,amountTzs:amount.replace(/,/g,''),currency:'TZS',urgent});
       setSubmitted(true);
-      setError('Request saved on this device. No funds moved.');
-      if(isOnline){const result=await syncQueue();setError(result?.remaining===0?'Request submitted for review. No funds moved.':'Saved request retained. Retry below with the same key.');}
+      setNotice('Request saved on this device. No funds moved.');
+      if(isOnline){const result=await syncQueue();setNotice(result?.remaining===0?'Request submitted for review. No funds moved.':'Saved request retained. Retry below with the same key.');}
     }catch(e){setError(e.message);}
     finally{busy.current=false;setLoading(false);hideLoader();}
   };
@@ -111,6 +112,9 @@ export default function NewRequestScreen({ navigation, route }) {
                 borderColor:     selected === net ? NETWORK_COLORS[net]         : theme.border,
               },
             ]}
+            accessibilityRole="radio"
+            accessibilityLabel={`${label}: ${net}`}
+            accessibilityState={{selected: selected === net}}
             scaleDown={0.94}
           >
             <View style={[s.netColorDot, { backgroundColor: NETWORK_COLORS[net] }]} />
@@ -155,7 +159,7 @@ export default function NewRequestScreen({ navigation, route }) {
             <View style={[s.offlineBanner, { backgroundColor: '#F59E0B18', borderColor: '#F59E0B' }]}>
               <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
               <Text style={[s.offlineBannerText, { color: '#F59E0B' }]}>
-                You're offline — request will be saved and submitted when you reconnect.
+                Offline or checking connection. Save on this device; submission retries while this screen is open and connected.
               </Text>
             </View>
           )}
@@ -216,6 +220,9 @@ export default function NewRequestScreen({ navigation, route }) {
           </View>
 
           <TouchableOpacity
+            accessibilityRole="switch"
+            accessibilityState={{checked:urgent}}
+            accessibilityLabel={tr("markUrgent")}
             onPress={() => setUrgent(v => !v)}
             style={[s.urgentRow, {
               backgroundColor: urgent ? '#F59E0B14' : theme.surfaceAlt,
@@ -223,7 +230,7 @@ export default function NewRequestScreen({ navigation, route }) {
             }]}
             activeOpacity={0.8}
           >
-            <View>
+            <View style={{flex:1,marginRight:12}}>
               <Text style={[s.urgentLabel, { color: theme.text }]}>{tr('markUrgent')}</Text>
               <Text style={[s.urgentSub,   { color: theme.textDim }]}>{"Flag for review; queue remains first-in, first-out."}</Text>
             </View>
@@ -232,10 +239,11 @@ export default function NewRequestScreen({ navigation, route }) {
             </View>
           </TouchableOpacity>
 
-          <Text style={[s.label,{color:theme.textDim}]}>Silverstone fee: TZS 0. Provider execution disabled.</Text>
-          {pendingCount>0&&<TouchableOpacity onPress={syncQueue} disabled={!isOnline||loading}><Text style={{color:theme.primary}}>{pendingCount} saved request(s) — Retry submission</Text></TouchableOpacity>}
+          <Text style={[s.label,{color:theme.textDim}]}>Silverstone fee: TZS 0. Provider charges unknown. Provider execution disabled; do not send funds. Accounts shown are synthetic test fixtures, not real verification.</Text>
+          {pendingCount>0&&<TouchableOpacity onPress={syncQueue} accessibilityRole="button" accessibilityState={{disabled:!isOnline||loading||syncing,busy:syncing}} style={{minHeight:48,justifyContent:"center"}} disabled={!isOnline||loading||syncing}><Text style={{color:theme.primary}}>{pendingCount} saved request(s) — Retry submission</Text></TouchableOpacity>}
           {queueError?<Text style={{color:theme.danger}}>{queueError}</Text>:null}
-          {error ? <Text style={[s.error, { color: theme.danger }]}>{error}</Text> : null}
+          {notice ? <Text accessibilityLiveRegion="polite" style={[s.error,{color:theme.text}]}>{notice}</Text> : null}
+          {error ? <Text accessibilityRole="alert" style={[s.error, { color: theme.danger }]}>{error}</Text> : null}
 
           {sourceNetwork && destNetwork && amount ? (
             <View style={[s.summary, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
@@ -263,7 +271,7 @@ export default function NewRequestScreen({ navigation, route }) {
             style={[s.submitBtn, { backgroundColor: loading ? theme.primaryDark : theme.primary }]}
             scaleDown={0.97}
           >
-            {<Text style={s.submitText}>{tr('submitRequest')}</Text>}
+            {<Text style={s.submitText}>{loading ? 'Saving…' : submitted ? 'Request saved' : isOnline ? tr('submitRequest') : 'Save on this device'}</Text>}
           </PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -316,7 +324,7 @@ const s = StyleSheet.create({
 
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 2 },
   quickBtn: {
-    flex: 1, height: 42, borderRadius: radius.sm + 2, borderWidth: 1,
+    flex: 1, minHeight: 48, borderRadius: radius.sm + 2, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
   quickBtnText: { fontSize: 15, fontFamily: fonts.bodyBold },
@@ -339,7 +347,7 @@ const s = StyleSheet.create({
   summaryValue: { fontSize: 16, fontFamily: fonts.bodySemi },
 
   submitBtn: {
-    height: 58, borderRadius: radius.lg,
+    minHeight: 58, paddingVertical: 12, borderRadius: radius.lg,
     alignItems: 'center', justifyContent: 'center', marginTop: spacing.lg - 2,
   },
   submitText: { color: '#fff', fontSize: 19, fontFamily: fonts.bodyBold },

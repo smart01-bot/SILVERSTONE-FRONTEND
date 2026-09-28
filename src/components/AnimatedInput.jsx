@@ -44,13 +44,15 @@ export default function AnimatedInput({
           backgroundColor: theme.surfaceAlt,
           borderColor,
           borderWidth,
-          height,
+          minHeight: height,
+          paddingVertical: 8,
         },
       ]}>
         {prefix ? (
           <Text style={[s.prefix, { color: theme.textDim }]}>{prefix}</Text>
         ) : null}
         <TextInput
+          accessibilityLabel={label || placeholder}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}

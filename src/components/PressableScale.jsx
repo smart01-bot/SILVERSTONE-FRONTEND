@@ -53,6 +53,8 @@ export default function PressableScale({
       onLongPress={onLongPress}
       activeOpacity={1}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       {...props}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>

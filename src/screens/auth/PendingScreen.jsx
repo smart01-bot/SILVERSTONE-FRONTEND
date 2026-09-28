@@ -80,9 +80,10 @@ const orbitStyles = StyleSheet.create({
 });
 
 export default function PendingScreen({ navigation }) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { logout, profile, refreshProfile } = useAuth();
   const { hideLoader } = useLoader();
+  const [refreshing, setRefreshing] = useState(false);
   const [application, setApplication] = useState(null);
   useEffect(() => {
     api
@@ -211,7 +212,7 @@ export default function PendingScreen({ navigation }) {
   return (
     <View style={s.root}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={isDark ? "light-content" : "dark-content"}
         translucent
         backgroundColor="transparent"
       />
@@ -411,14 +412,16 @@ export default function PendingScreen({ navigation }) {
             <TouchableOpacity
               style={s.demoBtn}
               onPress={() => {
+                if (refreshing) return;
+                setRefreshing(true);
                 setRefreshError("");
                 Promise.all([
                   refreshProfile(),
                   api.call("/applications/me").then(setApplication),
-                ]).catch((e) => setRefreshError(e.message));
+                ]).catch((e) => setRefreshError(e.message)).finally(() => setRefreshing(false));
               }}
             >
-              <Text style={s.demoBtnText}>Refresh account status →</Text>
+              <Text accessibilityLiveRegion="polite" style={s.demoBtnText}>{refreshing ? "Refreshing…" : "Refresh account status →"}</Text>
             </TouchableOpacity>
 
             {refreshError ? (

@@ -1,3 +1,4 @@
+import { workflowError } from '../../api/workflowState';
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -293,7 +294,7 @@ export default function Step3Personal({ navigation, route }) {
         navigation.navigate("Step4Business", syncWizard(navigation, saved));
       }
     } catch (e) {
-      setSaveError(e.message);
+      setSaveError(workflowError(e));
     } finally {
       setSaving(false);
     }

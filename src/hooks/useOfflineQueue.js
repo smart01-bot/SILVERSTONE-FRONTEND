@@ -27,13 +27,14 @@ export function useOfflineQueue(owner) {
     setSyncing(true);
     try {
       const result = await outbox.sync(owner);
+      if (api.currentOwner() !== owner) return result;
       setCount(result.submitted.length);
       await refresh();
       return result;
     } catch (e) {
-      setError(e.message);
+      if (api.currentOwner() === owner) setError(e.message);
     } finally {
-      setSyncing(false);
+      if (api.currentOwner() === owner) setSyncing(false);
     }
   };
   useEffect(
@@ -44,10 +45,11 @@ export function useOfflineQueue(owner) {
     [],
   );
   useEffect(() => {
+    setSyncing(false);
     setCount(0);
     setPending(0);
     setError("");
-    if (owner) refresh().catch((e) => setError(e.message));
+    if (owner) refresh().catch((e) => { if (api.currentOwner() === owner) setError(e.message); });
   }, [owner]);
   useEffect(() => {
     if (owner && isOnline) syncQueue();

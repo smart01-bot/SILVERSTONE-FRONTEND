@@ -1,3 +1,4 @@
+import { workflowError } from '../../api/workflowState';
 // src/screens/auth/Step4Business.jsx
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -121,6 +122,7 @@ function UploadRow({ label, file, onPick, theme }) {
           backgroundColor: theme.successSoft,
         },
       ]}
+      accessibilityRole="button" accessibilityLabel={`${label}: ${file ? "selected, not yet saved" : "choose image"}`}
       onPress={onPick}
       activeOpacity={0.8}
     >
@@ -142,7 +144,7 @@ function UploadRow({ label, file, onPick, theme }) {
             ]}
             numberOfLines={1}
           >
-            {file.name}
+            {file.name} · selected, not yet saved
           </Text>
         ) : (
           <Text
@@ -214,7 +216,7 @@ export default function Step4Business({ navigation, route }) {
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedDocuments,setSavedDocuments]=useState([]);
-  useEffect(()=>{let live=true;Promise.all((route.params?.documentIds||[]).map(id=>api.call(`/documents/${id}?metadata=1`))).then(rows=>{if(live)setSavedDocuments(rows);}).catch(e=>{if(live)setSaveError(e.message);});return ()=>{live=false;};},[route.params?.documentIds]);
+  useEffect(()=>{let live=true;Promise.all((route.params?.documentIds||[]).map(id=>api.call(`/documents/${id}?metadata=1`))).then(rows=>{if(live)setSavedDocuments(rows);}).catch(e=>{if(live)setSaveError(workflowError(e));});return ()=>{live=false;};},[route.params?.documentIds]);
   const progressAnim = useRef(
     new Animated.Value((STEP - 1) / TOTAL_STEPS),
   ).current;
@@ -267,7 +269,7 @@ export default function Step4Business({ navigation, route }) {
         haptics.success();
       }
     } catch (e) {
-      setSaveError(e.message);
+      setSaveError(workflowError(e));
     }
   };
 
@@ -335,7 +337,7 @@ export default function Step4Business({ navigation, route }) {
       if (advance) navigation.navigate("Step5Selfie", params);
       else setSaveError("Draft saved.");
     } catch (e) {
-      setSaveError(e.message);
+      setSaveError(workflowError(e));
     } finally {
       setSaving(false);
     }

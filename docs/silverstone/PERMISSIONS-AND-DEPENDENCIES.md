@@ -1,3 +1,7 @@
+## Phase 5 authority
+
+Local implementation/verification and local commits on development in both repositories only. Backend changes are documentation only. No pushes, main edits, deployment, live database/Firebase actions, real notification or payment. Prior publication authority does not extend to Phase 5. Separate authorization must name development in both repositories. Native acceptance and earlier external policy/evidence gates remain unresolved. No new policy selection was necessary.
+
 ## Phase 4 authority and missing provider decisions
 
 Local implementation/verification only on development in both repositories. No pushes, main edits, deployments, live databases, Firebase migration, real notifications or payments. External sandbox calls require separately named provider/account/test scope; none is approved. Manual settlement remains disabled. D14 is unresolved; see PROVIDER-EVIDENCE.md for the required capability/evidence matrix. No provider or financial policy was selected on the user's behalf.

@@ -1,3 +1,7 @@
+## Phase 5 contract status
+
+No API or schema changes. Existing paginated requests are now fetched by the My Requests refresh control; incomplete-page failures preserve the previous screen list. Reviewer uses existing status/version to disable stale or non-submitted decisions. New Request validates the existing positive whole-TZS BIGINT string range exactly before enqueueing. Server authorization remains decisive.
+
 ## Phase 4 implemented additions — disabled provider, synthetic evidence only
 
 - `GET /api/v1/provider-status`: active approved session; `{provider:null,mode:"unconfigured",executionEnabled:false,callbackEnabled:false,manualSettlementEnabled:false,agentFloatSupport:"unverified",providerFees:{status:"unknown",amountTzs:null}}`.

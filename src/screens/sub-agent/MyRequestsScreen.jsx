@@ -1,3 +1,6 @@
+import { api } from '../../config/api';
+import { requestView } from '../../api/presentation';
+import { loadRequests, workflowError } from '../../api/workflowState';
 import { requestStatusLabel } from '../../api/presentation';
 import { exchangeAction, formatTzs } from '../../api/exchanges';
 // src/screens/sub-agent/MyRequestsScreen.jsx
@@ -33,6 +36,7 @@ export default function MyRequestsScreen({ navigation }) {
   const { user }              = useAuth();
   const { theme, isDark, tr } = useTheme();
 
+  const [loadError, setLoadError] = useState('');
   const [requests,         setRequests]         = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [filter,           setFilter]           = useState('all');
@@ -58,10 +62,11 @@ export default function MyRequestsScreen({ navigation }) {
         orderBy('createdAt', 'desc')
       ),
       snap => {
+        setLoadError('');
         setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);
       },
-      () => setLoading(false)
+      e => { setLoading(false); setLoadError(workflowError(e)); }
     );
     return unsub;
   }, [user?.id]);
@@ -91,7 +96,7 @@ export default function MyRequestsScreen({ navigation }) {
         text: tr('confirm'), style: 'destructive',
         onPress: async () => {
           try { await exchangeAction(req,'cancel'); }
-          catch (e) { Alert.alert(tr('error'), tr('error')); }
+          catch (e) { Alert.alert(tr('error'), workflowError(e)); }
         },
       },
     ]);
@@ -132,7 +137,13 @@ export default function MyRequestsScreen({ navigation }) {
 
   const fmt = n => `TZS ${formatTzs(n)}`;
 
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
+  const onRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try { setRequests((await loadRequests(api)).map(requestView)); setLoadError(''); }
+    catch (e) { setLoadError(workflowError(e)); }
+    finally { setRefreshing(false); setLoading(false); }
+  };
 
   const emptyConfig = () => {
     if (filter !== 'all') {
@@ -191,13 +202,17 @@ export default function MyRequestsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
         }
       >
+        {loadError ? <View accessibilityLiveRegion="polite" style={{padding: 12}}>
+          <Text style={{color: theme.text}}>{loadError} Existing results may be out of date.</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled: refreshing, busy: refreshing}} disabled={refreshing} onPress={onRefresh} style={{minHeight:48, justifyContent:'center'}}><Text style={{color:theme.primary}}>Retry loading requests</Text></TouchableOpacity>
+        </View> : null}
         {loading ? (
           <>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && !loadError ? (
           <EmptyState {...emptyConfig()} />
         ) : (
           filtered.map(req => (
