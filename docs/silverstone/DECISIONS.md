@@ -1,3 +1,7 @@
+## Phase 4 local choices — no new provider/policy approval
+
+D09/D10 remain approved. D14 remains OPEN: no provider selected, no agent-float entitlement, tariff, sandbox scope or manual-settlement authority inferred. Official public discovery is recorded in PROVIDER-EVIDENCE.md. Independent implementation uses a disabled adapter plus an embedded-only synthetic protocol; real callback authentication remains unimplemented/disabled. One synthetic source attempt per leg is conservative and not a provider retry guarantee. Synthetic evidence never becomes real settlement. This does not approve ledger/refund/reconciliation policy or production operation.
+
 ## Phase 3 — D09 and D10 approved, 27 September 2026
 
 The user explicitly approved D09 and D10 as presented, and authorized local Phase 3 implementation/verification on development in both repositories. No push, main changes, deployment, live database, real notifications or payments. These approvals supersede historical proposed wording below.

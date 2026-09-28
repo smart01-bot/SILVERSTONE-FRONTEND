@@ -1,3 +1,11 @@
+## Phase 4 — 28 September 2026
+
+Exact Phase 3 clean development heads recovered; authenticated GitHub integration rechecked remote development and main pins against handoff. No AGENTS.md found in applicable ancestors or either repository outside dependencies. All required setup/shared docs and Phase 3 handoff read. Prior Phase 3 gates re-ran successfully before edits.
+
+Final verification: backend npm test 50 pass/0 fail; frontend npm test 15 pass/0 fail; backend npm run build 28 JS syntax checks/10-file active graph with no startup; all three previous HTTP integrations and new scripts/provider-client-integration.js pass; Android EXPO_PUBLIC_API_URL=http://10.0.2.2:8800/api/v1 npm run build:check passes; provider-boundary JSDoc checked by TypeScript; changed frontend JS/JSX parses; detail StyleSheet preserved; git diff --check passes. Logs included in affected-files delivery.
+
+No postgres/psql/docker/adb executable available. No native concurrency/process crash or Android device acceptance claimed. Embedded rollback/reconstructed service tests are explicitly synthetic. Provider authoritative discovery links and unresolved capabilities are recorded in PROVIDER-EVIDENCE.md; no sandbox request or genuine callback evidence exists.
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Evidence index

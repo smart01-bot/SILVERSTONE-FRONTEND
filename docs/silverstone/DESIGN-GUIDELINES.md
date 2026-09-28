@@ -1,3 +1,7 @@
+## Phase 4 detail copy
+
+RequestDetailModal retains its existing StyleSheet byte-for-byte. It distinguishes Silverstone fee TZS 0 from unknown provider charges, says provider unavailable/do not send funds, and labels every synthetic evidence state as no real payment verified. Missing/unrecognized evidence cannot display paid status. Registration, navigation, assets and other screen layouts are unchanged. Android export and syntax checks pass; native screenshots, compact width/large text, keyboard, screen-reader and dark/light checks remain open.
+
 ## Phase 3 UI wiring
 
 Existing StyleSheet definitions, brand, wizard and navigation are preserved. Existing network cards now save typed unverified identifiers; New Request selects an unambiguous synthetic verified account per network and displays its identifier. Offline banner/retry state distinguishes saved from submitted. Queue/card/detail controls use current versions and recorded server states; main-agent detail exposes both legs/history and next action. Accept means reserve, never paid. Unknown shows reconciliation needed. Dashboard placeholders and fake growth/chart removed. No native screenshot or usability acceptance is claimed.

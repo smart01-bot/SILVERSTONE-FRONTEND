@@ -1,3 +1,13 @@
+## Phase 4 implemented additions — disabled provider, synthetic evidence only
+
+- `GET /api/v1/provider-status`: active approved session; `{provider:null,mode:"unconfigured",executionEnabled:false,callbackEnabled:false,manualSettlementEnabled:false,agentFloatSupport:"unverified",providerFees:{status:"unknown",amountTzs:null}}`.
+- `/api/v1/provider-events/*`: disabled before app authentication; valid requests return 503 PROVIDER_UNCONFIGURED. No inbox writes, signatures accepted, or actual settlement. Malformed/oversized JSON still fails normal parsing limits.
+- Request detail/list gains `provider` with the same boundary and `providerEvidence` summaries: id, legId, synthetic reference, source=synthetic_fixture, scope=embedded_test, evidenceStatus, createdAt, actualSettlementVerified=false, reconciliationRequired=true. Existing owner/assignment restrictions apply. No inbox payload, claim token or provider credential is returned.
+- Evidence states are unknown/acknowledged/confirmed/failed/reversed **within a synthetic evidence projection only**. Even confirmed evidence leaves actual leg unknown, request needs_attention and reservation held. No financial effects, payout/retry or completion is available.
+- No public endpoint can prepare attempts, ingest fixtures, apply evidence, release unknown holds or manually confirm. Existing exchange command/idempotency and offline contracts remain intact. Fee zero applies only to Silverstone; unknown provider charges use null, not zero.
+
+See PROVIDER-EVIDENCE.md for normalized fixture protocol, transitions and rejected/conflicting event behavior. Prior phase descriptions below remain historical where superseded.
+
 ## Phase 3 implemented exchange contract (local synthetic only)
 
 All requests require a live Express session and active approved account. Every exchange command also rechecks both participants and current assignment under locks. Status, owner, assignment, verification and capacity cannot be client-written. The synthetic fixture source is not provider verification.

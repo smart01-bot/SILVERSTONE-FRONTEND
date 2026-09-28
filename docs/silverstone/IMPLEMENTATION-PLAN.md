@@ -1,3 +1,7 @@
+## Phase 4 checkpoint — 28 September 2026
+
+Independent local provider boundary/evidence work complete. Full Phase 4 gate remains BLOCKED: no genuine provider sandbox entitlement or transaction evidence, no native PostgreSQL/Android acceptance. Read PHASE-04-HANDOFF and PROVIDER-EVIDENCE. Phase 5 remains Frontend refinement as defined below; only independent local refinement may proceed while prior gates stay explicit. Do not substitute ledger/reconciliation implementation for the approved sequence or imply payment readiness.
+
 > Publication update — 27 September 2026: The user authorized remote development branches and publication of Phase 0 findings after the original read-only review. Both branches are based on the audited main commits. See README.md and PROJECT-STATE.md for current status. Historical statements below about unpublished documents or absent development branches describe the original review, not current state. Architecture proposals remain unapproved unless explicitly recorded otherwise.
 
 # Phased implementation and measurable gates

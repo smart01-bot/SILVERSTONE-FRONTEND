@@ -1,4 +1,5 @@
 import { exchangeAction, formatTzs } from '../api/exchanges';
+import { providerChargeLabel, providerEvidenceLabel } from '../api/providerEvidence';
 // src/components/RequestDetailModal.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import {
@@ -274,7 +275,9 @@ export default function RequestDetailModal({
           </View>
 
           <Text style={{color:theme.textDim}}>{request.nextAction}</Text>
-          <Text style={{color:theme.textDim}}>Silverstone fee: TZS 0 · Provider execution disabled</Text>
+          <Text style={{color:theme.textDim}}>Silverstone fee: TZS 0 · {providerChargeLabel(request.provider)}</Text>
+          <Text style={{color:theme.textDim}}>Provider unavailable. Do not send funds.</Text>
+          {request.providerEvidence?.map(evidence => <Text key={evidence.id} style={{color:theme.textDim}}>{providerEvidenceLabel(evidence)}</Text>)}
           {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{leg.type}: {leg.status}</Text>)}
           {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{event.event}: {event.reason}</Text>)}
           {/* Actions */}

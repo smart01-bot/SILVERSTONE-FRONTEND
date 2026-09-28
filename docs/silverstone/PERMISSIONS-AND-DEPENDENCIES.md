@@ -1,3 +1,9 @@
+## Phase 4 authority and missing provider decisions
+
+Local implementation/verification only on development in both repositories. No pushes, main edits, deployments, live databases, Firebase migration, real notifications or payments. External sandbox calls require separately named provider/account/test scope; none is approved. Manual settlement remains disabled. D14 is unresolved; see PROVIDER-EVIDENCE.md for the required capability/evidence matrix. No provider or financial policy was selected on the user's behalf.
+
+Synthetic preparation consumes only a current live source claim and checks assigned active approved participants, synthetic accounts and held reservation. The harness has no app route and is excluded from the active runtime. Receipt/application of existing synthetic evidence preserves financial obligations even if participant status changes. API reads retain existing active/assignment scope. No new operator capability or credential has been provisioned.
+
 ## Phase 3 — D09 and D10 approved, 27 September 2026
 
 The user explicitly approved D09 and D10 as presented, and authorized local Phase 3 implementation/verification on development in both repositories. No push, main changes, deployment, live database, real notifications or payments. These approvals supersede historical proposed wording below.

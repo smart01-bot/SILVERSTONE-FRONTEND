@@ -1,3 +1,11 @@
+## Phase 4 current boundaries
+
+Disabled provider contract and synthetic-only durable evidence model now exist. The external gate remains BLOCKED: no selected provider, approved sandbox account/scope, verified agent-float entitlement/network identifiers, actual balance/reservation policy, tariff/limits, callback protocol/replay guarantee, settlement dictionary, reversal/refund or real reconciliation policy. Public documentation is discovery only.
+
+The fixture harness is deliberately outside the active API/worker graph, source-leg-only, one attempt per leg, and restricted to embedded synthetic databases. Confirmation/reversal markers are not a money ledger. No destination dispatch or complete exchange flow exists. All fixture attempts retain holds and reconciliation obligations. Unknown references are retained as rejected evidence, not automatically reassociated; production quarantine/review is future work. Native process restart and multi-connection locking, production scheduling/retention/monitoring and native UI acceptance remain open. PGlite serializes transactions; Promise concurrency is not native proof.
+
+50 backend/15 frontend tests, four actual-client HTTP journeys, backend build and Android Hermes export pass. Earlier phone verification, production evidence/storage/retention/reviewer bootstrap and migration-policy blockers remain. No full phase/release acceptance implied.
+
 ## Phase 3 current boundaries
 
 S08 and S10 active paths now have identity-bound persistent outboxes, stable request keys, atomic capacity holds and PostgreSQL job claims. Existing UI styles were retained; undefined loading bindings corrected; request controls now perform scoped commands. Sample dashboard activity, fixed growth and fake chart bars were removed. Financial summaries count completed states only; no local operation creates completed states.
