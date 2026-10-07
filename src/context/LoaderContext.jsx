@@ -1,17 +1,15 @@
 // src/context/LoaderContext.jsx
-// Global overlay loader — blurs the screen behind it and shows the spinning S.
+// Global overlay loader — neutral dots over a matte, theme-aware scrim.
 //
 // Usage in any screen:
 //   const { showLoader, hideLoader } = useLoader();
 //   showLoader();   // before async work
 //   hideLoader();   // in finally {}
 
-import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { WebView } from 'react-native-webview';
 import { useTheme } from './ThemeContext';
-import { SPINNER_HTML } from '../components/spinnerHtml';
+import { LoadingIndicator } from '../components/Loader';
 
 const LoaderContext = createContext({ showLoader: () => {}, hideLoader: () => {} });
 export const useLoader = () => useContext(LoaderContext);
@@ -20,14 +18,6 @@ export function LoaderProvider({ children }) {
   const { isDark } = useTheme();
   const [visible, setVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const webRef   = useRef(null);
-
-  const onLoad = () => webRef.current?.postMessage(isDark ? 'dark' : 'light');
-
-  // Re-send theme if user switches dark/light while overlay is mounted
-  useEffect(() => {
-    webRef.current?.postMessage(isDark ? 'dark' : 'light');
-  }, [isDark]);
 
   const showLoader = useCallback(() => {
     setVisible(true);
@@ -51,23 +41,10 @@ export function LoaderProvider({ children }) {
           style={[StyleSheet.absoluteFillObject, s.overlay, { opacity: fadeAnim }]}
           pointerEvents="box-none"
         >
-          <BlurView
-            intensity={60}
-            tint={isDark ? 'dark' : 'light'}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={s.center}>
-            <WebView
-              ref={webRef}
-              source={{ html: SPINNER_HTML }}
-              style={s.webview}
-              scrollEnabled={false}
-              bounces={false}
-              overScrollMode="never"
-              backgroundColor="transparent"
-              androidLayerType="hardware"
-              onLoad={onLoad}
-            />
+          <View accessibilityViewIsModal style={[s.center, {
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.94)' : 'rgba(196, 199, 203, 0.96)',
+          }]}>
+            <LoadingIndicator />
           </View>
         </Animated.View>
       )}
@@ -78,5 +55,4 @@ export function LoaderProvider({ children }) {
 const s = StyleSheet.create({
   overlay: { zIndex: 9999, elevation: 9999 },
   center:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  webview: { width: 220, height: 220, backgroundColor: 'transparent' },
 });

@@ -76,3 +76,11 @@ Additional captures: [completed-request details](implementation/history-complete
 Native exports verify bundling, not native-device acceptance. The S22 Ultra, Pixel 7 Pro, iPhone 12 Pro Max and iPhone 15 Pro Max still need checks for physical safe areas/system controls, keyboard avoidance, blur, screen-reader announcements, large text and animation performance. The browser pager also develops an input-focus horizontal scroll offset that the native PagerView does not use; final captures blurred the input and cleared that browser-only offset. No production workaround was added for the harness. React Native Web's legacy selected-tab accessibility mapping cannot verify native announcements.
 
 Receipt downloads, public agent-number issuance, agency-data integration and push notifications remain deferred. Missing values are not generated from sample designs. No new financial execution, refund, reconciliation-resolution or provider activation capability was added. The original roadmap's Phases 7 and 8 remain on hold.
+
+## Loader follow-up — 7 October 2026
+
+Removed the rotating S from both shared entry points: the startup/auth-resolution screen and the global action overlay. They now share three small monochrome dots with a localized Loading… / Inapakia… label. Dots gently change opacity, stay still under reduced-motion settings, and use the silver/black palette. The overlay uses a matte scrim instead of the previous heavy blur and embedded WebView. The obsolete HTML/base64 spinner was deleted.
+
+This requested global change also reaches authentication, onboarding and main-agent actions that already use the same loader. Existing show/hide callbacks, fade durations, calling screens, authentication and financial handlers are unchanged. Static brand logos remain branding. The 32 regression tests and Android/iOS exports passed again after this change.
+
+An isolated browser check of the actual `ScreenLoader` and `LoaderProvider` also passed: light/dark appearance, English/Swahili labels, overlay show/hide, live language changes, and reduced-motion updates. With reduced motion enabled, all three dots stayed at a fixed opacity; disabling it restored the pulses. No logo, embedded WebView or uncaught runtime error remained in either loader.
