@@ -23,7 +23,7 @@ export function ThemeProvider({ children }) {
       if (savedPref === 'light' || savedPref === 'dark') {
         setUserPreference(savedPref);
       }
-      if (savedLang === 'sw' || savedLang === 'en') setLangState('sw');
+      if (savedLang === 'sw' || savedLang === 'en') setLangState(savedLang);
     })();
   }, []);
 

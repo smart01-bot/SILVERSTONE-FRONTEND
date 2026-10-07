@@ -1,567 +1,172 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { fonts } from '../../constants/theme';
 import { formatTzs } from '../../api/exchanges';
 import { requestStatusLabel } from '../../api/presentation';
-// src/screens/sub-agent/HomeScreen.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import { workflowError } from '../../api/workflowState';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, SafeAreaView,
-  RefreshControl, Dimensions,
-} from 'react-native';
-import { Ionicons }       from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth }        from '../../context/AuthContext';
-import { useTheme }       from '../../context/ThemeContext';
-import { fonts, spacing, radius } from '../../constants/theme';
-import { SkeletonBox, SkeletonCard, SkeletonNetRow } from '../../components/SkeletonLoader';
-import {
-  collection, query, where, orderBy, limit, onSnapshot,
+  collection, query, where, orderBy, limit, onSnapshot, getDocs, db,
 } from '../../api/screenData';
-import { db } from '../../api/screenData';
+import {
+  useAgentUI, AgentScroll, AgentButton, AgentNotice,
+} from '../../components/agent/AgentUI';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_H       = 210;
-const SLIDE_INTERVAL = 3500;
-const TRANSITION_MS  = 640; // must match scrollTo animation duration
+// Keep the established server-scoped subscription and its local owner filter.
+const requestsFor = owner => query(
+  collection(db, 'requests'),
+  where('agentId', '==', owner),
+  orderBy('createdAt', 'desc'),
+  limit(10000),
+);
+const networkNames = { Voda: 'M-Pesa', Yas: 'Mixx by Yas', Airtel: 'Airtel Money', Halotel: 'HaloPesa' };
 
-const NETWORKS = {
-  Voda:    { color: '#E40000', short: 'VOD' },
-  Yas:     { color: '#0070B8', short: 'YAS' },
-  Airtel:  { color: '#FF0000', short: 'AIR' },
-  Halotel: { color: '#D4A017', short: 'HAL' },
-};
-
-// ─── Infinite carousel banner ─────────────────────────────────────────────────
-// Renders [S1, S2, S3, S1, S2, S3] — always advances forward.
-// When the duplicate set is reached it silently resets to position 0
-// after the transition completes, making it imperceptibly infinite.
-// Manual swiping is enabled — touch pauses auto-advance, release resumes.
-function BannerCard({
-  loading, theme, tr,
-  totalVolume, todayVolume, todayCount,
-  latestCompleted, fmt, timeAgo, navigation,
-}) {
-  const scrollRef    = useRef(null);
-  const slideIndex   = useRef(0);
-  const isResetting  = useRef(false);
-  const isTouching   = useRef(false);
-  const timerRef     = useRef(null);
-  const resetTimerRef = useRef(null);
-  const [activeDot, setActiveDot] = useState(0);
-
-  const REAL_COUNT  = 3;
-  // Banner is inset by spacing.md on each side
-  const SLIDE_WIDTH = SCREEN_WIDTH - spacing.md * 2;
-
-  // ── Auto-advance timer management ──────────────────────
-  const startTimer = () => {
-    stopTimer();
-    timerRef.current = setInterval(() => {
-      if (isResetting.current || isTouching.current) return;
-
-      const next = slideIndex.current + 1;
-      slideIndex.current = next;
-      setActiveDot(next % REAL_COUNT);
-      scrollRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
-
-      if (next >= REAL_COUNT) {
-        isResetting.current = true;
-        resetTimerRef.current = setTimeout(() => {
-          slideIndex.current = 0;
-          scrollRef.current?.scrollTo({ x: 0, animated: false });
-          isResetting.current = false;
-        }, TRANSITION_MS + 200);
-      }
-    }, SLIDE_INTERVAL);
-  };
-
-  const stopTimer = () => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-  };
-
-  useEffect(() => {
-    if (loading) return;
-    startTimer();
-    return () => {
-      stopTimer();
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    };
-  }, [loading]);
-
-  // ── Touch handlers — pause auto-advance while swiping ──
-  const onTouchStart = () => {
-    isTouching.current = true;
-    stopTimer();
-  };
-
-  const onTouchEnd = () => {
-    isTouching.current = false;
-    startTimer();
-  };
-
-  // ── Scroll end — sync slideIndex after manual swipe ────
-  const onScrollEnd = (e) => {
-    if (isResetting.current) return;
-    const idx = Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH);
-    slideIndex.current = idx;
-    setActiveDot(idx % REAL_COUNT);
-
-    // If user swiped into the duplicate set, silently reset
-    if (idx >= REAL_COUNT) {
-      isResetting.current = true;
-      const realIdx = idx % REAL_COUNT;
-      resetTimerRef.current = setTimeout(() => {
-        slideIndex.current = realIdx;
-        scrollRef.current?.scrollTo({ x: realIdx * SLIDE_WIDTH, animated: false });
-        isResetting.current = false;
-      }, 50);
-    }
-  };
-
-  const cardPad = spacing.lg - 2;
-
-  const renderSlide = (key) => {
-    const baseKey = key.replace('2', '');
-
-    if (baseKey === 'float') return (
-      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad }]}>
-        <Text style={s.slideEyebrow} numberOfLines={1}>TOTAL FLOAT MOVED</Text>
-        <Text style={s.slideAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(totalVolume)}</Text>
-        <Text style={s.slideSub} numberOfLines={1}>+{fmt(todayVolume)} today · {todayCount} transfers</Text>
-        <View style={s.pillRow}>
-          <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
-            <Text style={s.pillWhiteText} numberOfLines={1}>{tr('newRequest')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
-            <Text style={s.pillOutlineText} numberOfLines={1}>{tr('myRequests')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-
-    if (baseKey === 'last') return (
-      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad, justifyContent: 'center' }]}>
-        <Text style={s.slideEyebrow} numberOfLines={1}>LAST COMPLETED TRANSFER</Text>
-        {latestCompleted ? (
-          <>
-            <View style={s.routeRow}>
-              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.sourceNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.sourceNetwork]?.short ?? latestCompleted.sourceNetwork}</Text>
-              </View>
-              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
-              <View style={[s.netBadge, { backgroundColor: NETWORKS[latestCompleted.destNetwork]?.color ?? '#fff' }]}>
-                <Text style={s.netBadgeText} numberOfLines={1}>{NETWORKS[latestCompleted.destNetwork]?.short ?? latestCompleted.destNetwork}</Text>
-              </View>
-              <Text style={s.routeAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmt(latestCompleted.amount)}</Text>
-            </View>
-            <Text style={s.slideSub} numberOfLines={1}>{latestCompleted._filler ? 'Sample · ' : ''}{timeAgo(latestCompleted.createdAt)}</Text>
-            <View style={s.completedPill}>
-              <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
-              <Text style={s.completedText}>Completed</Text>
-            </View>
-          </>
-        ) : (
-          <Text style={s.slideAmount}>No transfers yet</Text>
-        )}
-      </View>
-    );
-
-    if (baseKey === 'today') return (
-      <View key={key} style={[s.slide, { width: SLIDE_WIDTH, padding: cardPad }]}>
-        <Text style={s.slideEyebrow} numberOfLines={1}>TODAY'S ACTIVITY</Text>
-        <Text style={s.slideAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(todayVolume)}</Text>
-        <Text style={s.slideSub} numberOfLines={1}>{todayCount} transfer{todayCount !== 1 ? 's' : ''} completed today</Text>
-        <View style={s.pillRow}>
-          <TouchableOpacity style={s.pillWhite} onPress={() => navigation.navigate('MyRequests')} activeOpacity={0.85}>
-            <Text style={s.pillWhiteText} numberOfLines={1}>View History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.pillOutline} onPress={() => navigation.navigate('NewRequest')} activeOpacity={0.85}>
-            <Text style={s.pillOutlineText} numberOfLines={1}>New Request</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-
-    return null;
-  };
-
-  return (
-    <LinearGradient
-      colors={[theme.gradPrimA, theme.gradPrimB]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[s.bannerCard, { height: CARD_H }]}
-    >
-      <View style={s.decorCircle}  pointerEvents="none" />
-      <View style={s.decorCircle2} pointerEvents="none" />
-
-      {loading ? (
-        <View style={[s.slide, { padding: cardPad }]}>
-          <SkeletonBox width={120} height={12} borderRadius={5} style={{ opacity: 0.35 }} />
-          <SkeletonBox width={190} height={42} borderRadius={8} style={{ marginTop: 10, opacity: 0.35 }} />
-          <SkeletonBox width={150} height={14} borderRadius={5} style={{ marginTop: 10, opacity: 0.35 }} />
-          <View style={{ flexDirection: 'row', gap: spacing.sm + 2, marginTop: spacing.md }}>
-            <SkeletonBox width="47%" height={42} borderRadius={radius.md} style={{ opacity: 0.25 }} />
-            <SkeletonBox width="47%" height={42} borderRadius={radius.md} style={{ opacity: 0.25 }} />
-          </View>
-        </View>
-      ) : (
-        <>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={onScrollEnd}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={onTouchEnd}
-            scrollEnabled={true}
-            style={{ flex: 1 }}
-          >
-            {['float', 'last', 'today', 'float2', 'last2', 'today2'].map(k =>
-              renderSlide(k)
-            )}
-          </ScrollView>
-
-          {/* Dots */}
-          <View style={s.dots}>
-            {[0, 1, 2].map(i => (
-              <View key={i} style={[
-                s.dot,
-                { backgroundColor: i === activeDot ? '#fff' : 'rgba(255,255,255,0.35)' },
-                i === activeDot && s.dotActive,
-              ]} />
-            ))}
-          </View>
-        </>
-      )}
-    </LinearGradient>
-  );
-}
-
-// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const { profile, user } = useAuth();
-  const { theme, isDark, tr } = useTheme();
-
-  const [requests,     setRequests]     = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [totalVolume,  setTotalVolume]  = useState(0);
-  const [todayVolume,  setTodayVolume]  = useState(0);
-  const [todayCount,   setTodayCount]   = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
-  const initials  = profile?.name
-    ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
+  const { colors, copy } = useAgentUI();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const generation = useRef(0);
+  const currentOwner = useRef(user?.id);
+  const dataOwner = useRef(user?.id);
+  currentOwner.current = user?.id;
 
   useEffect(() => {
-    if (!user?.id) return;
-    const q = query(
-      collection(db, 'requests'),
-      where('agentId', '==', user.id),
-      orderBy('createdAt', 'desc'),
-      limit(10000)
-    );
-    const unsub = onSnapshot(q, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setRequests(docs);
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      let total = 0n, todayV = 0n, tCount = 0, pending = 0;
-      docs.forEach(r => {
-        const amt = BigInt(r.amount || 0);
-        if(r.status==='completed') total += amt;
-        if (r.status === 'awaiting_review') pending++;
-        if (r.status==='completed' && new Date(r.createdAt) >= today) { todayV += amt; tCount++; }
-      });
-      setTotalVolume(total);
-      setTodayVolume(todayV);
-      setTodayCount(tCount);
-      setPendingCount(pending);
+    const owner = user?.id;
+    const expected = ++generation.current;
+    dataOwner.current = owner;
+    setRequests([]);
+    setLoadError('');
+    setRefreshing(false);
+    setLoading(Boolean(owner));
+    if (!owner) return;
+    const unsubscribe = onSnapshot(requestsFor(owner), snap => {
+      if (generation.current !== expected || currentOwner.current !== owner) return;
+      setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadError('');
       setLoading(false);
-    }, () => setLoading(false));
-    return unsub;
+    }, error => {
+      if (generation.current !== expected || currentOwner.current !== owner) return;
+      setLoadError(workflowError(error));
+      setLoading(false);
+    });
+    return () => {
+      ++generation.current;
+      unsubscribe();
+    };
   }, [user?.id]);
 
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
-
-  const fmt = n => `TZS ${formatTzs(n)}`;
-
-  const statusColor = (status) => {
-    switch (status) {
-      case 'completed': return '#16A34A';
-      case 'awaiting_review':   return '#F59E0B';
-      case 'awaiting_source':  return '#0891B2';
-      case 'rejected':  return theme.danger;
-      default:          return theme.textDim;
+  // Read the same query on refresh; never submit or retry a financial command.
+  const onRefresh = async () => {
+    const owner = user?.id;
+    if (!owner || refreshing) return;
+    const expected = generation.current;
+    setRefreshing(true);
+    try {
+      const snap = await getDocs(requestsFor(owner));
+      if (generation.current !== expected || currentOwner.current !== owner) return;
+      setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadError('');
+    } catch (error) {
+      if (generation.current === expected && currentOwner.current === owner) setLoadError(workflowError(error));
+    } finally {
+      if (generation.current === expected && currentOwner.current === owner) {
+        setRefreshing(false);
+        setLoading(false);
+      }
     }
   };
 
-  const timeAgo = (ts) => {
-    if (!ts) return '';
-    const secs = Math.floor((Date.now() - Date.parse(ts)) / 1000);
-    if (secs < 60)     return tr('justNow');
-    if (secs < 3600)   return `${Math.floor(secs / 60)} ${tr('minAgo')}`;
-    if (secs < 86400)  return `${Math.floor(secs / 3600)}h ago`;
-    if (secs < 172800) return tr('yesterday');
-    return new Date(ts).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' });
+  const firstName = profile?.name?.trim().split(/\s+/)[0] || copy('Agent', 'Wakala');
+  // Hide the previous owner's render before the subscription effect clears it.
+  const ownerChanged = dataOwner.current !== user?.id;
+  const latest = ownerChanged ? null : requests[0];
+  const visibleError = ownerChanged ? '' : loadError;
+  const reading = loading || (Boolean(user?.id) && ownerChanged);
+  const statuses = {
+    awaiting_review: copy('Awaiting main-agent review', 'Inasubiri ukaguzi wa wakala mkuu'),
+    awaiting_source: copy('Reserved · provider disabled', 'Imehifadhiwa · mtoa huduma hajawashwa'),
+    needs_attention: copy('Reconciliation needed', 'Uhakiki wa muamala unahitajika'),
+    completed: copy('Completed', 'Imekamilika'),
+    rejected: copy('Rejected', 'Imekataliwa'),
+    cancelled: copy('Cancelled', 'Imefutwa'),
+    expired: copy('Expired', 'Muda umeisha'),
   };
-
-  const hasRealData     = requests.length > 0;
-  const displayRequests = requests.slice(0, 4);
-
-  const realNetworkBreakdown = Object.entries(NETWORKS).map(([name, meta]) => {
-    const net = requests.filter(r => r.sourceNetwork === name && r.status === 'completed');
-    const vol = net.reduce((s, r) => s + BigInt(r.amount || 0), 0n);
-    return { name, ...meta, volume: vol };
-  }).filter(n => n.volume > 0);
-
-  const displayNetworks = realNetworkBreakdown;
-  const maxVolume       = Math.max(...displayNetworks.map(n => Number(n.volume)), 1);
-
-  const latestCompleted = requests.find(r => r.status === 'completed') ?? null;
-
-  const reqId = (id) => `REQ-${id?.slice(-3).toUpperCase() ?? '000'}`;
-
-  const QUICK_ACTIONS = [
-    { label: tr('myRequests'), icon: 'list-outline',   onPress: () => navigation.navigate('MyRequests') },
-    { label: tr('history'),    icon: 'time-outline',   onPress: () => navigation.navigate('MyRequests') },
-    { label: 'Networks',       icon: 'wifi-outline',   onPress: () => navigation.navigate('Networks')   },
-    { label: tr('profile'),    icon: 'person-outline', onPress: () => navigation.navigate('Profile')    },
-  ];
+  const status = latest && (statuses[latest.status] || requestStatusLabel(latest.status));
+  const statusIcon = latest?.status === 'completed' ? 'checkmark-circle-outline'
+    : latest?.status === 'needs_attention' ? 'alert-circle-outline'
+      : ['rejected', 'cancelled', 'expired'].includes(latest?.status) ? 'close-circle-outline' : 'time-outline';
+  const unresolved = latest?.status === 'needs_attention' || latest?.legs?.some(leg => leg.status === 'unknown');
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
-
-      <View style={[s.topBar, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
-        <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.openDrawer()}>
-          <View style={[s.avatarCircle, { backgroundColor: theme.primary }]}>
-            <Text style={s.avatarText}>{initials}</Text>
-          </View>
-          {pendingCount > 0 && (
-            <View style={[s.avatarBadge, { borderColor: theme.bg }]}>
-              <Text style={s.avatarBadgeText}>{pendingCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        <Text style={[s.brandName, { color: theme.primary }]}>Silverstone</Text>
-        <TouchableOpacity style={[s.notifBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Ionicons name="notifications-outline" size={22} color={theme.text} />
-          {pendingCount > 0 && <View style={s.notifDot} />}
-        </TouchableOpacity>
+    <AgentScroll contentContainerStyle={styles.content} refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />
+    }>
+      <View style={styles.introduction}>
+        <Text style={[styles.greeting, { color: colors.secondary }]}>{copy('Hello', 'Habari')}, {firstName}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{copy('Exchange float', 'Badilisha float')}</Text>
+        <Text style={[styles.subtitle, { color: colors.secondary }]}>{copy('Through your main-agent', 'Kupitia wakala wako mkuu')}</Text>
+        <AgentButton label={copy('New request', 'Ombi jipya')} onPress={() => navigation.navigate('NewRequest')} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scroll}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
-        }
-      >
-        <View style={s.greetRow}>
-          <Text style={[s.greetSub,  { color: theme.textDim }]}>Karibu</Text>
-          <Text style={[s.greetName, { color: theme.text }]} numberOfLines={1}>{firstName}</Text>
+      <View style={styles.latestSection}>
+        <View style={styles.sectionHeading}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{copy('Latest request', 'Ombi la karibuni')}</Text>
+          <AgentButton label={copy('View all', 'Ona yote')} variant="text" icon={null} onPress={() => navigation.navigate('MyRequests', { showList: true })} />
         </View>
-
-        <BannerCard
-          loading={loading}
-          theme={theme}
-          tr={tr}
-          totalVolume={totalVolume}
-          todayVolume={todayVolume}
-          todayCount={todayCount}
-          latestCompleted={latestCompleted}
-          fmt={fmt}
-          timeAgo={timeAgo}
-          navigation={navigation}
-        />
-
-        <View style={s.quickGrid}>
-          {QUICK_ACTIONS.map(action => (
-            <TouchableOpacity
-              key={action.label}
-              onPress={action.onPress}
-              style={[s.quickItem, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
-              activeOpacity={0.75}
-            >
-              <View style={[s.quickIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name={action.icon} size={24} color={theme.primary} />
-              </View>
-              <Text style={[s.quickLabel, { color: theme.text }]}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: theme.text }]}>Networks</Text>
-            {!loading && (
-              <TouchableOpacity onPress={() => navigation.navigate('Networks')}>
-                <Text style={[s.sectionAction, { color: theme.primary }]}>Manage</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={[s.networkCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-            {loading ? (
-              <><SkeletonNetRow /><SkeletonNetRow /><SkeletonNetRow /><SkeletonNetRow /></>
-            ) : (
-              displayNetworks.map((net, i) => (
-                <View key={net.name} style={[
-                  s.netRow,
-                  i < displayNetworks.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-                ]}>
-                  <View style={s.netLeft}>
-                    <View style={[s.netDot, { backgroundColor: net.color }]} />
-                    <Text style={[s.netName, { color: theme.text }]}>{net.name}</Text>
-                  </View>
-                  <View style={s.netBarWrap}>
-                    <View style={[s.netBarBg, { backgroundColor: theme.border }]}>
-                      <View style={[s.netBarFill, { backgroundColor: net.color, width: `${(Number(net.volume) / maxVolume) * 100}%` }]} />
-                    </View>
-                  </View>
-                  <Text style={[s.netAmount, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(net.volume)}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
-
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: theme.text }]}>{tr('recentRequests')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MyRequests')}>
-              <Text style={[s.sectionAction, { color: theme.primary }]}>{tr('seeAll')} →</Text>
-            </TouchableOpacity>
-          </View>
-          {loading ? (
-            <><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
-          ) : (
-            <View style={[s.requestsCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-              {displayRequests.map((req, i) => (
-                <View key={req.id}>
-                  <View style={s.reqRow}>
-                    <View style={[s.reqNetDot, { backgroundColor: NETWORKS[req.sourceNetwork]?.color ?? theme.muted }]} />
-                    <View style={s.reqInfo}>
-                      <Text style={[s.reqRoute, { color: theme.text }]} numberOfLines={1}>{req.sourceNetwork} → {req.destNetwork}</Text>
-                      <Text style={[s.reqMeta, { color: theme.textDim }]} numberOfLines={1}>{reqId(req.id)} · {timeAgo(req.createdAt)}</Text>
-                    </View>
-                    <View style={s.reqRight}>
-                      <Text style={[s.reqAmount, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{fmt(req.amount)}</Text>
-                      <View style={[s.statusPill, { backgroundColor: statusColor(req.status) + '20' }]}>
-                        <Text style={[s.statusText, { color: statusColor(req.status) }]}>
-                          {requestStatusLabel(req.status)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  {i < displayRequests.length - 1 && <View style={[s.divider, { backgroundColor: theme.border }]} />}
-                </View>
-              ))}
+        {visibleError ? <AgentNotice error>
+          {visibleError}{latest ? ` ${copy('The last loaded request may be out of date.', 'Ombi lililopakiwa linaweza kuwa limebadilika.')}` : ''}
+        </AgentNotice> : null}
+        {reading ? <Text accessibilityLiveRegion="polite" style={[styles.stateText, { color: colors.secondary }]}>
+          {copy('Loading your requests…', 'Inapakia maombi yako…')}
+        </Text> : latest ? (
+          <TouchableOpacity accessibilityRole="button"
+            accessibilityLabel={`${copy('View latest request', 'Ona ombi la karibuni')}: TZS ${formatTzs(latest.amount)}, ${status}`}
+            activeOpacity={0.8} onPress={() => navigation.navigate('MyRequests', { requestId: latest.id })}
+            style={[styles.preview, { backgroundColor: colors.surface }]}>
+            <View style={styles.previewHeading}>
+              <Text style={[styles.amount, { color: colors.text }]}>TZS {formatTzs(latest.amount)}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.secondary} />
             </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            <Text style={[styles.route, { color: colors.secondary }]}>
+              {networkNames[latest.sourceNetwork] || latest.sourceNetwork} → {networkNames[latest.destNetwork] || latest.destNetwork}
+            </Text>
+            <View style={styles.statusLine}>
+              <Ionicons name={statusIcon} size={17} color={colors.secondary} />
+              <Text style={[styles.status, { color: colors.secondary }]}>{status}</Text>
+            </View>
+            {unresolved ? <Text style={[styles.warning, { color: colors.text }]}>
+              {copy('Outcome unresolved. Do not send funds or start another payment.', 'Matokeo hayajathibitishwa. Usitume fedha wala kuanzisha malipo mengine.')}
+            </Text> : null}
+          </TouchableOpacity>
+        ) : !visibleError ? <Text style={[styles.stateText, { color: colors.secondary }]}>
+          {copy('No requests yet. Start with a new request above.', 'Bado hakuna maombi. Anza na ombi jipya hapo juu.')}
+        </Text> : null}
+        {visibleError ? <AgentButton label={copy('Retry loading requests', 'Jaribu kupakia maombi tena')}
+          onPress={onRefresh} disabled={refreshing} busy={refreshing} variant="text" icon="refresh-outline" /> : null}
+      </View>
+    </AgentScroll>
   );
 }
 
-const s = StyleSheet.create({
-  safe:   { flex: 1 },
-  scroll: { paddingBottom: 120 },
-
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md + 2, paddingVertical: spacing.md - 3, borderBottomWidth: 1,
-  },
-  brandName: { fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.5 },
-  avatarBtn: { position: 'relative' },
-  avatarCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText:   { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 17 },
-  avatarBadge: {
-    position: 'absolute', top: -2, right: -2, backgroundColor: '#C8102E',
-    borderRadius: radius.full, minWidth: 18, height: 18,
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2,
-  },
-  avatarBadgeText: { color: '#fff', fontSize: 13, fontFamily: fonts.bodyXBold },
-  notifBtn: {
-    width: 44, height: 44, borderRadius: radius.md + 1, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center', position: 'relative',
-  },
-  notifDot: { position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8102E' },
-
-  greetRow:  { paddingHorizontal: spacing.md + 2, paddingTop: spacing.md + 2, paddingBottom: spacing.sm },
-  greetSub:  { fontSize: 17, fontFamily: fonts.body, marginBottom: 2 },
-  greetName: { fontSize: 28, fontFamily: fonts.display },
-
-  bannerCard: {
-    marginHorizontal: spacing.md, marginTop: spacing.sm,
-    borderRadius: radius.xxl - 4, overflow: 'hidden',
-  },
-  decorCircle:  { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -50 },
-  decorCircle2: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: 20 },
-
-  slide:       { flex: 1, justifyContent: 'space-between' },
-  slideEyebrow:{ fontSize: 11, fontFamily: fonts.bodySemi, letterSpacing: 1.6, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' },
-  slideAmount: { fontSize: 36, fontFamily: fonts.display, letterSpacing: -0.8, color: '#fff', marginTop: spacing.sm },
-  slideSub:    { fontSize: 14, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: spacing.xs },
-
-  pillRow: { flexDirection: 'row', gap: spacing.sm + 2, marginTop: spacing.md },
-  pillWhite: { flex: 1, height: 44, borderRadius: radius.md, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  pillWhiteText:   { color: '#C8102E', fontFamily: fonts.bodyBold, fontSize: 15 },
-  pillOutline: {
-    flex: 1, height: 44, borderRadius: radius.md, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  pillOutlineText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 15 },
-
-  routeRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  netBadge:     { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm, opacity: 0.9 },
-  netBadgeText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 13, letterSpacing: 0.3 },
-  routeAmount:  { marginLeft: spacing.sm, fontSize: 22, fontFamily: fonts.display, color: '#fff' },
-  completedPill: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm,
-    backgroundColor: 'rgba(22,163,74,0.25)', alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm,
-  },
-  completedText: { color: '#16A34A', fontFamily: fonts.bodySemi, fontSize: 13 },
-
-  dots:      { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: spacing.md - 4 },
-  dot:       { width: 6, height: 4, borderRadius: 2 },
-  dotActive: { width: 18 },
-
-  quickGrid: { flexDirection: 'row', gap: spacing.sm + 2, paddingHorizontal: spacing.md, marginTop: spacing.md + 2 },
-  quickItem: { flex: 1, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md - 2, alignItems: 'center', gap: spacing.sm },
-  quickIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  quickLabel:{ fontSize: 14, fontFamily: fonts.bodyBold, textAlign: 'center' },
-
-  section:       { paddingHorizontal: spacing.md, marginTop: spacing.lg - 2 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md - 4 },
-  sectionTitle:  { fontSize: 21, fontFamily: fonts.heading },
-  sectionAction: { fontSize: 16, fontFamily: fonts.bodySemi },
-
-  networkCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
-  netRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, padding: spacing.md - 2 },
-  netLeft:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, width: 80 },
-  netDot:      { width: 10, height: 10, borderRadius: 5 },
-  netName:     { fontSize: 16, fontFamily: fonts.bodySemi },
-  netBarWrap:  { flex: 1 },
-  netBarBg:    { height: 7, borderRadius: 4, overflow: 'hidden' },
-  netBarFill:  { height: 7, borderRadius: 4 },
-  netAmount:   { fontSize: 16, fontFamily: fonts.bodyBold, width: 68, textAlign: 'right' },
-
-  requestsCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
-  reqRow:       { flexDirection: 'row', alignItems: 'center', gap: spacing.md - 4, padding: spacing.md },
-  reqNetDot:    { width: 10, height: 10, borderRadius: 5, flexShrink: 0, marginTop: 2 },
-  reqInfo:      { flex: 1 },
-  reqRoute:     { fontSize: 18, fontFamily: fonts.bodyBold },
-  reqMeta:      { fontSize: 14, marginTop: 3, fontFamily: 'monospace' },
-  reqRight:     { alignItems: 'flex-end', gap: spacing.xs + 1 },
-  reqAmount:    { fontSize: 17, fontFamily: fonts.bodyXBold },
-  statusPill:   { paddingHorizontal: spacing.sm + 1, paddingVertical: spacing.xs, borderRadius: radius.sm - 2 },
-  statusText:   { fontSize: 13, fontFamily: fonts.bodyBold },
-  divider:      { height: 1, marginHorizontal: spacing.md },
+const styles = StyleSheet.create({
+  content: { paddingTop: 16 },
+  introduction: { gap: 8 },
+  greeting: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24 },
+  title: { fontFamily: fonts.heading, fontSize: 29, lineHeight: 36, letterSpacing: -0.5 },
+  subtitle: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, marginBottom: 10 },
+  latestSection: { marginTop: 26 },
+  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 6 },
+  sectionTitle: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 24 },
+  preview: { borderRadius: 18, padding: 18 },
+  previewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  amount: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 21, lineHeight: 29 },
+  route: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, marginTop: 4 },
+  statusLine: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 7 },
+  status: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 22 },
+  warning: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, marginTop: 10 },
+  stateText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23, paddingVertical: 18 },
 });
