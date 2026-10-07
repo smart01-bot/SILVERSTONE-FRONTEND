@@ -1,3 +1,24 @@
+# Phase 6 continuation API — implemented locally
+
+October 7, 2026. Prefix remains `/api/v1`; `{data}` and scoped `{data,page}` envelopes remain. Migration 005 adds operations_grants, operations_controls, exception_cases, operations_events and reconciliation_observations and immutable document-access events. No public/legacy/live schema is altered. No default capabilities are granted.
+
+| Route | Capability / behavior |
+| --- | --- |
+| GET /operations/scopes | Active approved main-agent; own explicit capability scopes only |
+| GET /operations/scopes/:scopeId/cases | cases.read; paginated unresolved cases, ownership, backup, ownerAvailable/backupAvailable, optional dueAt/escalationDue, supportReference, no settlement authority |
+| GET /operations/scopes/:scopeId/owners | cases.manage; eligible active approved actors with cases.own and cases.read |
+| POST /operations/scopes/:scopeId/cases/:id/assign | cases.manage; expectedVersion, ownerId, distinct backupId, optional future UTC dueAt, reason 3–1000 chars; append immutable assignment audit |
+| GET /operations/scopes/:scopeId/diagnostics | cases.read; scoped counts/oldest timestamp, exact reservedCapacityTzs, expiredPreparationClaims; realAlertsConfigured/financialLedgerAvailable false |
+| GET /operations/scopes/:scopeId/controls | cases.read; pause flags, version and reason |
+| POST /operations/scopes/:scopeId/controls | pause.manage; expectedVersion, requestsPaused, acceptancePaused, preparationPaused booleans and reason; durable/versioned/audited |
+| GET /operations/scopes/:scopeId/cases/:id/evidence | cases.read; original accounts/legs/reservation and unverified observations |
+| POST /operations/scopes/:scopeId/cases/:id/evidence | evidence.record; legId, source synthetic_fixture/submitted_statement, reference 3–128 safe chars, amountTzs, currency TZS, fromAccountId, toAccountId, observedAt, reason; compare only, never settle |
+| GET /operations/scopes/:scopeId/audit | audit.read; paginated scoped operational events; no global audit or KYC access |
+
+Case pagination uses request FIFO sequence cursors; audit uses event sequence cursors, each opaque to clients; limits 1–100. expectedVersion starts 0 before assignment/control changes. Stale updates return 409 OPERATIONS_CHANGED, changed reference terms return 409 EVIDENCE_CONFLICT, denied/missing scopes/resources generally 404, account restriction 403, invalid fields 400. New exchange/acceptance or claimed preparation in a paused scope returns 423 OPERATIONS_PAUSED. Known idempotent replay stays valid; clients never automatically retry operational mutations. Scope uses recorded immutable main-agent ID and explicitly delegated grants, rather than widening ordinary request scope.
+
+No public grants, account suspension, global/network pause, exception financial closure, payment retry, refund, settlement, real alert or backup API exists. Every observation reports actualSettlementVerified false and verification unverified. Existing backend authorization/caching/error and exact money rules remain. See OPERATIONS.md for lock/recovery behavior and release-policy decisions.
+
 ## Phase 6 contract
 
 All /api/v1 responses now carry Cache-Control: no-store, including authentication, exchanges and errors. No routes, DTO fields, financial commands or schema changed. Unresolved filtering derives from already-scoped request status, unknown legs and reconciliationRequired evidence. Existing authorization/idempotency rules remain unchanged. No audit, owner assignment, pause or resolution endpoint added.

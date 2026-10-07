@@ -1,3 +1,57 @@
+# Phase 6 continuation: implemented local controls
+
+October 7, 2026 · Africa/Nairobi. This heading supersedes older implementation-status descriptions below. The user requested finishing Phase 6 under the existing local-only rules. Configurable controls and synthetic fixtures were implemented; the user's “which is best” response did not approve a production roster, SLA, retention period or financial-resolution policy.
+
+## Scope and access
+
+`operations_grants` explicitly binds an active approved main-agent actor to a recorded main-agent scope and one capability: `cases.read`, `cases.manage`, `cases.own`, `evidence.record`, `audit.read` or `pause.manage`. No registration, role claim or public API can grant these capabilities. The new migration grants nobody access. Normal native startup seeds nobody. Only explicit disposable fixtures grant main@example.test its own scope; other-main@example.test receives delegated case visibility/ownership as a synthetic backup, without pause/audit/evidence authority. Grants and account status are checked and locked in transactions; revocation/suspension fail closed.
+
+Operational access intentionally follows the immutable request main-agent scope and explicit grants, so an independently authorized backup can see an obligation even if its original participant is suspended. This does not widen normal /requests reads or KYC access. Grants are not inherited from reviewer_grants. There is no global audit endpoint or self-grant.
+
+## Responsibility, escalation and diagnostics
+
+Cases are derived from needs_attention, unknown legs or reconciliation-required provider evidence. Missing assignment and suspended/revoked owner or backup authority are visible, never hidden. Stored ownership is not treated as usable access. Owner and distinct backup must each hold cases.own and cases.read in the same scope and have active approved main-agent accounts. Assignments use expectedVersion, reason, actor and append-only history; a stale retry conflicts instead of overwriting responsibility. Owner change does not change financial terms, assignment or settlement.
+
+A deadline is explicitly entered per case, in UTC, or remains unconfigured. No default 5/15-minute SLA or recipient is invented. The panel labels overdue cases “Escalation due” and reports scoped unresolved/unassigned/escalation counts, oldest request creation time, held capacity strings and expired preparation claims. These are in-app alerts/read-only diagnostics, not delivered SMS/email, a financial balance or a settlement discrepancy calculation. The full scoped list is paginated; later-page failures never masquerade as a complete empty list.
+
+## Reconciliation boundary
+
+Scoped evidence view includes immutable account/leg terms, actual leg state, held reservation and recorded observations. Authorized operators can append a bounded source/reference, exact whole-TZS amount, leg, both account IDs and observation timestamp. The server compares these with original terms, records discrepancies, deduplicates unchanged references and rejects changed terms under a reused reference. Every observation is unverified; synthetic_fixture and submitted_statement are distinct labels. A matching statement is not proof of authenticity or settlement. No operator can mark paid/complete, consume/release an unknown hold, retry an uncertain payout, issue a refund or alter a financial record through these routes.
+
+`operations_events`, `reconciliation_observations` and now `document_access_events` reject row UPDATE/DELETE using immutable triggers. This is application/database row protection, not tamper-proof storage against database owners, TRUNCATE or disabled triggers. Least-privilege production database roles and external audit custody remain required. Existing cache no-store and safe error/request-ID behavior are retained. No diagnostics log tokens, PINs, document bytes, account identifiers or raw provider payloads.
+
+## Scoped pause behavior
+
+One durable control row per main-agent scope separately pauses new requests, acceptance and preparation claims. Changes require pause.manage, expectedVersion and reason and are audited. New mutations check the shared control gate inside their transaction; a concurrent pause waits for an existing gate and fences later work. Known idempotency replay can return its original result while paused. Reads, evidence recording and safely allowed pre-movement cancellation continue. Unknown holds are never released by pause or resume.
+
+Already claimed preparation may finish recording provider-disabled, retryable preparation or unknown outcome. A paused scope issues no new claims; expired claims can recover only after explicit resume. Unknown reconciliation jobs are never redispatched. There is still no real provider dispatch. Future network-level or emergency global pause and behavior of actual external operations require a separately approved design; no implicit global authority was added.
+
+## Verified backup and restart procedure
+
+`scripts/backup.js` provides test-only AES-256-GCM archive encryption with authenticated manifest and SHA-256 integrity checks. Explicit 32-byte keys stay in process memory. Wrong key, corruption, truncated archive and wrong integrity metadata reject before restore. Snapshot helper requires syntheticOnly and is excluded from the active API/worker graph. It reads no environment database URL and has no default destination or schedule.
+
+`scripts/native-operations-drill.js` creates its own uniquely named disposable Docker PostgreSQL 16 container at a random loopback-only port, using a pinned image digest. It ignores user database URLs, compares count/digest of all 32 ss_v1 tables, writes only an encrypted synthetic pg_dump archive to a private temporary directory, kills/restarts that dedicated container, restores to a newly created separate empty database, rechecks every table/migration, then verifies replay, pauses, holds and fresh/stale claim tokens. It exercises ten actual concurrent same-key HTTP requests and two independent PostgreSQL connections for pause fencing. Private synthetic evidence bytes and access events are included. Key/archive, test container and anonymous volume are removed at exit. No real database or existing container is targeted.
+
+Run from backend: `node scripts/native-operations-drill.js` after locked dependencies and the managed Docker daemon are available. It is an isolated drill, not a production backup utility. The embedded encrypted-restore test additionally rejects wrong keys/corruption and preserves grants, private bytes, document-access events and uncertainty.
+
+Observed successful native drill: 32 tables identical; restart 1182 ms and restore 632 ms. No external effects occur after the snapshot in this scenario. These measurements establish neither production RPO/RTO nor offsite durability, disaster recovery, key-custodian recovery, ransomware resistance, load behavior or provider reconciliation. Production destination/region, custodians, protected keys, schedule, retention and recovery targets remain D20 owner decisions.
+
+## Operational runbooks
+
+1. Unknown or partial exchange: inspect recorded support reference, immutable terms, both actual legs and reservation; assign eligible owner/backup and an explicit deadline where agreed. Preserve all evidence and holds. Request independent authorized provider/statement evidence through the future approved process. Append an unverified observation if authorized. Never infer settlement, cancel an unknown, retry a payout or compensate from a synthetic/matching observation. Escalate to the named owner via an explicitly authorized channel; this build sends no messages.
+2. Duplicate/reference conflict: retain the original immutable observation. A repeated identical reference has one record; changed terms return EVIDENCE_CONFLICT. Do not edit or delete the original to make a later statement fit. Record distinct evidence/reason and keep the case unresolved until approved independent reconciliation.
+3. Pause: inspect current scope/version, choose the specific request/acceptance/preparation flags and record reason. Re-read controls after a conflict. Continue read/evidence work; confirm holds and unknowns remain. Before resume inspect in-flight claims and unresolved obligations, then explicitly save a current-version resume; no automatic expiry/resume exists.
+4. Restart: normal runtime does not seed or erase native data. Recheck DB/migration readiness and controls before allowing claims. Expired preparation may receive a fresh fenced token; old tokens fail. Reconciliation jobs stay unretryable. Never run the legacy Redis consumer.
+5. Restore rehearsal: use only the named disposable drill. For a future real recovery, obtain separate authorization for environment, backup and keys; preserve an isolated destination, prohibit dispatch, authenticate archive and migration state, compare records/private evidence, invalidate or deliberately handle restored sessions and reconcile every external effect after snapshot before any resume. No live restore or payment is authorized by this document.
+6. Suspension/access: revoke the scoped grant or suspend the actor using the separately approved provisioning process. Existing sessions then fail protected operations. Ensure a separately granted eligible backup remains; assignment alone grants no access. Document access still requires the existing owner/reviewer policy. This build adds no public suspension, provisioning or secret-recovery endpoint.
+
+## Remaining decisions and gates
+
+D16–D20 remain production-policy OPEN: named owner/backup roster and off-hours coverage, deadlines/delivery destination; evidence authenticity/sufficiency and independent financial reviewers; approved pause scope and real in-flight behavior; evidence/privacy/retention/audit/device rules; backup destination/key custody/schedule/retention/targets. No automatic data deletion, alerts, compensation, ledger posting or settlement authority adopted. The new interface uses existing tokens/branding; native screenshot/keyboard/TalkBack/large-text and reviewed Swahili copy are still unverified. Provider, genuine phone verification, existing-user migration and live /api versus development /api/v1 compatibility remain earlier independent blockers.
+
+
+## Historical Phase 6 assessment
+
 # Phase 6 operations — partial, local only
 
 28 September 2026, Africa/Dar_es_Salaam. No operational/payment readiness claimed. D16–D20 below are proposals, not approvals. Existing D09/D10 remain authoritative. Phase 7 has not started.

@@ -1,3 +1,7 @@
+# Current continuation pointer — October 7, 2026
+
+Read [PHASE-06-CONTINUATION.md](PHASE-06-CONTINUATION.md) for the latest implementation, verification and open gates. The historical handoff below remains evidence of the earlier partial delivery; current baseline publication is independently verified in the continuation. Phase 7 is not started.
+
 # Silverstone Phase 6 — Operations
 
 28 September 2026 · Africa/Dar_es_Salaam. **Independent local work complete; full Operations acceptance PARTIAL. Provider gate BLOCKED; Phase 5 native/visual acceptance PARTIAL. Nothing pushed. Phase 7 not started.**

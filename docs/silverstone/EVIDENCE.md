@@ -1,3 +1,9 @@
+# Phase 6 continuation evidence — October 7, 2026
+
+54 backend/26 frontend tests pass; backend build checks 35 syntax files/11-file active import graph without startup; five actual frontend-client local HTTP scripts pass. Android JS/Hermes export passes. `native-operations-drill.js` returns PASS comparing 32 PostgreSQL tables, ten concurrent same-key requests, independent-connection pause fence, AES-GCM encrypted disk round trip, wrong-key/corruption rejection, native DB process kill/restart, retained unknown holds and rejected stale claims. One observed successful sample: restart 1182 ms, restore 632 ms, zero provider calls. Native readiness was corrected to check TCP and rediscover the Docker-assigned port after restart.
+
+No inherited live DATABASE_URL/Redis/JWT configuration used in tests. No dependency upgrade, real provider, live health/account request, production mutation, push or deployment. Docker image pinned to postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4. Archives/keys/containers removed after the synthetic drill. Native Android screenshots/device behavior, external monitoring/alerts, authentic settlement and offsite/key-custodian disaster recovery remain untested.
+
 ## Phase 6 evidence
 
 Baseline independently passed 50 backend/19 frontend tests, backend build, four actual-client HTTP scripts and Android JS/Hermes export. New operations tests exercise embedded snapshot restore/fencing/replay/privacy and frontend uncertainty/precision/time handling. The exact final results and limitations are in PHASE-06-HANDOFF.md. No native screenshot, PostgreSQL process recovery, real provider or durable backup evidence exists.

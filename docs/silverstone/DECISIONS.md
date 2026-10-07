@@ -1,3 +1,11 @@
+# Phase 6 continuation decision record — October 7, 2026
+
+Confirmed current instruction: finish Phase 6 under the same rules; local implementation/verification on development in both repositories. No push, main mutation, deployment, live data, real message/payment or Phase 7 execution authority.
+
+Local implementation choices: explicit scoped capability rows with no default/native grants; immutable request-scope operations visibility; distinct eligible owner/backup; optional operator-entered UTC deadline; per-main-agent request/acceptance/preparation pauses; current-version audit; append-only unverified observations with strict terms comparison; authenticated encrypted synthetic backup and native disposable drill. These make the controls reviewable without selecting a production roster, SLA, recipient, evidence sufficiency, financial authority, retention period, destination or recovery target. No policy approval inferred from the user's “which is best” question.
+
+D16–D20 remain OPEN for production use. Prior D09/D10 and service-fee-zero requirements are preserved. No new identity, provider, financial ledger, settlement or live API architecture chosen. Canonical docs remain here, with a backend pointer. Historical “nothing pushed” baseline statements are superseded by current verified remote SHAs, not by any publication in this continuation.
+
 ## Phase 6 decisions remain OPEN
 
 D16 exception ownership/escalation; D17 reconciliation evidence/compensation; D18 scoped pause; D19 privacy/retention/audit scope; D20 backup destination/custody/RPO/RTO. These are concrete proposals in OPERATIONS.md, not approvals. Existing participants are not incident owners. No policy-dependent mutation implemented. D09/D10 preserved. Independent read-only presentation and no-store header require no new operating-policy adoption.

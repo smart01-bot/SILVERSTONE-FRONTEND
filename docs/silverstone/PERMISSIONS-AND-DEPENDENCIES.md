@@ -1,3 +1,7 @@
+# Phase 6 continuation authority
+
+October 7, 2026. Local work on both development branches only. Synthetic scoped grants and fixture deadlines are isolated test configuration, not a production access roster or SLA. Operational read/assignment/evidence/audit/pause capabilities are separate and do not grant KYC, global admin or payment authority. No public grants/provisioning/suspension endpoint. Native drill owns a uniquely named disposable container and removes it and its synthetic volume/archive; existing services/live data are untouched. Publishing must separately name development destinations. Phase 7 planning/operation is not started.
+
 ## Phase 6 authority and dependencies
 
 Local development implementation/tests/commits only in both repositories. D16–D20 in OPERATIONS.md require explicit approval before policy-dependent controls; none adopted. No push, main change, deployment, live DB/Firebase action, real notifications, provider/sandbox calls or payment. No extra audit/KYC/operations access granted. Both Phase 5 and Phase 6 remain unpublished; separate named authorization required to push both development branches. Phase 7 not authorized.

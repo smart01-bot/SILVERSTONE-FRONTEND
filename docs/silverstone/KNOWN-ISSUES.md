@@ -1,3 +1,11 @@
+# Phase 6 continuation — verified disposition
+
+October 7, 2026. Local exception owner/backup assignment, optional deadlines/in-app escalation, scoped audit/diagnostics, unverified evidence comparison and durable pause/resume are now implemented and tested. document_access_events is now immutable against row UPDATE/DELETE. Native PostgreSQL independent-connection pause fencing, ten concurrent same-key HTTP requests, database kill/restart and encrypted full-table restore passed; earlier blanket “native PostgreSQL not executed” wording below is historical.
+
+Remaining release blockers: production D16–D20 policy/roster/custody/schedules, independent statement authenticity and financial ledger/reconciliation authority, actual external notifications, real provider and OTP access, production storage/database role hardening, user migration and native Android/privacy/accessibility/localization acceptance. Backup tests are synthetic and temporary, not offsite production backup or key-custodian recovery. Observation term matching never establishes settlement. Per-main-agent pause has no network/global policy or real-dispatch proof. No public provisioning/suspension endpoint exists.
+
+Development remains incompatible with the restored live /api phone/PIN contract. This Phase 6 implementation intentionally targets the verified development /api/v1 contract and does not authorize live cutover, migration or deployment. Existing EAS build shell portability and historical modules/dependency audit remain separate issues.
+
 ## Phase 6 current boundaries
 
 Read-only unresolved filters, exact held amounts/history timestamps and API cache protection implemented. D16–D20 remain open; cases are not assigned to an approved incident owner. No escalation/SLA, scoped pause, financial reconciliation, alert delivery or durable backup acceptance. Embedded close/load is not native crash recovery. Document-access audit has no immutable trigger; privileged DB role hardening remains open. Suspension restricts outstanding-obligation reads until a scoped operations role is approved. Native visual/localization gates and all earlier external gates remain unresolved. See OPERATIONS.md.

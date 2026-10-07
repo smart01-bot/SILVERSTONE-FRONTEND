@@ -1,3 +1,4 @@
+import OperationsPanel from '../../components/OperationsPanel';
 import { needsReconciliation, requestAge, reservationLabel } from '../../api/operations';
 import { loadRequests, workflowError } from '../../api/workflowState';
 import RequestDetailModal from '../../components/RequestDetailModal';
@@ -74,6 +75,7 @@ export default function QueueScreen() {
   const { theme, isDark, tr } = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
+  const [operationsVisible,setOperationsVisible]=useState(false);
   const [loadError, setLoadError] = useState('');
   const [requests,   setRequests]   = useState([]);
   const [selectedRequest,setSelectedRequest]=useState(null);
@@ -170,12 +172,13 @@ export default function QueueScreen() {
               {pendingCount} pending · {urgentCount} urgent · {approvedCount} reserved
             </Text>
           </View>
-          <View style={s.iconBtn}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Open operational controls" hitSlop={8} onPress={()=>setOperationsVisible(true)} style={s.iconBtn}>
             <Ionicons name="options-outline" size={22} color="#fff" />
-          </View>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
+      <OperationsPanel visible={operationsVisible} onClose={()=>setOperationsVisible(false)} />
       {/* ── Filter pills ── */}
       <View style={[s.filters, { backgroundColor: theme.bg }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>

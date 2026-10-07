@@ -1,0 +1,11 @@
+# Future initiating message — Phase 7 controlled pilot preparation
+
+Do not execute this message as part of Phase 6.
+
+Read all applicable AGENTS.md and complete canonical docs/silverstone context/state/decisions/API/issues/design/operations, Phase 6 handoff and PHASE-06-CONTINUATION.md. Use development in both repositories. Expected starting local SHAs are the exact final frontend/backend commits in the Phase 6 continuation delivery manifest; do not substitute the historical remote baselines (frontend eeca65bde0b6604da30e30ef03e17eeb5522d7f2, backend 37699dc6c0214835ebfc10b71ad886856ef2a0f2). Fetch remote refs, verify SHAs and worktree status, and inspect unexpected differences without overwriting work.
+
+First review prior gates. Phase 6 local controls/recovery tests passed, but release acceptance is PARTIAL: production owners/backups/escalation, independent evidence/financial resolution/ledger, pause policy, privacy/retention, backup custody/schedule/targets remain OPEN; genuine provider/OTP/account entitlements and native Android acceptance remain unresolved. Develop a concrete closure checklist before any pilot. Do not bypass these gates or reinterpret synthetic statements as payment proof.
+
+Authority for a separately invoked Phase 7 request: readiness review, local fixes and non-live rehearsals only unless the user explicitly expands it. No push without named development authorization; no main changes, deployment, live migration, external messages, enrollment or real transactions. Preserve branding/wizard and zero Silverstone service fee.
+
+Prepare the bounded proposal: one named main-agent and small approved group; exact commits/build/environment; verified networks/accounts/provider entitlements; owner-approved per-transaction/total limits; duration/hours; initiation/approval/reconciliation/stop authority; daily independent reconciliation; incident owner/backup and escalation; support/runbooks; measurable success/stop criteria. Do not invent limits, participants, operating hours or authority. Request the concrete missing live-pilot authorization only after the proposal and prior gate evidence are reviewable. Until then report “pilot prepared, not executed,” or report readiness blockers. No pilot or Phase 8 starts automatically.
