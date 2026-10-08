@@ -21,7 +21,7 @@ const NETWORK_COLORS = {
 };
 
 export default function ProfileScreen({ navigation }) {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, lockSession } = useAuth();
   const { theme, isDark, setTheme, lang, setLang, tr } = useTheme();
 
   const [editing,   setEditing]   = useState(null);
@@ -52,9 +52,9 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+    Alert.alert('Sign Out', 'Return to your PIN screen?', [
       { text: tr('cancel'), style: 'cancel' },
-      { text: tr('signOut'), style: 'destructive', onPress: logout },
+      { text: tr('signOut'), style: 'destructive', onPress: lockSession },
     ]);
   };
 
