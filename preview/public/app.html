@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="color-scheme" content="light dark">
+    <title>Silverstone agent preview</title>
+    <style>
+      html, body, #root {
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      #root { display: flex; flex-direction: column; opacity: 0; }
+      body.ready #root { opacity: 1; transition: opacity 140ms ease; }
+      * { box-sizing: border-box; }
+      @media (prefers-reduced-motion: reduce) { body.ready #root { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.__DEV__ = true;
+      window.process = { env: { NODE_ENV: 'development' }, browser: true };
+      if (!window.localStorage.getItem('silverstone_lang')) {
+        window.localStorage.setItem('silverstone_lang', 'en');
+      }
+    </script>
+    <script src="app.js"></script>
+    <script>
+      // React Native Web's fallback pager can expose its off-screen scenes as a
+      // horizontally scrollable container. Native uses PagerView instead. Keep
+      // that implementation detail clipped in this browser-only presentation.
+      const clipFallbackPager = () => {
+        for (const element of document.querySelectorAll('div')) {
+          const style = window.getComputedStyle(element);
+          if (style.overflowX === 'hidden' && element.clientWidth > 0 && element.scrollWidth >= element.clientWidth * 3) {
+            element.style.overflow = 'clip';
+            element.scrollLeft = 0;
+          }
+        }
+      };
+      const pagerCheck = window.setInterval(clipFallbackPager, 250);
+      window.setTimeout(() => window.clearInterval(pagerCheck), 4000);
+      window.setTimeout(() => document.body.classList.add('ready'), 420);
+    </script>
+  </body>
+</html>

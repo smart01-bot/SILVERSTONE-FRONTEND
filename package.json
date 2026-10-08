@@ -7,6 +7,7 @@
     "start:clear": "expo start --clear --lan",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "preview:ui": "node preview/server.mjs",
     "build:android": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile preview --platform android",
     "build:dev": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile development --platform android",
     "test": "node --test tests/*.test.mjs",
