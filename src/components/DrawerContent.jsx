@@ -37,7 +37,7 @@ function SpringItem({ onPress, style, children }) {
 
 export default function DrawerContent({ navigation, items }) {
   const { theme, isDark, setTheme, lang, setLang, tr } = useTheme();
-  const { profile, logout } = useAuth();
+  const { profile, lockSession } = useAuth();
 
   const name     = profile?.name  || 'Agent';
   const email    = profile?.email || '';
@@ -145,7 +145,7 @@ export default function DrawerContent({ navigation, items }) {
         </View>
 
         <View style={s.divider} />
-        <SpringItem style={s.item} onPress={logout}>
+        <SpringItem style={s.item} onPress={lockSession}>
           <View style={[s.itemIcon, { backgroundColor: theme.dangerSoft }]}>
             <Ionicons name="log-out-outline" size={22} color={theme.primary} />
           </View>
