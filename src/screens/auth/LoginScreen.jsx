@@ -47,6 +47,27 @@ export default function LoginScreen({ navigation, route }) {
     }
   };
 
+  const handleRecovery = async () => {
+    const address = email.trim();
+    if (!address) {
+      setError('Enter your email address first.');
+      return;
+    }
+    setError('');
+    showLoader();
+    try {
+      await resetPassword(address);
+      Alert.alert(
+        'Password recovery',
+        'If an account exists for that email, password recovery instructions have been sent.'
+      );
+    } catch (e) {
+      Alert.alert('Password recovery', e.message || 'Unable to start password recovery.');
+    } finally {
+      hideLoader();
+    }
+  };
+
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
@@ -115,7 +136,7 @@ export default function LoginScreen({ navigation, route }) {
               <Text style={s.btnText}>Sign In</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => resetPassword(email.trim()).catch(e => Alert.alert('Password recovery', e.message))} style={s.forgotWrap}>
+            <TouchableOpacity onPress={handleRecovery} style={s.forgotWrap}>
               <Text style={[s.forgot, { color: theme.primary }]}>Forgot password?</Text>
             </TouchableOpacity>
 
