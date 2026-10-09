@@ -112,6 +112,9 @@ export function AuthProvider({ children }) {
       Alert.alert("Sign out failed", error.message);
     }
   }
+  function lockSession() {
+    if (user && profile?.pinSet) setSessionLocked(true);
+  }
   async function savePin(pin) {
     if (
       !user ||
@@ -148,6 +151,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        lockSession,
         savePin,
         verifyPin,
         checkPinExists,

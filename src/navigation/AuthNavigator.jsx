@@ -31,7 +31,9 @@ export default function AuthNavigator({ initialRoute } = {}) {
       ? 'Rejected'
       : initialRoute === 'RoleSelect'
         ? 'RoleSelect'
-        : 'Splash';
+        : initialRoute === 'Login'
+          ? 'Login'
+          : 'Splash';
 
   return (
     <Stack.Navigator

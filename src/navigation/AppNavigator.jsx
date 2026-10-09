@@ -85,11 +85,11 @@ export default function AppNavigator() {
     </View>;
   }
 
-  // No user — go straight to RoleSelect (Splash already showed at top)
+  // No retained account — show email/password. Registration stays available from Login.
   if (!user) {
     return (
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <AuthNavigator initialRoute="RoleSelect" />
+        <AuthNavigator initialRoute="Login" />
       </NavigationContainer>
     );
   }
