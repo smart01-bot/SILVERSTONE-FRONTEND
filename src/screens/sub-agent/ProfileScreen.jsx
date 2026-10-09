@@ -13,7 +13,7 @@ import {
 const providedText = value => typeof value === 'string' && value.trim() ? value.trim() : null;
 
 export default function ProfileScreen({ navigation }) {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, lockSession } = useAuth();
   const { userPreference, setTheme, setLang } = useTheme();
   const { colors, lang, copy } = useAgentUI();
   const [sheet, setSheet] = useState(null);
@@ -54,9 +54,9 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert(copy('Sign out', 'Ondoka'), copy('Are you sure you want to sign out?', 'Una uhakika unataka kuondoka?'), [
+    Alert.alert(copy('Sign out', 'Ondoka'), copy('Return to your PIN screen?', 'Rudi kwenye skrini ya PIN?'), [
       { text: copy('Cancel', 'Ghairi'), style: 'cancel' },
-      { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: logout },
+      { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: lockSession },
     ]);
   };
 
