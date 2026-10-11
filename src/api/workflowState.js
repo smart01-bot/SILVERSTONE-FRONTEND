@@ -6,6 +6,7 @@ export function workflowError(error) {
     return error.message;
   if (error?.code === 'APPLICATION_CHANGED')
     return 'This application changed. Your input is still here. Reopen the saved application to compare before trying again.';
+  if (['FUNDING_UNAVAILABLE','PAYMENT_IN_PROGRESS','ACCOUNT_UNAVAILABLE','AMOUNT_LIMIT','RESERVATION_MISSING'].includes(error?.code)) return error.message;
   if (error?.status === 409)
     return 'This record changed. Refresh and review its current state before trying again. Your input has been retained.';
   return error?.message || 'Unable to load. Check your connection and retry.';
@@ -16,6 +17,7 @@ export function legLabel(leg) {
   return `${name}: ${state}`;
 }
 export function nextActionLabel(request) {
+  if (request.payment?.mode === 'real' && request.nextAction) return request.nextAction;
   if (request.status === 'needs_attention' || request.legs?.some(l => l.status === 'unknown'))
     return 'Outcome unresolved. Reservation retained pending reconciliation. Do not send funds or start another payment.';
   if (request.status === 'awaiting_review') return 'Awaiting main-agent review. Acceptance reserves capacity; it does not make a payment.';

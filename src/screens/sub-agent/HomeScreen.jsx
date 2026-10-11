@@ -88,7 +88,8 @@ export default function HomeScreen({ navigation }) {
   const reading = loading || (Boolean(user?.id) && ownerChanged);
   const statuses = {
     awaiting_review: copy('Awaiting main-agent review', 'Inasubiri ukaguzi wa wakala mkuu'),
-    awaiting_source: copy('Reserved · provider disabled', 'Imehifadhiwa · mtoa huduma hajawashwa'),
+    awaiting_source: copy('Awaiting collection', 'Inasubiri malipo'),
+    payout_pending: copy('Payout processing', 'Fedha zinatumwa'),
     needs_attention: copy('Reconciliation needed', 'Uhakiki wa muamala unahitajika'),
     completed: copy('Completed', 'Imekamilika'),
     rejected: copy('Rejected', 'Imekataliwa'),

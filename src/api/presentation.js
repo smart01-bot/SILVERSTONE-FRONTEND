@@ -33,4 +33,4 @@ export const canOperate = (agent) =>
   agent?.applicationStatus === "approved" &&
   ["sub-agent", "main-agent"].includes(agent?.role);
 
-export const requestStatusLabel = status => ({awaiting_review:'Awaiting review',awaiting_source:'Reserved · provider disabled',needs_attention:'Reconciliation needed',completed:'Completed',rejected:'Rejected',cancelled:'Cancelled',expired:'Expired'}[status] || 'Action unavailable');
+export const requestStatusLabel = status => ({awaiting_review:'Awaiting review',awaiting_source:'Awaiting collection',source_confirmed:'Collection confirmed',payout_pending:'Payout processing',needs_attention:'Reconciliation needed',completed:'Completed',rejected:'Rejected',cancelled:'Cancelled',expired:'Expired'}[status] || 'Action unavailable');

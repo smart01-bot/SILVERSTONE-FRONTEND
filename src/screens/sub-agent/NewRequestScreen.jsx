@@ -6,10 +6,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { validateAmount } from '../../api/workflowState';
-import { api } from '../../config/api';
-import { getNetworkAccounts } from '../../api/exchanges';
+import { normalizePaymentEndpoint } from '../../api/paymentEndpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader } from '../../context/LoaderContext';
@@ -19,7 +17,7 @@ import {
   AgentScroll, AgentButton, AgentSheet, AgentNotice, useAgentUI,
 } from '../../components/agent/AgentUI';
 
-// Display names only; existing network values and account resolution are unchanged.
+// A network and an explicitly typed identifier form each immutable payment endpoint.
 const NETWORKS = ['Voda', 'Yas', 'Airtel', 'Halotel'];
 const NETWORK_NAMES = {
   Voda: 'M-Pesa', Yas: 'Mixx by Yas', Airtel: 'Airtel Money', Halotel: 'HaloPesa',
@@ -33,18 +31,10 @@ export default function NewRequestScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { isOnline, syncing, syncedCount, enqueue, syncQueue, pendingCount, queueError } = useOfflineQueue(user?.id, profile?.name);
 
-  const [accounts,setAccounts] = useState([]);
   const [loading,setLoading] = useState(false);
   const [submitted,setSubmitted] = useState(false);
   const busy = useRef(false);
   const codes={Voda:'vodacom',Airtel:'airtel',Yas:'yas',Halotel:'halotel'};
-  const selectedAccount=label=>{const matches=accounts.filter(a=>a.networkCode===codes[label]&&a.verificationStatus==='synthetic_fixture');return matches.length===1?matches[0]:null;};
-  useEffect(()=>{let cancelled=false;setAccounts([]);const owner=user?.id;if(!owner)return;
-    (async()=>{const key='silverstone_accounts_v1_'+owner;
-      try {const cached=await AsyncStorage.getItem(key);if(cached&&!cancelled)setAccounts(JSON.parse(cached));
-       if(isOnline){const rows=await getNetworkAccounts();if(api.currentOwner()===owner){await AsyncStorage.setItem(key,JSON.stringify(rows));if(!cancelled)setAccounts(rows);}}
-      }catch(e){if(!cancelled)setError(e.message);}
-    })();return()=>{cancelled=true;};},[user?.id,isOnline]);
   const prefill = route?.params?.prefill;
 
   const [sourceNetwork, setSourceNetwork] = useState(prefill?.sourceNetwork ?? '');
@@ -55,9 +45,11 @@ export default function NewRequestScreen({ navigation, route }) {
   const [urgent,        setUrgent]        = useState(false);
   const [error,         setError]         = useState('');
   const [notice, setNotice] = useState('');
+  const [sourceType, setSourceType] = useState('phone');
+  const [destType, setDestType] = useState('phone');
+  const [review, setReview] = useState(null);
 
-  useEffect(()=>{setSourcePhone(selectedAccount(sourceNetwork)?.identifier||'');setDestPhone(selectedAccount(destNetwork)?.identifier||'');setSubmitted(false);},[sourceNetwork,destNetwork,accounts]);
-  useEffect(()=>setSubmitted(false),[amount,urgent]);
+  useEffect(()=>setSubmitted(false),[sourceNetwork,destNetwork,sourcePhone,destPhone,sourceType,destType,amount,urgent]);
 
   const formatAmount = (val) => {
     const digits = val.replace(/\D/g, '');
@@ -80,15 +72,23 @@ export default function NewRequestScreen({ navigation, route }) {
     return validateAmount(amount.replace(/,/g, ''));
   };
 
+  const reviewRequest = () => {
+    if (busy.current || submitted) return;
+    const problem = validate(); if (problem) { setError(problem); return; }
+    try {
+      const source = normalizePaymentEndpoint({ networkCode: codes[sourceNetwork], identifierType: sourceType, identifier: sourcePhone });
+      const destination = normalizePaymentEndpoint({ networkCode: codes[destNetwork], identifierType: destType, identifier: destPhone });
+      if (source.networkCode === destination.networkCode) throw new Error('Choose two different networks.');
+      setError('');
+      setReview({ source, destination, amountTzs: String(BigInt(amount.replace(/,/g,''))), currency:'TZS', urgent });
+    } catch (e) { setError(e.message); }
+  };
   const handleSubmit = async () => {
-    if(busy.current||submitted)return;
-    const problem=validate();if(problem){setError(problem);return;}
-    const source=selectedAccount(sourceNetwork),destination=selectedAccount(destNetwork);
-    if(!source||!destination){setError('Verified test accounts are required. Connect to load your accounts.');return;}
-    if(source.networkCode===destination.networkCode){setError('Choose two different networks.');return;}
+    if(busy.current||submitted||!review)return;
     busy.current=true;setLoading(true);setError('');setNotice('');showLoader();
     try {
-      await enqueue({sourceAccountId:source.id,destinationAccountId:destination.id,amountTzs:amount.replace(/,/g,''),currency:'TZS',urgent});
+      await enqueue(review);
+      setReview(null);
       setSubmitted(true);
       setNotice('Request saved on this device. No funds moved.');
       if(isOnline){const result=await syncQueue();setNotice(result?.remaining===0?'Request submitted for review. No funds moved.':'Saved request retained. Retry below with the same key.');}
@@ -102,6 +102,11 @@ export default function NewRequestScreen({ navigation, route }) {
     if (!prefill || loading || busy.current) return;
     setSourceNetwork(prefill.sourceNetwork ?? '');
     setDestNetwork(prefill.destNetwork ?? '');
+    setSourcePhone(prefill.sourcePhone ?? '');
+    setDestPhone(prefill.destPhone ?? '');
+    setSourceType(prefill.sourceType ?? 'phone');
+    setDestType(prefill.destType ?? 'phone');
+    setReview(null);
     setAmount(prefill.amount ? formatAmount(String(prefill.amount)) : '');
     setUrgent(false);
     setError('');
@@ -114,29 +119,39 @@ export default function NewRequestScreen({ navigation, route }) {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const pickerSelection = picker === 'source' ? sourceNetwork : destNetwork;
 
-  const accountField = (kind, label, network, identifier) => (
-    <TouchableOpacity
-      onPress={() => setPicker(kind)}
-      style={[s.accountField, { borderBottomColor: colors.border }]}
-      activeOpacity={0.65}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${NETWORK_NAMES[network] || copy('Choose network', 'Chagua mtandao')}${identifier ? `, ${identifier}` : ''}`}
-      accessibilityHint={copy('Opens your network choices', 'Hufungua chaguo za mitandao yako')}
-    >
-      <View style={s.fieldContent}>
-        <Text style={[s.label, { color: colors.secondary }]}>{label}</Text>
-        <Text style={[s.accountName, { color: network ? colors.text : colors.secondary }]}>
-          {NETWORK_NAMES[network] || copy('Choose network', 'Chagua mtandao')}
-        </Text>
-        <Text style={[s.identifier, { color: colors.secondary }]}>
-          {identifier || (network
-            ? copy('No unique test account loaded', 'Hakuna akaunti moja ya majaribio iliyopakiwa')
-            : copy('Select your test account', 'Chagua akaunti yako ya majaribio'))}
-        </Text>
+  const accountField = (kind, label, network, identifier) => {
+    const type = kind === 'source' ? sourceType : destType;
+    const setType = kind === 'source' ? setSourceType : setDestType;
+    const setNumber = kind === 'source' ? setSourcePhone : setDestPhone;
+    return (
+      <View style={[s.endpoint, { borderBottomColor: colors.secondary }]}>
+        <TouchableOpacity onPress={() => setPicker(kind)} style={s.accountField} accessibilityRole="button"
+          accessibilityLabel={`${label}: ${NETWORK_NAMES[network] || copy('Choose network','Chagua mtandao')}`}>
+          <View style={s.fieldContent}>
+            <Text style={[s.label, { color: colors.secondary }]}>{label}</Text>
+            <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network] || copy('Choose network','Chagua mtandao')}</Text>
+          </View>
+          <Ionicons name="chevron-down" size={19} color={colors.text} />
+        </TouchableOpacity>
+        <View style={s.typeRow}>
+          {[['phone',copy('Wallet','Wallet')],['agent',copy('Agent','Wakala')],['till',copy('Till','Lipa namba')]].map(([value,title]) => (
+            <TouchableOpacity key={value} onPress={() => setType(value)} style={s.typeChoice} accessibilityRole="radio"
+              accessibilityState={{selected:type===value}} accessibilityLabel={`${label}: ${title}`}>
+              <Text style={[s.typeText,{color:type===value?colors.text:colors.secondary,textDecorationLine:type===value?'underline':'none'}]}>{title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TextInput value={identifier} onChangeText={setNumber} maxLength={type==='phone'?24:32}
+          keyboardType={type==='phone'?'phone-pad':'default'} autoCapitalize="none" autoCorrect={false}
+          placeholder={type==='phone'?'07XX XXX XXX':copy('Enter agent / till number','Weka namba ya wakala / lipa')}
+          placeholderTextColor={colors.secondary} selectionColor={colors.text}
+          style={[s.numberInput,{color:colors.text}]} accessibilityLabel={`${label}: ${type} number`} />
+        <Text style={[s.endpointHint,{color:colors.secondary}]}>{kind==='source'
+          ? copy('Approves the payment to Silverstone','Itaidhinisha malipo kwenda Silverstone')
+          : copy('Receives the payout from your agency','Itapokea fedha kutoka kwa wakala wako')}</Text>
       </View>
-      <Ionicons name="chevron-down" size={19} color={colors.text} />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -235,7 +250,7 @@ export default function NewRequestScreen({ navigation, route }) {
           {copy('Silverstone fee: TZS 0', 'Ada ya Silverstone: TZS 0')}
         </Text>
         <Text style={[s.executionNotice, { color: colors.secondary }]}>
-          {copy('Provider execution disabled; do not send funds.', 'Utekelezaji wa mtoa huduma umezimwa; usitume fedha.')}
+          {copy('Payment connection pending. Requests can be saved for review.', 'Muunganisho wa malipo unasubiriwa. Maombi yanaweza kuhifadhiwa kwa ukaguzi.')}
         </Text>
 
         {pendingCount > 0 && (
@@ -256,21 +271,15 @@ export default function NewRequestScreen({ navigation, route }) {
         {error ? <AgentNotice error>{error}</AgentNotice> : null}
 
         <AgentButton
-          onPress={handleSubmit}
+          onPress={reviewRequest}
           disabled={loading || submitted}
           busy={loading}
           label={loading
             ? copy('Saving…', 'Inahifadhi…')
             : submitted
               ? copy('Request saved', 'Ombi limehifadhiwa')
-              : isOnline ? tr('submitRequest') : copy('Save on this device', 'Hifadhi kwenye kifaa hiki')}
+              : copy('Review request', 'Kagua ombi')}
         />
-        <Text style={[s.testNotice, { color: colors.secondary }]}>
-          {copy(
-            'Provider charges unknown. Accounts shown are synthetic test fixtures, not real verification.',
-            'Ada za mtoa huduma hazijulikani. Akaunti zinazoonyeshwa ni za majaribio, si uthibitisho halisi.',
-          )}
-        </Text>
       </AgentScroll>
 
       <AgentSheet
@@ -279,7 +288,6 @@ export default function NewRequestScreen({ navigation, route }) {
         title={picker === 'source' ? tr('sourceNetwork') : tr('destNetwork')}
       >
         {NETWORKS.map(network => {
-          const account = selectedAccount(network);
           const selected = pickerSelection === network;
           return (
             <TouchableOpacity
@@ -292,19 +300,33 @@ export default function NewRequestScreen({ navigation, route }) {
               style={[s.networkChoice, { borderBottomColor: colors.border }]}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${NETWORK_NAMES[network]}${account?.identifier ? `, ${account.identifier}` : ''}`}
+              accessibilityLabel={NETWORK_NAMES[network]}
               activeOpacity={0.65}
             >
               <View style={s.fieldContent}>
                 <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network]}</Text>
-                <Text style={[s.identifier, { color: colors.secondary }]}>
-                  {account?.identifier || copy('No unique test account loaded', 'Hakuna akaunti moja ya majaribio iliyopakiwa')}
-                </Text>
               </View>
               {selected && <Ionicons name="checkmark" size={22} color={colors.text} />}
             </TouchableOpacity>
           );
         })}
+      </AgentSheet>
+      <AgentSheet visible={!!review} onClose={() => { if (!loading) setReview(null); }} title={copy('Review request','Kagua ombi')}>
+        {review && <View style={s.reviewContent}>
+          <Text style={[s.reviewAmount,{color:colors.text}]}>TZS {formatAmount(review.amountTzs)}</Text>
+          {[[copy('From · approves collection','Kutoka · itaidhinisha malipo'),review.source],
+            [copy('To · receives payout','Kwenda · itapokea fedha'),review.destination]].map(([label,endpoint]) => (
+            <View key={label} style={s.reviewEndpoint}>
+              <Text style={[s.label,{color:colors.secondary}]}>{label}</Text>
+              <Text style={[s.accountName,{color:colors.text}]}>{NETWORK_NAMES[Object.keys(codes).find(key=>codes[key]===endpoint.networkCode)]}</Text>
+              <Text selectable style={[s.reviewNumber,{color:colors.text}]}>{endpoint.identifier}</Text>
+              <Text style={[s.label,{color:colors.secondary}]}>{endpoint.identifierType==='phone'?copy('Mobile wallet','Wallet ya simu'):endpoint.identifierType==='agent'?copy('Agent number','Namba ya wakala'):copy('Till number','Lipa namba')}</Text>
+            </View>
+          ))}
+          <Text style={[s.executionNotice,{color:colors.secondary}]}>{copy('Submit for main-agent approval. No funds move at this step.','Tuma kwa idhini ya wakala mkuu. Hakuna fedha zitakazohamishwa katika hatua hii.')}</Text>
+          <AgentButton onPress={handleSubmit} disabled={loading || submitted} busy={loading}
+            label={isOnline?copy('Confirm request','Thibitisha ombi'):copy('Save on this device','Hifadhi kwenye kifaa hiki')} />
+        </View>}
       </AgentSheet>
     </KeyboardAvoidingView>
   );
@@ -314,17 +336,24 @@ const s = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingTop: 0 },
   fieldContent: { flex: 1, paddingRight: 16 },
-  accountField: {
-    minHeight: 99, paddingTop: 15, paddingBottom: 16,
-    flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+  endpoint: { paddingBottom:18, borderBottomWidth:1 },
+  accountField: { minHeight:72,paddingTop:16,paddingBottom:8,flexDirection:'row',alignItems:'center' },
+  typeRow: { flexDirection:'row',gap:20 },
+  typeChoice: { minHeight:44,justifyContent:'center' },
+  typeText: { fontFamily:fonts.bodyMed,fontSize:14 },
+  numberInput: { minWidth:0,width:'100%',minHeight:50,paddingVertical:8,fontFamily:fonts.bodySemi,fontSize:23 },
+  endpointHint: { fontFamily:fonts.body,fontSize:12,lineHeight:18 },
+  reviewContent: { paddingVertical:10 },
+  reviewAmount: { fontFamily:fonts.bodySemi,fontSize:30,marginBottom:24 },
+  reviewEndpoint: { marginBottom:24 },
+  reviewNumber: { fontFamily:fonts.bodySemi,fontSize:24,marginVertical:5 },
   label: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
   accountName: { fontFamily: fonts.bodySemi, fontSize: 18, lineHeight: 25, marginTop: 2 },
   identifier: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 3 },
   amountField: { paddingTop: 19, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   currency: { fontFamily: fonts.bodyMed, fontSize: 18 },
-  amountInput: { flex: 1, minHeight: 50, paddingVertical: 4, fontFamily: fonts.bodySemi, fontSize: 32 },
+  amountInput: { flex: 1, minWidth:0, minHeight: 50, paddingVertical: 4, fontFamily: fonts.bodySemi, fontSize: 32 },
   optionsToggle: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   optionsLabel: { fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22 },
   optionsContent: { paddingBottom: 12 },
@@ -337,7 +366,6 @@ const s = StyleSheet.create({
   urgentIndicator: { fontFamily: fonts.bodyMed, fontSize: 12, lineHeight: 18, marginBottom: 12 },
   fee: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, marginBottom: 7 },
   executionNotice: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginBottom: 17 },
-  testNotice: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, marginTop: 14 },
   retry: { minHeight: 48, justifyContent: 'center', marginBottom: 8 },
   retryText: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 21 },
   message: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginBottom: 16 },

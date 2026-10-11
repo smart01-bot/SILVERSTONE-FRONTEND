@@ -106,16 +106,16 @@ export default function QueueScreen() {
 
   const filtered = requests.filter(r => {
     if (filter === 'Unresolved') return needsReconciliation(r);
-    if (filter === 'All') return needsReconciliation(r) || ['awaiting_review','awaiting_source'].includes(r.status);
+    if (filter === 'All') return needsReconciliation(r) || ['awaiting_review','awaiting_source','source_confirmed','payout_pending'].includes(r.status);
     if (filter === 'Urgent')   return r.status === 'awaiting_review' && r.urgent;
     if (filter === 'Pending')  return r.status === 'awaiting_review';
-    if (filter === 'Approved') return r.status === 'awaiting_source';
+    if (filter === 'Approved') return ['awaiting_source','source_confirmed','payout_pending'].includes(r.status);
     return true;
   });
 
   const pendingCount  = requests.filter(r => r.status === 'awaiting_review').length;
   const urgentCount   = requests.filter(r => r.status === 'awaiting_review' && r.urgent).length;
-  const approvedCount = requests.filter(r => r.status === 'awaiting_source').length;
+  const approvedCount = requests.filter(r => ['awaiting_source','source_confirmed','payout_pending'].includes(r.status)).length;
 
   // Age is descriptive; escalation deadlines and severity thresholds are not approved.
 

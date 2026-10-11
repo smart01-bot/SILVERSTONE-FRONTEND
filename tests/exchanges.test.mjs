@@ -128,3 +128,17 @@ test("API owner check occurs before transport; idempotency header survives reque
   );
   assert.equal(calls.length, before);
 });
+
+test('real payment endpoints survive offline restart and edits cannot retarget queued funds', async () => {
+  const storage = memory(), calls = [];
+  const options = { storage, currentOwner: () => 'owner', newKey: () => 'payment-stable-key',
+    send: async (body,key) => { calls.push({body,key}); return { id:'real-request' }; } };
+  const source = { networkCode:'vodacom',identifierType:'phone',identifier:'+255700000001' };
+  let q = createExchangeOutbox(options);
+  await q.enqueue('owner',{ source, destination:{networkCode:'airtel',identifierType:'agent',identifier:'001234'},amountTzs:'10000' });
+  source.identifier = '+255700000099';
+  q = createExchangeOutbox(options); await q.sync('owner');
+  assert.equal(calls[0].body.source.identifier,'+255700000001');
+  assert.equal(calls[0].body.destination.identifier,'001234');
+  assert.equal(calls[0].key,'payment-stable-key');
+});

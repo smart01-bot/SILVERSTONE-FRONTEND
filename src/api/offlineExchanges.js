@@ -32,8 +32,13 @@ export function createExchangeOutbox({ storage, send, currentOwner, newKey }) {
       serial(async () => {
         const rows = await read(owner);
         const normalized = {
-          sourceAccountId: payload.sourceAccountId,
-          destinationAccountId: payload.destinationAccountId,
+          ...(payload.source || payload.destination ? {
+            source: { networkCode: payload.source.networkCode, identifierType: payload.source.identifierType, identifier: payload.source.identifier },
+            destination: { networkCode: payload.destination.networkCode, identifierType: payload.destination.identifierType, identifier: payload.destination.identifier },
+          } : {
+            sourceAccountId: payload.sourceAccountId,
+            destinationAccountId: payload.destinationAccountId,
+          }),
           amountTzs: payload.amountTzs,
           currency: "TZS",
           urgent: !!payload.urgent,
