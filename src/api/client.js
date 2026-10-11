@@ -172,6 +172,7 @@ export function createApiClient({
         method: "POST",
         body,
       });
+      if (data.requiresEmailConfirmation) return data;
       await save(data, current);
       if (current !== revision) throw new Error("Session changed.");
       ownerId = data.agent.id;

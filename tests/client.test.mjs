@@ -199,3 +199,12 @@ test("local development API keeps its own host and port", async () => {
   await client.login("agent@example.test", "synthetic");
   assert.equal(requested, "http://10.0.2.2:8800/api/v1/auth/login");
 });
+
+test("email confirmation response never persists tokens or claims a session", async () => {
+  const saved=storage();
+  const client=createApiClient({baseUrl:'https://synthetic.example.test/api/v1',storage:saved,
+    fetchImpl:async()=>response({requiresEmailConfirmation:true},202)});
+  assert.deepEqual(await client.register({email:'agent@example.test',password:'synthetic'}),{requiresEmailConfirmation:true});
+  assert.equal(await saved.getItem('silverstone_api_session_v1'),undefined);
+  assert.equal(client.currentOwner(),null);
+});

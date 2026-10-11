@@ -17,6 +17,7 @@ export default function Step3Personal({ navigation, route }) {
   const [confirmation, setConfirmation] = useState('');
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   function change(setter, key) { return value => { setter(value); setErrors(current => ({ ...current, [key]: '' })); }; }
@@ -29,16 +30,22 @@ export default function Step3Personal({ navigation, route }) {
     if (!user && (password.length < 12 || password.length > 72)) e.password = copy('Use 12–72 characters.', 'Tumia herufi 12–72.');
     if (!user && password !== confirmation) e.confirmation = copy('Passwords do not match.', 'Nenosiri halifanani.');
     setErrors(e); if (Object.keys(e).length) return;
-    pending.current = true; setBusy(true); setError('');
+    pending.current = true; setBusy(true); setError(''); setNotice('');
     try {
       const params = { ...p, name: name.trim(), email: email.trim(), nida };
-      if (!user) await register({ ...params, password }); // Auth routing restores the saved draft after account creation.
+      if (!user) {
+        const result = await register({ ...params, password });
+        if (result?.requiresEmailConfirmation) setNotice(copy(
+          'Confirm your email using the link in your inbox, then tap Save & continue again.',
+          'Thibitisha barua pepe kupitia kiungo kwenye ujumbe uliotumwa, kisha bonyeza Hifadhi na uendelee tena.'
+        ));
+      }
       else navigation.navigate('Step4Business', syncWizard(navigation, await saveDraft(api, params)));
     } catch (e) { setError(workflowError(e)); }
     finally { pending.current = false; setBusy(false); }
   }
   return <RegistrationFrame step={3} title={copy('About you', 'Kuhusu wewe')} onBack={() => navigation.goBack()} busy={busy}
-    footer={<><RegistrationText error>{error}</RegistrationText><GlassButton label={busy ? copy('Saving…', 'Inahifadhi…') : copy('Save & continue', 'Hifadhi na uendelee')} onPress={next} busy={busy} /></>}>
+    footer={<><RegistrationText>{notice}</RegistrationText><RegistrationText error>{error}</RegistrationText><GlassButton label={busy ? copy('Saving…', 'Inahifadhi…') : copy('Save & continue', 'Hifadhi na uendelee')} onPress={next} busy={busy} /></>}>
     <GlassField label={copy('Full name', 'Jina kamili')} value={name} onChangeText={change(setName, 'name')} error={errors.name} editable={!busy} autoCapitalize="words" autoComplete="name" maxLength={100} />
     <GlassField label={copy('Email', 'Barua pepe')} value={email} onChangeText={change(setEmail, 'email')} error={errors.email} editable={!busy && !user} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" />
     <GlassField label={copy('NIDA number', 'Namba ya NIDA')} value={nida.replace(/(\d{5})(?=\d)/g, '$1 ')} onChangeText={value => change(setNida, 'nida')(value.replace(/\D/g, '').slice(0, 20))}

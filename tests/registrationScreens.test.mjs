@@ -144,3 +144,14 @@ test('resumed selfie preserves evidence and exits read-only review mode when con
   assert.equal(h.navCalls[0][1].readOnly, false);
   assert.equal(h.navCalls[0][1].expectedVersion, 5);
 });
+
+test('email confirmation keeps the form and permits verified continuation without navigating early', async () => {
+  let attempts=0;
+  const h=harness('Step3Personal',{params:{phone:'+255700123456'},auth:{register:async()=>{attempts++;return {requiresEmailConfirmation:true};}}});
+  for(const [label,value] of Object.entries({'Full name':'Juma Example',Email:'juma@example.test','NIDA number':'12345123451234512345',Password:'synthetic-password','Confirm password':'synthetic-password'}))find(h.render(),'GlassField',label).props.onChangeText(value);
+  await find(h.render(),'GlassButton').props.onPress();
+  assert.match(content(h.render()),/Confirm your email/);
+  assert.equal(find(h.render(),'GlassField','Email').props.value,'juma@example.test');
+  assert.equal(h.navCalls.length,0);assert.equal(h.calls.length,0);
+  await find(h.render(),'GlassButton').props.onPress();assert.equal(attempts,2);
+});

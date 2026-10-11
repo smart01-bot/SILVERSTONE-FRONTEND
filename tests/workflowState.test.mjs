@@ -21,3 +21,8 @@ test('unknown outcomes and synthetic confirmation never imply funds can move',()
  assert.match(legLabel({type:'origin_in',status:'unknown'}),/reconciliation required/);
  assert.match(workflowError({code:'APPLICATION_CHANGED',status:409}),/input is still here/);
 });
+
+test('account conflicts are not mislabeled as changed records', () => {
+  assert.match(workflowError({status:409,code:'ACCOUNT_CONFLICT'}),/email or phone number already exists/);
+  assert.equal(workflowError({status:409,code:'REGISTRATION_REQUIRED',message:'Finish registration.'}),'Finish registration.');
+});

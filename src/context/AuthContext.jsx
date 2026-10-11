@@ -94,6 +94,7 @@ export function AuthProvider({ children }) {
       name: params.name,
       phone: params.phone,
     });
+    if (agent.requiresEmailConfirmation) return agent;
     try {
       await api.call("/applications/me/draft", {
         method: "PUT",

@@ -1,5 +1,9 @@
 // Presentation only: server state and permissions remain authoritative.
 export function workflowError(error) {
+  if (error?.code === 'ACCOUNT_CONFLICT')
+    return 'An account with this email or phone number already exists. Sign in, recover your password, or check your registration details.';
+  if (error?.code === 'REGISTRATION_REQUIRED')
+    return error.message;
   if (error?.code === 'APPLICATION_CHANGED')
     return 'This application changed. Your input is still here. Reopen the saved application to compare before trying again.';
   if (error?.status === 409)
