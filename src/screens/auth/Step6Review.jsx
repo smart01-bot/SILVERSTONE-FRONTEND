@@ -1,587 +1,90 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
+import { api } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 import { workflowError } from '../../api/workflowState';
-import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  StatusBar,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../context/ThemeContext";
-import { useLoader } from "../../context/LoaderContext";
-import { useHaptics } from "../../hooks/useHaptics";
-import { api } from "../../config/api";
-import { useAuth } from "../../context/AuthContext";
-
-const TOTAL_STEPS = 6;
-const STEP = 6;
-
-const NETWORKS = {
-  Voda: { label: "M-Pesa", color: "#00A651" },
-  Airtel: { label: "Airtel", color: "#E20020" },
-  Yas: { label: "Yas Mixx", color: "#0057A8" },
-  Halotel: { label: "Halotel", color: "#F68B1F" },
-};
-
-const PARTICLE_COLORS = [
-  "#E01535",
-  "#C8102E",
-  "#FF6B6B",
-  "#FF9F43",
-  "#FECA57",
-  "#48DBFB",
-  "#fff",
-];
-const PARTICLE_COUNT = 18;
-
-function maskNida(nida = "") {
-  if (nida.length < 4) return nida;
-  return "•".repeat(nida.length - 4) + nida.slice(-4);
-}
-
-function fmtFloat(n) {
-  if (!n) return "—";
-  if (n >= 1_000_000) return `TSh ${(n / 1_000_000).toFixed(1)}M/day`;
-  return `TSh ${(n / 1000).toFixed(0)}K/day`;
-}
-
-// ── Particle system ──────────────────────────────────────────────────────────
-// Fix: opacity (useNativeDriver:false) and transform (useNativeDriver:true)
-// MUST live on separate Animated.View nodes — never the same view.
-// Outer view owns opacity (JS driver), inner view owns transform (native driver).
-function Particles({ trigger }) {
-  const particles = useRef(
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      x: new Animated.Value(0),
-      y: new Animated.Value(0),
-      op: new Animated.Value(0),
-      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-      size: 6 + Math.random() * 6,
-      angle: (360 / PARTICLE_COUNT) * i + (Math.random() * 20 - 10),
-      dist: 80 + Math.random() * 80,
-    })),
-  ).current;
-
-  useEffect(() => {
-    if (!trigger) return;
-    particles.forEach((p) => {
-      p.x.setValue(0);
-      p.y.setValue(0);
-      p.op.setValue(0);
-    });
-    const rad = (deg) => deg * (Math.PI / 180);
-
-    // Native driver — translate only
-    const translateAnims = particles.map((p) => {
-      const tx = Math.cos(rad(p.angle)) * p.dist;
-      const ty = Math.sin(rad(p.angle)) * p.dist - 40;
-      return Animated.parallel([
-        Animated.spring(p.x, {
-          toValue: tx,
-          tension: 80,
-          friction: 6,
-          useNativeDriver: true,
-        }),
-        Animated.spring(p.y, {
-          toValue: ty,
-          tension: 80,
-          friction: 6,
-          useNativeDriver: true,
-        }),
-      ]);
-    });
-
-    // JS driver — opacity only
-    const opacityAnims = particles.map((p) =>
-      Animated.sequence([
-        Animated.timing(p.op, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: false,
-        }),
-        Animated.delay(500),
-        Animated.timing(p.op, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-      ]),
-    );
-
-    Animated.stagger(18, translateAnims).start();
-    Animated.stagger(18, opacityAnims).start();
-  }, [trigger]);
-
-  if (!trigger) return null;
-
-  return (
-    <View style={particleStyles.wrap} pointerEvents="none">
-      {particles.map((p, i) => (
-        // Outer: opacity only — JS driver
-        <Animated.View
-          key={i}
-          style={[particleStyles.opacityLayer, { opacity: p.op }]}
-        >
-          {/* Inner: transform only — native driver */}
-          <Animated.View
-            style={[
-              particleStyles.dot,
-              {
-                width: p.size,
-                height: p.size,
-                borderRadius: p.size / 2,
-                backgroundColor: p.color,
-                transform: [{ translateX: p.x }, { translateY: p.y }],
-              },
-            ]}
-          />
-        </Animated.View>
-      ))}
-    </View>
-  );
-}
-
-const particleStyles = StyleSheet.create({
-  wrap: {
-    position: "absolute",
-    bottom: 27,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  opacityLayer: { position: "absolute" },
-  dot: { position: "absolute" },
-});
-
-function FieldRow({ label, value, mono }) {
-  const { theme } = useTheme();
-  const { showLoader, hideLoader } = useLoader();
-  const s = fieldStyles(theme);
-  return (
-    <View style={s.row}>
-      <Text style={s.label}>{label}</Text>
-      <Text style={[s.value, mono && s.mono]}>{value}</Text>
-    </View>
-  );
-}
-const fieldStyles = (theme) =>
-  StyleSheet.create({
-    row: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-      gap: 12,
-    },
-    label: {
-      fontSize: 13,
-      fontFamily: "Inter_400Regular",
-      color: theme.textDim,
-      flex: 0.45,
-    },
-    value: {
-      fontSize: 13,
-      fontFamily: "Inter_600SemiBold",
-      color: theme.text,
-      flex: 0.55,
-      textAlign: "right",
-    },
-    mono: { fontFamily: "RobotoMono_400Regular", fontSize: 12 },
-  });
+import { useSavedDocuments } from '../../components/auth/useSavedDocuments';
+import { RegistrationFrame, GlassButton, RegistrationText, Section, PlainRow, CheckRow, TextAction } from '../../components/auth/RegistrationUI';
+import { useAuthStyle } from '../../components/auth/AuthUI';
 
 export default function Step6Review({ navigation, route }) {
+  const { copy, colors } = useAuthStyle();
   const { refreshProfile } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const { theme } = useTheme();
-  const { showLoader, hideLoader } = useLoader();
-  const insets = useSafeAreaInsets();
-  const haptics = useHaptics();
-
+  const p = route.params || {};
+  const readOnly = p.readOnly === true;
+  const [application, setApplication] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [agreed, setAgreed] = useState(false);
-  const [error, setError] = useState("");
-  const [burst, setBurst] = useState(false);
-
-  // AppNavigator replaces this screen when the server application status changes.
-  const isMounted = useRef(true);
-  useEffect(
-    () => () => {
-      isMounted.current = false;
-    },
-    [],
-  );
-
-  const p = route.params ?? {};
-  const [documents, setDocuments] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [details, setDetails] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
+  const pending = useRef(false);
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => {
-    Promise.all((p.documentIds || []).map((id) => api.call(`/documents/${id}?metadata=1`)))
-      .then(setDocuments)
-      .catch((e) => setError(workflowError(e)));
-  }, [p.documentIds]);
-
-  // ── Animations ────────────────────────────────────────────────────────────
-  const progressAnim = useRef(
-    new Animated.Value((STEP - 1) / TOTAL_STEPS),
-  ).current;
-  const heroAnim = useRef(new Animated.Value(0)).current;
-  const card1Anim = useRef(new Animated.Value(0)).current;
-  const card2Anim = useRef(new Animated.Value(0)).current;
-  const termsAnim = useRef(new Animated.Value(0)).current;
-  const checkAnim = useRef(new Animated.Value(0)).current;
-
-  // useNativeDriver: false — width
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, []);
-
-  // useNativeDriver: true — translate / scale
-  useEffect(() => {
-    Animated.stagger(100, [
-      Animated.spring(heroAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 9,
-        useNativeDriver: true,
-      }),
-      Animated.spring(card1Anim, {
-        toValue: 1,
-        tension: 60,
-        friction: 9,
-        useNativeDriver: true,
-      }),
-      Animated.spring(card2Anim, {
-        toValue: 1,
-        tension: 60,
-        friction: 9,
-        useNativeDriver: true,
-      }),
-      Animated.spring(termsAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 9,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const toggleAgree = () => {
-    haptics.selection();
-    const next = !agreed;
-    setAgreed(next);
-    Animated.spring(checkAnim, {
-      toValue: next ? 1 : 0,
-      tension: 80,
-      friction: 7,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleSubmit = async () => {
-    if (!agreed) {
-      haptics.error();
-      setError("Please confirm your information is accurate.");
-      return;
-    }
-    haptics.medium();
-
-    if (loading) return;
-    setLoading(true);
-
-    showLoader();
-    setError("");
-
+    let current = true;
+    setApplication(null); setLoadError('');
+    api.call('/applications/me').then(state => { if (current) setApplication(state); }).catch(e => { if (current) setLoadError(workflowError(e)); });
+    return () => { current = false; };
+  }, [attempt, p.expectedVersion]);
+  const revision = application?.revisions?.[0];
+  // Submitted views use the immutable revision, never the subsequently edited draft.
+  const data = readOnly ? (revision?.data || application?.data || {}) : p;
+  const documents = useSavedDocuments(data.documentIds);
+  const knownProof = !!application?.phoneVerification && application.phoneVerification !== 'unavailable';
+  const editable = ['draft', 'changes_requested'].includes(application?.status);
+  const sameVersion = application?.version === p.expectedVersion;
+  const canSubmit = !readOnly && !submitted && editable && knownProof && sameVersion && agreed;
+  async function submit() {
+    if (pending.current || !canSubmit) return;
+    pending.current = true; setBusy(true); setError('');
     try {
-      await api.call("/applications/me/submit", {
-        method: "POST",
-        body: { expectedVersion: p.expectedVersion },
-      });
-      await refreshProfile();
-
-
-      if (isMounted.current) haptics.success();
-      // AppNavigator routes the submitted application to the progress screen.
-    } catch (e) {
-      if (!isMounted.current) return;
-      haptics.error();
-      const msg = e?.message ?? "";
-      if (msg.includes("email-already-in-use")) {
-        setError(
-          "An account with this email already exists. Try logging in instead.",
-        );
-      } else if (msg.includes("Missing credentials")) {
-        setError(
-          "Registration data is incomplete. Please go back and check your details.",
-        );
-      } else {
-        setError(workflowError(e));
-      }
-    } finally {
-      hideLoader();
-      setLoading(false);
-    }
-  };
-
-  const headerProgress = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-  });
-
-  const reveal = (anim) => ({
-    opacity: anim,
-    transform: [
-      {
-        translateY: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [24, 0],
-        }),
-      },
-    ],
-  });
-
-  const checkScale = checkAnim.interpolate({
-    inputRange: [0, 0.6, 1],
-    outputRange: [0.8, 1.15, 1],
-  });
-
-  const s = styles(theme, insets);
-
-  return (
-    <View style={s.root}>
-      <StatusBar
-        barStyle="light-content"
-        translucent
-        backgroundColor="transparent"
-      />
-
-      <LinearGradient
-        colors={[theme.gradPrimA, theme.gradPrimB]}
-        style={s.header}
-      >
-        <View style={s.navRow}>
-          <TouchableOpacity
-            onPress={() => {
-              haptics.light();
-              navigation.goBack();
-            }}
-            style={s.backBtn}
-          >
-            <Text style={s.backArrow}>←</Text>
-          </TouchableOpacity>
-          <View style={s.progressTrack}>
-            <Animated.View
-              style={[s.progressFill, { width: headerProgress }]}
-            />
-          </View>
-          <Text style={s.stepCounter}>
-            {STEP}/{TOTAL_STEPS}
-          </Text>
-        </View>
-        <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
-        <Text style={s.title}>Review & Submit</Text>
-        <Text style={s.subtitle}>
-          Check everything before submitting your application.
-        </Text>
-      </LinearGradient>
-
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={[s.heroCard, reveal(heroAnim)]}>
-          <View style={s.heroMap}>
-            <Text style={s.heroMapIcon}>📍</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.heroName}>{p.businessName || "—"}</Text>
-            <Text style={s.heroArea}>{p.businessLocation || "—"}</Text>
-            {p.coordinates && (
-              <Text style={s.heroCoords}>
-                {p.coordinates.lat}° · {p.coordinates.lng}°
-              </Text>
-            )}
-          </View>
-        </Animated.View>
-
-        {p.networks && p.networks.length > 0 && (
-          <Animated.View style={[s.netChips, reveal(heroAnim)]}>
-            {p.networks.map((id) => {
-              const n = NETWORKS[id];
-              if (!n) return null;
-              return (
-                <View
-                  key={id}
-                  style={[s.netChip, { borderColor: n.color + "80" }]}
-                >
-                  <View style={[s.netDot, { backgroundColor: n.color }]} />
-                  <Text style={[s.netLabel, { color: n.color }]}>
-                    {n.label}
-                  </Text>
-                </View>
-              );
-            })}
-          </Animated.View>
-        )}
-
-        <Animated.View style={reveal(card1Anim)}>
-          <Text style={s.sectionTitle}>Personal</Text>
-          <View style={s.card}>
-            <FieldRow label="Full Name" value={p.name || "—"} />
-            <FieldRow label="Phone" value={p.phone || "—"} mono />
-            <FieldRow label="Email" value={p.email || "—"} />
-            <FieldRow label="NIDA" value={maskNida(p.nida || "")} mono />
-          </View>
-        </Animated.View>
-
-        <Animated.View style={reveal(card2Anim)}>
-          <Text style={s.sectionTitle}>Business</Text>
-          <View style={s.card}>
-            <FieldRow label="Till Name" value={p.businessName || "—"} />
-            <FieldRow label="Location" value={p.businessLocation || "—"} />
-            <FieldRow
-              label="Float Cap."
-              value={fmtFloat(p.floatCapacity)}
-              mono
-            />
-            <FieldRow label="TIN" value={p.businessTIN || "—"} mono />
-            <FieldRow
-              label="Licence No."
-              value={p.businessLicenceNumber || "—"}
-              mono
-            />
-            <FieldRow label="TIN Cert." value={"See saved evidence below"} />
-            <FieldRow label="Lic. Cert." value={"See saved evidence below"} />
-            {documents.map((d) => (
-              <FieldRow
-                key={d.id}
-                label={d.kind}
-                value={`${d.name} · saved privately`}
-              />
-            ))}
-            <FieldRow label="Identity" value={"Manual review required"} />
-          </View>
-        </Animated.View>
-
-        <Animated.View style={[reveal(termsAnim), { marginTop: 4 }]}>
-          <TouchableOpacity
-            accessibilityRole="checkbox"
-            accessibilityState={{checked:agreed}}
-            style={s.termsRow}
-            onPress={toggleAgree}
-            activeOpacity={0.8}
-          >
-            <Animated.View
-              style={[
-                s.checkbox,
-                agreed && s.checkboxActive,
-                { transform: [{ scale: checkScale }] },
-              ]}
-            >
-              {agreed && <Text style={s.checkMark}>✓</Text>}
-            </Animated.View>
-            <Text style={s.termsText}>
-              I confirm this information is accurate and ready for my assigned
-              main-agent to review.
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {error ? <Text accessibilityRole="alert" style={s.errText}>{error}</Text> : null}
-
-        <View style={{ marginTop: 24 }}>
-          <Particles trigger={burst} />
-          <TouchableOpacity
-            onPress={handleSubmit}
-            accessibilityRole="button"
-            accessibilityState={{disabled:!agreed || loading,busy:loading}}
-            disabled={!agreed || loading}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={
-                agreed && !loading
-                  ? [theme.gradPrimA, theme.gradPrimB]
-                  : ["#555", "#444"]
-              }
-              style={s.cta}
-            >
-              <Text style={s.ctaText}>
-                {loading ? "Submitting…" : "Submit Application →"}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: insets.bottom + 32 }} />
-      </ScrollView>
-    </View>
-  );
+      await api.call('/applications/me/submit', { method: 'POST', body: { expectedVersion: p.expectedVersion } });
+      if (live.current) setSubmitted(true);
+      await refreshProfile(); // Routing remains server-controlled.
+    } catch (e) { if (live.current) setError(workflowError(e)); }
+    finally { pending.current = false; if (live.current) setBusy(false); }
+  }
+  const edit = screen => !readOnly && !busy && !submitted ? () => navigation.navigate(screen, p) : undefined;
+  const valueStyle = { color: colors.text, marginBottom: 7 };
+  const names = { Voda: 'M-Pesa', vodacom: 'M-Pesa', Airtel: 'Airtel', airtel: 'Airtel', Yas: 'Yas Mixx', yas: 'Yas Mixx', Halotel: 'Halotel', halotel: 'Halotel' };
+  return <RegistrationFrame step={readOnly ? undefined : 6} title={readOnly ? copy('Your application', 'Ombi lako') : copy('Final check', 'Ukaguzi wa mwisho')}
+    onBack={() => navigation.goBack()} busy={busy} footer={readOnly ? <TextAction label={copy('Back to status', 'Rudi kwenye hali ya ombi')} onPress={() => navigation.goBack()} /> : <>
+      {!submitted && <CheckRow label={copy('My details are accurate.', 'Taarifa zangu ni sahihi.')} checked={agreed} onPress={() => setAgreed(v => !v)} disabled={busy} />}
+      <RegistrationText error>{error || loadError}</RegistrationText>
+      {loadError && <TextAction label={copy('Retry status check', 'Jaribu tena kukagua hali')} onPress={() => setAttempt(n => n + 1)} />}
+      {!application && !loadError && <RegistrationText>{copy('Checking application…', 'Inakagua ombi…')}</RegistrationText>}
+      {application && !submitted && <RegistrationText>{!sameVersion ? copy('Your application changed. Reopen your saved draft before submitting.', 'Ombi lako limebadilika. Fungua rasimu iliyohifadhiwa kabla ya kutuma.')
+        : !knownProof ? copy('Verify your phone before submitting.', 'Thibitisha simu yako kabla ya kutuma.') : !editable ? copy('This application is already with your reviewer.', 'Ombi hili tayari lipo kwa mkaguzi.') : ''}</RegistrationText>}
+      <GlassButton label={busy ? copy('Submitting…', 'Inatuma…') : submitted ? copy('Application submitted', 'Ombi limetumwa') : copy('Submit application', 'Tuma ombi')} onPress={submit} busy={busy} disabled={!canSubmit} />
+      {submitted && <TextAction label={copy('Refresh account status', 'Sasisha hali ya akaunti')} onPress={async () => { try { await refreshProfile(); } catch (e) { setError(workflowError(e)); } }} />}
+    </>}>
+    {readOnly && loadError ? <><RegistrationText error>{loadError}</RegistrationText><TextAction label={copy('Try again', 'Jaribu tena')} onPress={() => setAttempt(n => n + 1)} /></> : readOnly && !application ? <RegistrationText>{copy('Loading application…', 'Inapakia ombi…')}</RegistrationText> : <>
+      <Section title={copy('Personal', 'Taarifa binafsi')} action={edit('Step3Personal')}>
+        <RegistrationText style={valueStyle}>{data.name || '—'}</RegistrationText><RegistrationText style={valueStyle}>{readOnly ? application?.email : p.email}</RegistrationText>
+        <RegistrationText>{`NIDA •••• ${data.nida?.slice(-4) || '—'}`}</RegistrationText>
+      </Section>
+      <Section title={copy('Business', 'Biashara')} action={edit('Step4Business')}>
+        <RegistrationText style={valueStyle}>{data.businessName || '—'}</RegistrationText><RegistrationText>{data.businessLocation || '—'}</RegistrationText>
+      </Section>
+      <PlainRow label={copy('More details', 'Taarifa zaidi')} icon={details ? 'chevron-up' : 'chevron-down'} onPress={() => setDetails(v => !v)} />
+      {details && <View style={{ paddingVertical: 12 }}>
+        <PlainRow label={copy('Phone', 'Simu')} detail={readOnly ? application?.phone : p.phone} />
+        <PlainRow label={copy('Networks', 'Mitandao')} detail={(data.networks || []).map(n => names[n] || n).join(' · ')} />
+        <PlainRow label={copy('Daily float capacity', 'Kiasi cha float kwa siku')} detail={`TZS ${String(data.floatCapacity || '—').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`} />
+        <PlainRow label={copy('Business TIN', 'TIN ya biashara')} detail={data.businessTIN} />
+        <PlainRow label={copy('Licence number', 'Namba ya leseni')} detail={data.businessLicenceNumber} />
+        {data.coordinates && <PlainRow label={copy('Coordinates', 'Viwianishi')} detail={`${data.coordinates.lat}, ${data.coordinates.lng}`} />}
+      </View>}
+      <PlainRow label={copy('Documents', 'Nyaraka')} detail={documents.loading ? copy('Loading…', 'Inapakia…') : documents.error ? copy('Unable to load file status', 'Imeshindikana kupakia hali ya faili') : copy(`${documents.documents.length} files saved privately`, `Faili ${documents.documents.length} zimehifadhiwa kwa faragha`)}
+        icon={showDocuments ? 'chevron-up' : 'chevron-down'} onPress={() => setShowDocuments(v => !v)} />
+      {showDocuments && <View style={{ paddingVertical: 12 }}>{documents.documents.map(d => <PlainRow key={d.id} label={d.kind === 'selfie' ? copy('Selfie', 'Picha yako') : d.kind === 'tin' ? copy('TIN certificate', 'Cheti cha TIN') : copy('Business licence', 'Leseni ya biashara')} detail={d.name} />)}
+        <RegistrationText error>{documents.error}</RegistrationText>{documents.error && <TextAction label={copy('Retry documents', 'Jaribu tena nyaraka')} onPress={documents.retry} />}
+        {!readOnly && <><TextAction label={copy('Edit business documents', 'Hariri nyaraka za biashara')} disabled={busy || submitted} onPress={edit('Step4Business')} /><TextAction label={copy('Edit selfie', 'Badili picha yako')} disabled={busy || submitted} onPress={edit('Step5Selfie')} /></>}
+      </View>}
+    </>}
+  </RegistrationFrame>;
 }
-
-const styles = (theme, insets) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.bg },
-  header: {
-    paddingTop: insets.top + 12, paddingBottom: 28,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
-  },
-  navRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  backBtn:  { marginRight: 12, padding: 4 },
-  backArrow:{ fontSize: 22, color: '#fff' },
-  progressTrack: {
-    flex: 1, height: 3, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
-  stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  eyebrow: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
-  title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
-  subtitle:{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  scroll:        { flex: 1 },
-  scrollContent: { padding: 20 },
-  heroCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: theme.surfaceAlt, borderRadius: 16,
-    borderWidth: 1, borderColor: theme.border,
-    padding: 16, gap: 14, marginBottom: 12,
-  },
-  heroMap:    { width: 52, height: 52, borderRadius: 10, backgroundColor: '#EEF2F5', alignItems: 'center', justifyContent: 'center' },
-  heroMapIcon:{ fontSize: 26 },
-  heroName:   { fontSize: 17, fontFamily: 'Manrope_700Bold', color: theme.text },
-  heroArea:   { fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, marginTop: 2 },
-  heroCoords: { fontSize: 11, fontFamily: 'RobotoMono_400Regular', color: theme.muted, marginTop: 3 },
-  netChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  netChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, gap: 6, backgroundColor: theme.surfaceAlt },
-  netDot:   { width: 7, height: 7, borderRadius: 4 },
-  netLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  sectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: theme.muted, letterSpacing: 1.2, marginBottom: 8, marginTop: 4 },
-  card: { backgroundColor: theme.surfaceAlt, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, marginBottom: 20 },
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  checkbox: {
-    width: 24, height: 24, borderRadius: 6,
-    borderWidth: 2, borderColor: theme.border,
-    alignItems: 'center', justifyContent: 'center',
-    marginTop: 1, backgroundColor: theme.surfaceAlt,
-  },
-  checkboxActive: { borderColor: theme.primary, backgroundColor: theme.primary },
-  checkMark:      { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
-  termsText:      { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.textDim, lineHeight: 20 },
-  termsLink:      { color: theme.primary, fontFamily: 'Inter_600SemiBold' },
-  errText: { marginTop: 12, fontSize: 13, fontFamily: 'Inter_400Regular', color: theme.primary, textAlign: 'center' },
-  cta: {
-    height: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#C8102E', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
-  },
-  ctaText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
-});

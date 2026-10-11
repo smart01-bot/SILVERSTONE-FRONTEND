@@ -1,465 +1,56 @@
+import React, { useRef, useState } from 'react';
+import { Image, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import { api } from '../../config/api';
+import { uploadDocument } from '../../api/documents';
+import { saveDraft, syncWizard } from '../../api/onboarding';
 import { workflowError } from '../../api/workflowState';
-import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  StatusBar,
-  Dimensions,
-  Image,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as DocumentPicker from "expo-document-picker";
-import { api } from "../../config/api";
-import { uploadDocument } from "../../api/documents";
-import { saveDraft, wizardParams, syncWizard } from "../../api/onboarding";
-import { useTheme } from "../../context/ThemeContext";
-import { useHaptics } from "../../hooks/useHaptics";
-
-const TOTAL_STEPS = 6;
-const STEP = 5;
-const { width: W } = Dimensions.get("window");
-const OVAL_W = W * 0.62;
-const OVAL_H = OVAL_W * 1.28;
-const BRACKET_SIZE = 28;
-
-const BRACKETS = [
-  {
-    top: -4,
-    left: -4,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomWidth: 0,
-    borderRightWidth: 0,
-  },
-  {
-    top: -4,
-    right: -4,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-  },
-  {
-    bottom: -4,
-    left: -4,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderTopWidth: 0,
-    borderRightWidth: 0,
-  },
-  {
-    bottom: -4,
-    right: -4,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-  },
-];
+import { useSavedDocuments } from '../../components/auth/useSavedDocuments';
+import { RegistrationFrame, GlassButton, RegistrationText, TextAction } from '../../components/auth/RegistrationUI';
+import { useAuthStyle } from '../../components/auth/AuthUI';
 
 export default function Step5Selfie({ navigation, route }) {
-  const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const haptics = useHaptics();
-
-  const [phase, setPhase] = useState("idle");
+  const { copy, colors } = useAuthStyle();
+  const p = route.params || {};
   const [photo, setPhoto] = useState(null);
-  const [error, setError] = useState("");
-  const [scanPct, setScanPct] = useState(0);
-
-  const progressAnim = useRef(
-    new Animated.Value((STEP - 1) / TOTAL_STEPS),
-  ).current;
-  const scanProgress = useRef(new Animated.Value(0)).current;
-  const frameGlow = useRef(new Animated.Value(0)).current;
-  const checkAnim = useRef(new Animated.Value(0)).current;
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const silhouetteAnim = useRef(new Animated.Value(1)).current;
-
-  // Per-bracket translate anims — native driver only
-  const bracketAnims = useRef(
-    BRACKETS.map(() => new Animated.Value(0)),
-  ).current;
-
-  // useNativeDriver: false — progress bar width
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: STEP / TOTAL_STEPS,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, []);
-
-  useEffect(() => {
-    if (phase === "scanning") {
-      Animated.stagger(
-        40,
-        bracketAnims.map((a) =>
-          Animated.spring(a, {
-            toValue: 1,
-            tension: 120,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ),
-      ).start();
-
-      Animated.timing(silhouetteAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start();
-
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(scanLineAnim, {
-            toValue: 1,
-            duration: 1800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scanLineAnim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-
-    if (phase === "idle") {
-      bracketAnims.forEach((a) => a.setValue(0));
-      silhouetteAnim.setValue(1);
-    }
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === "idle") {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.04,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1.0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-  }, [phase]);
-
-  const startScan = async () => {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const upload = useRef(null);
+  const saved = useSavedDocuments(p.documentIds);
+  const previous = saved.documents.find(d => d.kind === 'selfie');
+  async function choose() {
+    if (pending.current) return;
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ["image/jpeg", "image/png"],
-        copyToCacheDirectory: true,
-      });
-      if (!result.canceled) {
-        setPhoto(result.assets[0]);
-        setPhase("done");
-      }
-    } catch (e) {
-      setError(workflowError(e));
-    }
-  };
-  const handleNext = async () => {
-    if (phase === "scanning") return;
-    setError("");
-    setPhase("scanning");
+      const result = await DocumentPicker.getDocumentAsync({ type: ['image/jpeg', 'image/png'], copyToCacheDirectory: true });
+      if (!result.canceled && result.assets?.[0]) { setPhoto(result.assets[0]); setError(''); }
+    } catch (e) { setError(workflowError(e)); }
+  }
+  async function next() {
+    if (pending.current || (!photo && !previous)) return;
+    pending.current = true; setBusy(true); setError('');
     try {
-      let ids = [...(route.params?.documentIds || [])];
+      let ids = [...(p.documentIds || [])];
       if (photo) {
-        const uploaded = await uploadDocument(photo, "selfie");
-        const kept = [];
-        for (const id of ids) {
-          const doc = await api.call(`/documents/${id}?metadata=1`);
-          if (doc.kind !== "selfie") kept.push(id);
-        }
-        ids = [...kept, uploaded.id];
+        if (upload.current?.uri !== photo.uri) upload.current = { ...(await uploadDocument(photo, 'selfie')), uri: photo.uri };
+        const existing = await Promise.all(ids.map(id => api.call(`/documents/${id}?metadata=1`)));
+        ids = [...existing.filter(d => d.kind !== 'selfie').map(d => d.id), upload.current.id];
       }
-      const saved = await saveDraft(api, { ...route.params, documentIds: ids });
-      const params = syncWizard(navigation, saved);
-      navigation.navigate("Step6Review", params);
-    } catch (e) {
-      setError(workflowError(e));
-    } finally {
-      setPhase(photo ? "done" : "idle");
-    }
-  };
-
-  const headerProgress = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-  });
-
-  const scanLineY = scanLineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, OVAL_H],
-  });
-
-  // frameColor is JS driver — applied only to ovalBorder (separate view from oval's transform)
-  const frameColor = frameGlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["rgba(255,255,255,0.6)", "rgba(34,197,94,1)"],
-  });
-
-  const checkScale = checkAnim.interpolate({
-    inputRange: [0, 0.6, 1],
-    outputRange: [0, 1.2, 1],
-  });
-
-  // Bracket translate — native driver, applied only to transform (no borderColor on same view)
-  const bracketTranslate = (i) => {
-    const dirs = [
-      { x: [0, 8], y: [0, 8] },
-      { x: [0, -8], y: [0, 8] },
-      { x: [0, 8], y: [0, -8] },
-      { x: [0, -8], y: [0, -8] },
-    ];
-    return [
-      {
-        translateX: bracketAnims[i].interpolate({
-          inputRange: [0, 1],
-          outputRange: dirs[i].x,
-        }),
-      },
-      {
-        translateY: bracketAnims[i].interpolate({
-          inputRange: [0, 1],
-          outputRange: dirs[i].y,
-        }),
-      },
-    ];
-  };
-
-  // bracketColor is a plain JS string — not animated, so no driver conflict
-  const bracketColor = phase === "done" ? "#22C55E" : "#fff";
-
-  const s = styles(theme, insets);
-
-  return (
-    <View style={s.root}>
-      <StatusBar
-        barStyle="light-content"
-        translucent
-        backgroundColor="transparent"
-      />
-
-      <LinearGradient
-        colors={["#0A0A12", "#1A0508", "#0A0A12"]}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <View style={s.navRow}>
-          <TouchableOpacity
-            onPress={() => {
-              haptics.light();
-              navigation.goBack();
-            }}
-            style={s.backBtn}
-          >
-            <Text style={s.backArrow}>←</Text>
-          </TouchableOpacity>
-          <View style={s.progressTrack}>
-            <Animated.View
-              style={[s.progressFill, { width: headerProgress }]}
-            />
-          </View>
-          <Text style={s.stepCounter}>
-            {STEP}/{TOTAL_STEPS}
-          </Text>
-        </View>
-        <Text style={s.eyebrow}>SIGN UP · SUB-AGENT</Text>
-        <Text style={s.title}>Selfie preview</Text>
-        <Text style={s.subtitle}>
-          Choose a clear selfie photo for manual review. Uploading a photo does
-          not verify your identity.
-        </Text>
-      </View>
-
-      <View style={s.ovalWrap}>
-        {/* Oval outer: transform (native driver) — no color/opacity props here */}
-        <Animated.View
-          style={[
-            s.oval,
-            {
-              transform: phase === "idle" ? [{ scale: pulseAnim }] : [],
-            },
-          ]}
-        >
-          {/* ovalBorder: borderColor (JS driver) — separate child view, no transform */}
-          <Animated.View style={[s.ovalBorder, { borderColor: frameColor }]} />
-
-          {/* Brackets: transform (native driver) — borderColor is a plain string, not animated */}
-          {BRACKETS.map((pos, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                s.bracket,
-                { ...pos, borderColor: bracketColor },
-                { transform: bracketTranslate(i) },
-              ]}
-            />
-          ))}
-
-          {/* Silhouette: opacity (native driver — same value as silhouetteAnim which is native) */}
-          {photo ? (
-            <Image
-              source={{ uri: photo.uri }}
-              style={{ width: OVAL_W, height: OVAL_H }}
-            />
-          ) : (
-            <Text style={s.silhouette}>👤</Text>
-          )}
-
-          {phase === "done" && (
-            /* checkAnim is native driver — scale only on this view, no opacity/color */
-            <Animated.View
-              style={[s.checkWrap, { transform: [{ scale: checkScale }] }]}
-            >
-              <View style={s.checkCircle}>
-                <Text style={s.checkIcon}>✓</Text>
-              </View>
-            </Animated.View>
-          )}
-        </Animated.View>
-      </View>
-
-      <View style={s.chips}>
-        {["Eyes open", "No hat", "Good light"].map((c) => (
-          <View key={c} style={s.chip}>
-            <Text style={s.chipText}>{c}</Text>
-          </View>
-        ))}
-      </View>
-
-      {phase === "done" && (
-        <View style={s.doneBadge}>
-          <View style={s.doneDot} />
-          <Text style={s.doneText}>
-            Photo selected · save before manual review
-          </Text>
-        </View>
-      )}
-
-      <View style={[s.bottom, { paddingBottom: insets.bottom + 16 }]}>
-        {phase !== "scanning" && (
-          <TouchableOpacity onPress={startScan} activeOpacity={0.85}>
-            <LinearGradient
-              colors={[theme.gradPrimA, theme.gradPrimB]}
-              style={s.cta}
-            >
-              <Text style={s.ctaText}>Choose a selfie photo</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-        {phase === "scanning" && (
-          <View style={[s.cta, s.ctaScanning]}>
-            <Text style={s.ctaText}>Saving photo…</Text>
-          </View>
-        )}
-        {phase !== "scanning" && (
-          <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
-            <LinearGradient colors={["#16A34A", "#15803D"]} style={s.cta}>
-              <Text style={s.ctaText}>Continue →</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-        {error ? (
-          <Text accessibilityRole="alert" style={{ color: "white" }}>
-            {error}
-          </Text>
-        ) : null}
-        <Text style={s.note}>
-          Your photo is stored privately for your assigned reviewer.
-        </Text>
-      </View>
+      navigation.navigate('Step6Review', { ...syncWizard(navigation, await saveDraft(api, { ...p, documentIds: ids })), readOnly: false });
+    } catch (e) { setError(workflowError(e)); }
+    finally { pending.current = false; setBusy(false); }
+  }
+  return <RegistrationFrame step={5} title={copy('Selfie photo', 'Picha yako')} description={copy('For your main-agent to review.', 'Kwa ajili ya ukaguzi wa wakala mkuu.')}
+    onBack={() => navigation.goBack()} busy={busy} footer={<><RegistrationText error>{error || saved.error}</RegistrationText>
+      {saved.error && <TextAction label={copy('Retry document status', 'Jaribu tena hali ya nyaraka')} onPress={saved.retry} />}
+      <GlassButton label={busy ? copy('Saving photo…', 'Inahifadhi picha…') : copy('Save & continue', 'Hifadhi na uendelee')} onPress={next} busy={busy} disabled={!photo && !previous} /></>}>
+    <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+      {photo ? <Image accessibilityLabel={copy('Selected selfie', 'Picha iliyochaguliwa')} source={{ uri: photo.uri }} style={{ width: '80%', maxWidth: 260, aspectRatio: 0.8, borderRadius: 18 }} resizeMode="cover" />
+        : <View style={{ minHeight: 180, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="person-outline" size={88} color={colors.secondary} /></View>}
     </View>
-  );
+    <RegistrationText style={{ textAlign: 'center' }}>{photo ? copy('Selected · Not saved yet', 'Imechaguliwa · Bado haijahifadhiwa') : previous ? copy('Your selfie is saved privately.', 'Picha yako imehifadhiwa kwa faragha.') : copy('Face visible · Good lighting', 'Uso uonekane · Mwanga mzuri')}</RegistrationText>
+    <TextAction label={photo || previous ? copy('Choose another photo', 'Chagua picha nyingine') : copy('Choose a selfie photo', 'Chagua picha yako')} onPress={choose} disabled={busy} />
+    <RegistrationText style={{ textAlign: 'center', fontSize: 13 }}>{copy('PNG or JPEG · Up to 2 MB', 'PNG au JPEG · Hadi MB 2')}</RegistrationText>
+  </RegistrationFrame>;
 }
-
-const styles = (theme, insets) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A12' },
-  header:    { paddingHorizontal: 20, paddingBottom: 24, zIndex: 2 },
-  navRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  backBtn:   { marginRight: 12, padding: 4 },
-  backArrow: { fontSize: 22, color: '#fff' },
-  progressTrack: {
-    flex: 1, height: 3,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 2, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
-  stepCounter:  { marginLeft: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  eyebrow: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.4, marginBottom: 6 },
-  title:   { color: '#fff', fontSize: 26, fontFamily: 'Manrope_800ExtraBold', marginBottom: 6 },
-  subtitle:{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  ovalWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  oval: {
-    width: OVAL_W, height: OVAL_H,
-    borderRadius: OVAL_W / 2,
-    overflow: 'hidden',
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  ovalBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: OVAL_W / 2,
-    borderWidth: 2, borderStyle: 'dashed',
-  },
-  bracket:    { position: 'absolute', width: BRACKET_SIZE, height: BRACKET_SIZE },
-  silhouette: { fontSize: OVAL_W * 0.45, opacity: 0.15 },
-  scanLine:   { position: 'absolute', left: 0, right: 0, height: 3, top: 0 },
-  checkWrap:  { alignItems: 'center', justifyContent: 'center' },
-  checkCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#22C55E',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 8,
-  },
-  checkIcon: { color: '#fff', fontSize: 36, fontFamily: 'Inter_700Bold' },
-  chips: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 20 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  chipText:    { fontSize: 12, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)' },
-  progressWrap:{ paddingHorizontal: 32, marginBottom: 16, alignItems: 'center', gap: 8 },
-  progressBg:  {
-    width: '100%', height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 2, overflow: 'hidden',
-  },
-  progressScan: { height: '100%', backgroundColor: '#E01535', borderRadius: 2 },
-  progressPct:  { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'RobotoMono_400Regular' },
-  progressNum:  { color: '#fff' },
-  doneBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
-  doneDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
-  doneText:  { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#22C55E' },
-  bottom:    { paddingHorizontal: 20, paddingTop: 8, gap: 12 },
-  cta: {
-    height: 54, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#E01535',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
-  },
-  ctaScanning: { backgroundColor: '#333', shadowOpacity: 0 },
-  ctaText:     { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
-  note: { textAlign: 'center', fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(255,255,255,0.35)' },
-});

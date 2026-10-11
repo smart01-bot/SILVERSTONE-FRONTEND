@@ -1,3 +1,9 @@
+# Current registration direction — 11 October 2026
+
+The user approved the minimal liquid-glass registration design and requested implementation. Prefer open layouts, generous spacing, very few boxes and short, contextual information. Use restrained glass on selected inputs/actions; plain rows and dividers for review. Keep the silver/AMOLED palette, existing mark and six-step behavior. The initial card-heavy registration mockups are superseded. Carry this preference into future UI work.
+
+See [registration implementation and verification](REGISTRATION-UI-2026-10-11.md). Current working branch spelling is `Development`. The historical phase notes below describe earlier scope; they do not override this approved visual pass.
+
 # Phase 6 continuation interface
 
 October 7, 2026. Existing Queue options icon now opens a scoped operations modal. Existing Queue StyleSheet, navigation, assets, wizard, colors and fonts are preserved. New panel uses established tokens, 48-point actions, labelled inputs/checkboxes/radios, clear support references/held capacity and conflict/error/unconfigured states. No revenue or payment-success metric. Pending mutations are guarded; conflicts retain entered reasons and require explicit reload.

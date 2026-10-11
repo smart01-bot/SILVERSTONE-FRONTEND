@@ -50,7 +50,6 @@ test("restricted accounts stay outside operational navigators", async () => {
 
   assert.match(navigator, /if \(!canOperate\(profile\)\)/);
   assert.match(navigator, /initialRoute="pending"/);
-  assert.match(pending, /Account suspended\./);
-  assert.match(pending, /Application rejected\./);
-  assert.match(pending, /Corrections requested\./);
+  // Status-specific actions are exercised in registrationScreens.test.mjs.
+  assert.match(pending, /profile\?\.accountStatus === 'suspended'/);
 });
