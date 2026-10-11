@@ -7,6 +7,7 @@ import { agentColors } from '../agent/agentTheme';
 import { fonts } from '../../constants/theme';
 import SilverstoneMark from '../SilverstoneMark';
 import { ButtonDots } from '../Loader';
+import PressFeedback from '../PressFeedback';
 
 export function useAuthStyle() {
   const { isDark, lang } = useTheme();
@@ -55,7 +56,7 @@ export function AuthField({ label, password = false, editable = true, ...props }
   const [focused, setFocused] = useState(false);
   return <View style={s.field}>
     <Text style={[s.label, { color: colors.secondary }]}>{label}</Text>
-    <View style={[s.fieldRow, { borderBottomColor: focused ? colors.text : colors.strongBorder }]}>
+    <View style={[s.fieldRow, { borderBottomColor: focused ? colors.text : colors.border, backgroundColor: focused ? colors.surface : colors.glass }]}>
       <TextInput underlineColorAndroid="transparent" accessibilityLabel={label} placeholderTextColor={colors.muted} selectionColor={colors.text}
         {...props} editable={editable} secureTextEntry={password && !visible}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
@@ -71,11 +72,11 @@ export function AuthField({ label, password = false, editable = true, ...props }
 export function AuthButton({ label, onPress, busy = false, disabled = false }) {
   const { colors } = useAuthStyle();
   const blocked = busy || disabled;
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy, disabled: blocked }}
+  return <PressFeedback accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy, disabled: blocked }}
     disabled={blocked} onPress={onPress} style={({ pressed }) => [s.button, { backgroundColor: colors.action, opacity: pressed || blocked ? 0.65 : 1 }]}>
     <Text style={[s.buttonText, { color: colors.actionText }]}>{label}</Text>
     {busy ? <ButtonDots color={colors.actionText} /> : <Ionicons name="arrow-forward" size={22} color={colors.actionText} />}
-  </Pressable>;
+  </PressFeedback>;
 }
 
 export function AuthLink({ children, onPress, disabled = false }) {
@@ -96,8 +97,8 @@ export function AuthNotice({ children, error = false }) {
 export function PinDots({ length }) {
   const { colors, copy } = useAuthStyle();
   return <View accessible accessibilityLabel={copy(`${length} of 4 PIN digits entered`, `Namba ${length} kati ya 4 zimeingizwa`)} style={s.pinDots}>
-    {[0, 1, 2, 3].map(i => <View key={i} style={[s.pinCell, { borderColor: colors.strongBorder, backgroundColor: i < length ? colors.surface : 'transparent' }]}>
-      {i < length && <View style={[s.dot, { backgroundColor: colors.text }]} />}
+    {[0, 1, 2, 3].map(i => <View key={i} style={[s.pinCell, { borderColor: colors.strongBorder, backgroundColor: i < length ? colors.text : colors.glass }]}>
+      {i < length && <View style={[s.dot, { backgroundColor: colors.bg }]} />}
     </View>)}
   </View>;
 }
@@ -125,14 +126,14 @@ const s = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   brandText: { fontFamily: fonts.bodySemi, fontSize: 13, letterSpacing: 0.2, flexShrink: 1 },
   back: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { flex: 1, paddingTop: 28 }, heading: { gap: 12, marginBottom: 32 },
+  content: { flex: 1, paddingTop: 22 }, heading: { gap: 12, marginBottom: 32 },
   eyebrow: { fontFamily: fonts.bodyMed, fontSize: 14, lineHeight: 21 },
-  title: { fontFamily: fonts.display, fontSize: 34, lineHeight: 42, letterSpacing: -1 },
+  title: { fontFamily: fonts.display, fontSize: 40, lineHeight: 48, letterSpacing: -1.4 },
   description: { fontFamily: fonts.body, fontSize: 16, lineHeight: 25 },
   field: { marginBottom: 24 }, label: { fontFamily: fonts.bodyMed, fontSize: 14, lineHeight: 21 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, minHeight: 58 },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 2, minHeight: 62, borderTopLeftRadius:14, borderTopRightRadius:14, paddingHorizontal:14, marginTop:8 },
   input: { flex: 1, minWidth: 0, fontFamily: fonts.body, fontSize: 17, paddingVertical: 16 }, eye: { width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  button: { minHeight: 58, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16 },
+  button: { minHeight: 58, borderRadius: 18, paddingHorizontal: 22, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16 },
   buttonText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 17, lineHeight: 25 },
   link: { minHeight: 48, paddingVertical: 14, justifyContent: 'center', alignItems: 'center' },
   linkText: { fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22, textAlign: 'center' },

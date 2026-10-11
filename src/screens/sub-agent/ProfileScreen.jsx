@@ -92,13 +92,13 @@ export default function ProfileScreen({ navigation }) {
     <>
       <AgentScroll>
         <View style={s.identity}>
-          <View style={[s.avatar, { backgroundColor: colors.surface }]}>
-            <Text style={[s.initials, { color: colors.text }]}>{initials}</Text>
+          <View style={[s.avatar, { backgroundColor: colors.text }]}>
+            <Text style={[s.initials, { color: colors.bg }]}>{initials}</Text>
           </View>
           <View style={s.identityText}>
             <Text style={[s.name, { color: colors.text }]}>{name}</Text>
             <Text style={[s.agency, { color: colors.secondary }]}>
-              {agency || copy('Agency not provided', 'Jina la uwakala halijatolewa')}
+              {agency || user?.email || copy('Your agent account', 'Akaunti yako ya uwakala')}
             </Text>
           </View>
         </View>
@@ -120,8 +120,10 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
+        <Text style={[s.groupLabel,{color:colors.secondary}]}>{copy('Account','Akaunti')}</Text>
         <AgentRow icon="person-outline" label={copy('Personal details', 'Taarifa binafsi')} onPress={() => setSheet('personal')} />
         <AgentRow icon="swap-horizontal-outline" label={copy('Network accounts', 'Akaunti za mitandao')} onPress={() => navigation.navigate('Networks')} />
+        <Text style={[s.groupLabel,{color:colors.secondary}]}>{copy('Make it yours','Mapendeleo yako')}</Text>
         <AgentRow icon="sunny-outline" label={copy('Appearance', 'Mwonekano')} value={appearance} onPress={() => setSheet('appearance')} />
         <AgentRow icon="globe-outline" label={copy('Language', 'Lugha')} value={lang === 'sw' ? 'Kiswahili' : 'English'} onPress={() => setSheet('language')} />
 
@@ -204,15 +206,16 @@ export default function ProfileScreen({ navigation }) {
 
 const s = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 10, paddingBottom: 20 },
-  avatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  groupLabel: { fontFamily:fonts.bodyMed,fontSize:13,lineHeight:20,marginTop:26,marginBottom:2 },
+  avatar: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   initials: { fontSize: 21, fontFamily: fonts.bodySemi },
   identityText: { flex: 1, gap: 4 },
-  name: { fontSize: 19, lineHeight: 26, fontFamily: fonts.bodySemi },
+  name: { fontSize: 24, lineHeight: 31, fontFamily: fonts.bodySemi },
   agency: { fontSize: 14, lineHeight: 21, fontFamily: fonts.body },
   numberRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, minHeight: 58, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
   numberLabel: { flexGrow: 1, fontSize: 13, lineHeight: 20, fontFamily: fonts.body },
   numberValue: { flexShrink: 1, fontSize: 13, lineHeight: 20, fontFamily: fonts.body },
-  copyButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  copyButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   signOut: { minHeight: 62, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10 },
   rowLabel: { fontSize: 15, fontFamily: fonts.body },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 80, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },

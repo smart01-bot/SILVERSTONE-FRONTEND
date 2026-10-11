@@ -48,6 +48,7 @@ export default function NewRequestScreen({ navigation, route }) {
   const [sourceType, setSourceType] = useState('phone');
   const [destType, setDestType] = useState('phone');
   const [review, setReview] = useState(null);
+  const [focusedEndpoint, setFocusedEndpoint] = useState(null);
 
   useEffect(()=>setSubmitted(false),[sourceNetwork,destNetwork,sourcePhone,destPhone,sourceType,destType,amount,urgent]);
 
@@ -124,7 +125,7 @@ export default function NewRequestScreen({ navigation, route }) {
     const setType = kind === 'source' ? setSourceType : setDestType;
     const setNumber = kind === 'source' ? setSourcePhone : setDestPhone;
     return (
-      <View style={[s.endpoint, { borderBottomColor: colors.secondary }]}>
+      <View style={[s.endpoint, { borderBottomColor: colors.border, borderLeftColor:focusedEndpoint===kind?colors.text:colors.border }]}>
         <TouchableOpacity onPress={() => setPicker(kind)} style={s.accountField} accessibilityRole="button"
           accessibilityLabel={`${label}: ${NETWORK_NAMES[network] || copy('Choose network','Chagua mtandao')}`}>
           <View style={s.fieldContent}>
@@ -135,13 +136,13 @@ export default function NewRequestScreen({ navigation, route }) {
         </TouchableOpacity>
         <View style={s.typeRow}>
           {[['phone',copy('Wallet','Wallet')],['agent',copy('Agent','Wakala')],['till',copy('Till','Lipa namba')]].map(([value,title]) => (
-            <TouchableOpacity key={value} onPress={() => setType(value)} style={s.typeChoice} accessibilityRole="radio"
+            <TouchableOpacity key={value} onPress={() => setType(value)} style={[s.typeChoice,{backgroundColor:type===value?colors.selected:'transparent'}]} accessibilityRole="radio"
               accessibilityState={{selected:type===value}} accessibilityLabel={`${label}: ${title}`}>
-              <Text style={[s.typeText,{color:type===value?colors.text:colors.secondary,textDecorationLine:type===value?'underline':'none'}]}>{title}</Text>
+              <Text style={[s.typeText,{color:type===value?colors.text:colors.secondary,fontFamily:type===value?fonts.bodySemi:fonts.body}]}>{title}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <TextInput value={identifier} onChangeText={setNumber} maxLength={type==='phone'?24:32}
+        <TextInput value={identifier} onChangeText={setNumber} onFocus={()=>setFocusedEndpoint(kind)} onBlur={()=>setFocusedEndpoint(null)} maxLength={type==='phone'?24:32}
           keyboardType={type==='phone'?'phone-pad':'default'} autoCapitalize="none" autoCorrect={false}
           placeholder={type==='phone'?'07XX XXX XXX':copy('Enter agent / till number','Weka namba ya wakala / lipa')}
           placeholderTextColor={colors.secondary} selectionColor={colors.text}
@@ -174,8 +175,8 @@ export default function NewRequestScreen({ navigation, route }) {
           </Text>
         )}
 
-        {accountField('source', copy('From', 'Kutoka'), sourceNetwork, sourcePhone)}
-        {accountField('destination', copy('To', 'Kwenda'), destNetwork, destPhone)}
+        {accountField('source', copy('Collect from', 'Kusanya kutoka'), sourceNetwork, sourcePhone)}
+        {accountField('destination', copy('Pay out to', 'Tuma kwenda'), destNetwork, destPhone)}
 
         <View style={[s.amountField, { borderBottomColor: colors.border }]}>
           <Text style={[s.label, { color: colors.secondary }]}>{tr('amount')}</Text>
@@ -336,10 +337,10 @@ const s = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingTop: 0 },
   fieldContent: { flex: 1, paddingRight: 16 },
-  endpoint: { paddingBottom:18, borderBottomWidth:1 },
+  endpoint: { paddingBottom:20,paddingLeft:18,marginBottom:18,borderLeftWidth:2,borderBottomWidth:StyleSheet.hairlineWidth },
   accountField: { minHeight:72,paddingTop:16,paddingBottom:8,flexDirection:'row',alignItems:'center' },
-  typeRow: { flexDirection:'row',gap:20 },
-  typeChoice: { minHeight:44,justifyContent:'center' },
+  typeRow: { flexDirection:'row',gap:4,flexWrap:'wrap',marginTop:6 },
+  typeChoice: { minHeight:48,minWidth:64,paddingHorizontal:12,borderRadius:12,justifyContent:'center',alignItems:'center' },
   typeText: { fontFamily:fonts.bodyMed,fontSize:14 },
   numberInput: { minWidth:0,width:'100%',minHeight:50,paddingVertical:8,fontFamily:fonts.bodySemi,fontSize:23 },
   endpointHint: { fontFamily:fonts.body,fontSize:12,lineHeight:18 },
@@ -350,10 +351,10 @@ const s = StyleSheet.create({
   label: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
   accountName: { fontFamily: fonts.bodySemi, fontSize: 18, lineHeight: 25, marginTop: 2 },
   identifier: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 3 },
-  amountField: { paddingTop: 19, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  amountField: { paddingTop: 6, paddingBottom: 18, borderBottomWidth: StyleSheet.hairlineWidth },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   currency: { fontFamily: fonts.bodyMed, fontSize: 18 },
-  amountInput: { flex: 1, minWidth:0, minHeight: 50, paddingVertical: 4, fontFamily: fonts.bodySemi, fontSize: 32 },
+  amountInput: { flex: 1, minWidth:0, minHeight: 50, paddingVertical: 4, fontFamily: fonts.bodySemi, fontSize: 40,fontVariant:['tabular-nums'] },
   optionsToggle: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   optionsLabel: { fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22 },
   optionsContent: { paddingBottom: 12 },

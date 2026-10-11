@@ -1,18 +1,18 @@
 // Shared silver/AMOLED tokens for auth and post-login sub-agent screens.
 // Registration also uses these tokens; legacy main-agent screens retain constants/theme.js.
 export const AGENT_LIGHT = Object.freeze({
-  bg: '#C4C7CB', text: '#16191D', secondary: '#454B53', muted: '#49515A',
-  surface: '#F4F5F6', border: '#A6ABB1', strongBorder: '#797F87',
+  bg: '#EEF0F2', text: '#16191D', secondary: '#454B53', muted: '#49515A',
+  surface: '#FFFFFF', border: '#CED3D9', strongBorder: '#797F87',
   action: '#202428', actionText: '#FFFFFF', danger: '#962E35',
-  glass: 'rgba(245,247,249,0.36)', glassBorder: 'rgba(255,255,255,0.88)',
-  selected: 'rgba(255,255,255,0.57)', scrim: 'rgba(0,0,0,0.28)',
+  glass: 'rgba(255,255,255,0.70)', glassBorder: 'rgba(255,255,255,0.96)',
+  selected: 'rgba(32,36,40,0.09)', scrim: 'rgba(0,0,0,0.28)',
 });
 
 export const AGENT_DARK = Object.freeze({
   bg: '#000000', text: '#F5F5F5', secondary: '#B8BCC1', muted: '#A1A7AF',
-  surface: '#181A1D', border: '#303438', strongBorder: '#697079',
+  surface: '#14171B', border: '#303438', strongBorder: '#697079',
   action: '#F4F5F6', actionText: '#111315', danger: '#FFB0B5',
-  glass: 'rgba(22,24,27,0.68)', glassBorder: 'rgba(220,225,232,0.52)',
+  glass: 'rgba(22,24,27,0.68)', glassBorder: 'rgba(220,225,232,0.24)',
   selected: 'rgba(235,240,247,0.14)', scrim: 'rgba(0,0,0,0.62)',
 });
 

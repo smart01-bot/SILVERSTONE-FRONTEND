@@ -13,7 +13,7 @@ const AgentUIContext = createContext(null);
 
 export function AgentUIProvider({ children }) {
   const { isDark, lang } = useTheme();
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(true);
   const [reducedTransparency, setReducedTransparency] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(118);
   useEffect(() => {
@@ -50,11 +50,13 @@ export function AgentButton({ label, onPress, disabled = false, busy = false, ic
   const { colors, reducedMotion } = useAgentUI();
   const scale = useRef(new Animated.Value(1)).current;
   const blocked = disabled || busy;
+  useEffect(() => { if (reducedMotion || blocked) { scale.stopAnimation(); scale.setValue(1); } return () => scale.stopAnimation(); }, [reducedMotion, blocked, scale]);
   const primary = variant === 'primary';
   const ink = primary ? colors.actionText : colors.text;
   const animate = value => {
     if (reducedMotion || blocked) return;
-    Animated.timing(scale, { toValue: value, duration: 100, useNativeDriver: true }).start();
+    scale.stopAnimation();
+    Animated.spring(scale, { toValue: value, stiffness:420, damping:30, mass:0.7, useNativeDriver:true }).start();
   };
   return <Animated.View style={{ transform: [{ scale }] }}>
     <Pressable accessibilityRole="button" accessibilityLabel={label}
@@ -70,9 +72,10 @@ export function AgentButton({ label, onPress, disabled = false, busy = false, ic
 export function AgentRow({ label, value, icon, onPress, disabled = false, children, style, ...props }) {
   const { colors } = useAgentUI();
   return <Pressable onPress={onPress} disabled={disabled || !onPress}
+    accessibilityLabel={label} accessibilityValue={value ? { text:value } : undefined}
     accessibilityRole={onPress ? 'button' : undefined}
     accessibilityState={onPress ? { disabled } : undefined}
-    style={({ pressed }) => [styles.row, { borderBottomColor: colors.border, opacity: pressed ? 0.65 : 1 }, style]} {...props}>
+    style={({ pressed }) => [styles.row, { borderBottomColor: colors.border, backgroundColor: pressed ? colors.selected : 'transparent', opacity: disabled ? 0.5 : 1 }, style]} {...props}>
     {icon ? <Ionicons name={icon} size={21} color={colors.text} /> : null}
     <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
     {value ? <Text style={[styles.rowValue, { color: colors.secondary }]}>{value}</Text> : null}
@@ -102,7 +105,7 @@ export function AgentSheet({ visible, onClose, title, children }) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.modal, { backgroundColor: colors.scrim }]}>
       <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
-      <View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: colors.bg, paddingBottom: Math.max(insets.bottom, 16), marginTop: insets.top + 32 }]}>
+      <View accessibilityViewIsModal style={[styles.sheet, { borderColor:colors.glassBorder, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16), marginTop: insets.top + 32 }]}>
         <View style={styles.sheetHeader}>
           <Text accessibilityRole="header" style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
           <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={copy('Close', 'Funga')}
@@ -119,17 +122,17 @@ export function AgentSheet({ visible, onClose, title, children }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24, flexGrow: 1 },
-  button: { minHeight: 54, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  button: { minHeight: 58, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
   buttonText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 23 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58, paddingVertical: 15, borderBottomWidth: StyleSheet.hairlineWidth },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 66, paddingVertical: 18, borderBottomWidth: StyleSheet.hairlineWidth },
   rowLabel: { flex: 1, fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22 },
   rowValue: { flexShrink: 1, maxWidth: '42%', fontFamily: fonts.body, fontSize: 14, lineHeight: 21, textAlign: 'right' },
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 12 },
   noticeText: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 20 },
   modal: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { maxHeight: '88%', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12 },
+  sheet: { maxHeight: '88%', borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth:1, paddingHorizontal: 24, paddingTop: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   sheetTitle: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 21, lineHeight: 28 },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   sheetContent: { paddingBottom: 20 },
 });

@@ -171,13 +171,13 @@ export default function MyRequestsScreen({ navigation, route }) {
         ListHeaderComponent={(
           <View>
             <View style={s.filterBar}>
-              <Text style={[s.caption, { color: colors.secondary }]}>{copy('Transactions', 'Miamala')}</Text>
+              <Text style={[s.caption, { color: colors.secondary }]}>{copy('Your activity', 'Shughuli zako')}</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`${copy('Filter history', 'Chuja historia')}: ${filterLabel(filter)}`}
                 accessibilityState={{ expanded: filterVisible }}
                 onPress={() => setFilterVisible(true)}
-                style={({ pressed }) => [s.filterButton, { opacity: pressed ? 0.6 : 1 }]}
+                style={({ pressed }) => [s.filterButton, { backgroundColor:colors.surface,borderColor:colors.border,opacity: pressed ? 0.6 : 1 }]}
               >
                 <Text style={[s.filterText, { color: colors.text }]}>{filterLabel(filter)}</Text>
                 <Ionicons name="chevron-down" size={16} color={colors.text} />
@@ -198,7 +198,7 @@ export default function MyRequestsScreen({ navigation, route }) {
           </View>
         ) : !visibleError ? (
           <View style={s.empty}>
-            <Ionicons name={filter === 'all' ? 'receipt-outline' : 'filter-outline'} size={28} color={colors.secondary} />
+            <View style={[s.emptySymbol,{backgroundColor:colors.surface,borderColor:colors.border}]}><Ionicons name={filter === 'all' ? 'receipt-outline' : 'filter-outline'} size={34} color={colors.text} /></View>
             <Text style={[s.emptyTitle, { color: colors.text }]}>{filter === 'all' ? copy('No requests yet', 'Bado hakuna maombi') : copy('No matching requests', 'Hakuna maombi yanayolingana')}</Text>
             <Text style={[s.emptyText, { color: colors.secondary }]}>{filter === 'all' ? copy('Your exchanges will appear here.', 'Maombi yako ya kubadilisha float yataonekana hapa.') : copy('Choose another filter to see more.', 'Chagua kichujio kingine kuona zaidi.')}</Text>
             <AgentButton
@@ -214,7 +214,7 @@ export default function MyRequestsScreen({ navigation, route }) {
             accessibilityLabel={`TZS ${formatTzs(request.amount)}, ${networkDisplayName(request.sourceNetwork)} ${copy('to', 'kwenda')} ${networkDisplayName(request.destNetwork)}, ${requestStatusLabel(request.status)}`}
             accessibilityHint={copy('Open transaction details', 'Fungua maelezo ya muamala')}
             onPress={() => setSelectedRequest(request)}
-            style={({ pressed }) => [s.transaction, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [s.transaction, { borderBottomColor: colors.border, backgroundColor:pressed?colors.selected:'transparent' }]}
           >
             <View style={s.rowTop}>
               <Text style={[s.amount, { color: colors.text }]}>TZS {formatTzs(request.amount)}</Text>
@@ -253,9 +253,9 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingBottom: 24 },
   filterBar: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   caption: { fontFamily: fonts.body, fontSize: 14, flexShrink: 1 },
-  filterButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingLeft: 12, maxWidth: '70%' },
+  filterButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingHorizontal: 14, borderWidth:1,borderRadius:16,maxWidth: '70%' },
   filterText: { fontFamily: fonts.bodyMed, fontSize: 14, flexShrink: 1 },
-  transaction: { paddingVertical: 20, borderBottomWidth: StyleSheet.hairlineWidth, gap: 7 },
+  transaction: { paddingVertical: 24, borderBottomWidth: StyleSheet.hairlineWidth, gap: 7 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   amount: { fontFamily: fonts.bodyMed, fontSize: 23, letterSpacing: -0.5, flex: 1, fontVariant: ['tabular-nums'] },
   route: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21 },
@@ -264,7 +264,8 @@ const s = StyleSheet.create({
   statusText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, flexShrink: 1 },
   time: { fontFamily: fonts.body, fontSize: 12, lineHeight: 20 },
   notice: { fontFamily: fonts.body, fontSize: 12, lineHeight: 19, marginTop: 2 },
-  empty: { paddingVertical: 52, alignItems: 'center', gap: 14 },
+  emptySymbol: { width:80,height:88,borderRadius:24,borderWidth:1,alignItems:'center',justifyContent:'center',marginBottom:6 },
+  empty: { paddingVertical: 40, alignItems: 'center', gap: 14 },
   emptyTitle: { fontFamily: fonts.bodySemi, fontSize: 20, textAlign: 'center' },
   emptyText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, textAlign: 'center' },
 });

@@ -182,7 +182,7 @@ export function AgentTabBar({ navigationState, position, navigation }) {
   const boxy = isBoxyAgentDevice(Platform.constants?.Model);
   const corner = boxy ? 14 : 34;
   const cellWidth = Math.max(0, (width - 12) / navigationState.routes.length);
-  const markerWidth = Math.max(0, Math.min(50, cellWidth - 8));
+  const markerWidth = Math.max(0, cellWidth - 4);
   const indicatorPosition = useMemo(() => Animated.multiply(position, cellWidth), [position, cellWidth]);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -218,7 +218,8 @@ export function AgentTabBar({ navigationState, position, navigation }) {
               }}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               style={({ pressed }) => [s.tab, { opacity: pressed ? 0.55 : 1 }]}>
-              <Ionicons name={tab.icon} size={25} color={selected ? colors.text : colors.secondary} />
+              <Ionicons name={selected ? tab.icon.replace('-outline','') : tab.icon} size={23} color={selected ? colors.text : colors.secondary} />
+              <Text style={[s.tabLabel,{color:selected?colors.text:colors.secondary,fontFamily:selected?fonts.bodySemi:fonts.body}]}>{copy(tab.en,tab.sw)}</Text>
             </Pressable>;
           })}
         </View>
@@ -240,17 +241,18 @@ const s = StyleSheet.create({
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   brandText: { flexShrink: 1, fontFamily: fonts.bodySemi, fontSize: 12, letterSpacing: 0.1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconButton: { width: 44, height: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  iconButton: { width: 48, height: 48, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
   titleSlot: { minHeight: 48, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 10, overflow: 'hidden' },
-  pageTitle: { fontFamily: fonts.bodySemi, fontSize: 23, lineHeight: 32, letterSpacing: -0.45 },
+  pageTitle: { fontFamily: fonts.bodySemi, fontSize: 27, lineHeight: 35, letterSpacing: -0.8 },
   previousTitle: { position: 'absolute', left: 24, top: 4, right: 24 },
   sheetRow: { minHeight: 60, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', gap: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   sheetLabel: { flex: 1, fontFamily: fonts.bodyMed, fontSize: 16, lineHeight: 23 },
   sheetDescription: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23, marginBottom: 24 },
   navigationArea: { paddingTop: 8, paddingHorizontal: 20 },
-  navigationBar: { width: '100%', maxWidth: 440, height: 64, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  navigationBar: { width: '100%', maxWidth: 440, minHeight: 76, alignSelf: 'center', borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   tabs: { flex: 1, flexDirection: 'row', padding: 6 },
-  tab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center' },
+  tabLabel: { fontSize:11,lineHeight:16,marginTop:4,textAlign:'center',flexShrink:1 },
+  tab: { flex: 1, minHeight: 62,paddingVertical:6,paddingHorizontal:2, alignItems: 'center', justifyContent: 'center' },
   selection: { position: 'absolute', left: 10, top: 6, bottom: 6, borderWidth: StyleSheet.hairlineWidth },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

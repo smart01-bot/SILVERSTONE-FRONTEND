@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import SilverstoneMark from '../../components/SilverstoneMark';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { fonts } from '../../constants/theme';
@@ -106,11 +107,16 @@ export default function HomeScreen({ navigation }) {
     <AgentScroll contentContainerStyle={styles.content} refreshControl={
       <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />
     }>
-      <View style={styles.introduction}>
-        <Text style={[styles.greeting, { color: colors.secondary }]}>{copy('Hello', 'Habari')}, {firstName}</Text>
-        <Text style={[styles.title, { color: colors.text }]}>{copy('Exchange float', 'Badilisha float')}</Text>
-        <Text style={[styles.subtitle, { color: colors.secondary }]}>{copy('Through your main-agent', 'Kupitia wakala wako mkuu')}</Text>
-        <AgentButton label={copy('New request', 'Ombi jipya')} onPress={() => navigation.navigate('NewRequest')} />
+      <Text style={[styles.greeting, { color: colors.secondary }]}>{copy('Hello', 'Habari')}, {firstName}</Text>
+      <View style={[styles.introduction,{backgroundColor:colors.text}]}>
+        <View style={styles.heroTop}>
+          <Text style={[styles.heroLabel,{color:colors.bg}]}>{copy('Through your main-agent','Kupitia wakala wako mkuu')}</Text>
+          <SilverstoneMark color={colors.bg} size={36} />
+        </View>
+        <Text style={[styles.title, { color: colors.bg }]}>{copy('Exchange\nfloat.','Badilisha\nfloat.')}</Text>
+        <Text style={[styles.subtitle, { color: colors.bg }]}>{copy('Choose where your float goes next.','Chagua float yako iende wapi.')}</Text>
+        <AgentButton label={copy('New request', 'Ombi jipya')} onPress={() => navigation.navigate('NewRequest')}
+          style={{backgroundColor:colors.bg}} variant="text" icon="swap-horizontal-outline" />
       </View>
 
       <View style={styles.latestSection}>
@@ -143,9 +149,13 @@ export default function HomeScreen({ navigation }) {
               {copy('Outcome unresolved. Do not send funds or start another payment.', 'Matokeo hayajathibitishwa. Usitume fedha wala kuanzisha malipo mengine.')}
             </Text> : null}
           </TouchableOpacity>
-        ) : !visibleError ? <Text style={[styles.stateText, { color: colors.secondary }]}>
-          {copy('No requests yet. Start with a new request above.', 'Bado hakuna maombi. Anza na ombi jipya hapo juu.')}
-        </Text> : null}
+        ) : !visibleError ? <View style={[styles.empty,{borderColor:colors.border}]}>
+          <Ionicons name="swap-horizontal-outline" size={26} color={colors.text} />
+          <View style={{flex:1,gap:5}}>
+            <Text style={[styles.sectionTitle,{color:colors.text}]}>{copy('Your first exchange starts here','Anza kubadilisha float hapa')}</Text>
+            <Text style={[styles.route,{color:colors.secondary}]}>{copy('Choose where funds come from and where they should go.','Chagua fedha zitoke wapi na ziende wapi.')}</Text>
+          </View>
+        </View> : null}
         {visibleError ? <AgentButton label={copy('Retry loading requests', 'Jaribu kupakia maombi tena')}
           onPress={onRefresh} disabled={refreshing} busy={refreshing} variant="text" icon="refresh-outline" /> : null}
       </View>
@@ -155,14 +165,17 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   content: { paddingTop: 16 },
-  introduction: { gap: 8 },
+  introduction: { gap:8,borderRadius:26,padding:24,marginTop:16,overflow:'hidden' },
+  heroTop: { flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:14,marginBottom:18 },
+  heroLabel: { fontFamily:fonts.bodyMed,fontSize:14,lineHeight:21,flex:1 },
+  empty: { flexDirection:'row',gap:16,paddingVertical:24,borderTopWidth:1 },
   greeting: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24 },
-  title: { fontFamily: fonts.heading, fontSize: 29, lineHeight: 36, letterSpacing: -0.5 },
-  subtitle: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, marginBottom: 10 },
+  title: { fontFamily: fonts.heading, fontSize: 36, lineHeight: 43, letterSpacing: -1.1 },
+  subtitle: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23, marginBottom: 14,opacity:0.85 },
   latestSection: { marginTop: 26 },
   sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 6 },
   sectionTitle: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 24 },
-  preview: { borderRadius: 18, padding: 18 },
+  preview: { borderRadius: 20, padding: 22 },
   previewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   amount: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 21, lineHeight: 29 },
   route: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, marginTop: 4 },

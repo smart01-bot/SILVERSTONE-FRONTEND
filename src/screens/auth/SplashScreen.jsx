@@ -15,7 +15,8 @@ export default function SplashScreen({ navigation, onDone }) {
   return <SafeAreaView style={[s.root, { backgroundColor: colors.bg }]}>
     <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
     <View style={s.center}>
-      <SilverstoneMark color={colors.text} size={64} />
+      <SilverstoneMark color={colors.text} size={92} />
+      <View style={[s.rule,{backgroundColor:colors.strongBorder}]} />
       <Text style={[s.brand, { color: colors.text }]}>SILVERSTONE</Text>
       <Text style={[s.tagline, { color: colors.secondary }]}>{copy('Float through your main-agent.', 'Float kupitia wakala wako mkuu.')}</Text>
     </View>
@@ -23,7 +24,8 @@ export default function SplashScreen({ navigation, onDone }) {
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
-  root: { flex: 1, padding: 24 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22 },
-  brand: { fontFamily: fonts.bodySemi, fontSize: 24, letterSpacing: 2 },
-  tagline: { fontFamily: fonts.body, fontSize: 15, lineHeight: 24, textAlign: 'center' },
+  root: { flex: 1, padding: 24 }, center: { flex: 1, alignItems: 'flex-start', justifyContent: 'center', gap: 24,paddingHorizontal:12 },
+  brand: { fontFamily: fonts.bodySemi, fontSize: 28, letterSpacing: 1 },
+  rule: { width:48,height:2,marginTop:8 },
+  tagline: { fontFamily: fonts.body, fontSize: 17, lineHeight: 26,maxWidth:260 },
 });
