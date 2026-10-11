@@ -15,10 +15,15 @@ export function useAuthStyle() {
 
 export function AuthFrame({ children, onBack, backDisabled = false, footer }) {
   const { colors, isDark, copy } = useAuthStyle();
+  const [headerHeight, setHeaderHeight] = useState(88);
   return <SafeAreaView style={[s.root, { backgroundColor: colors.bg }]}>
     <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
-    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+    <KeyboardAvoidingView style={[s.root, { overflow: 'hidden' }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={[s.scroll, { paddingTop: headerHeight }]}>
+        <View style={s.content}>{children}</View>
+        {footer ? <Text style={[s.footer, { color: colors.secondary }]}>{footer}</Text> : null}
+      </ScrollView>
+      <View onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)} style={[s.fixedHeader, { backgroundColor: colors.bg }]}>
         <View style={s.header}>
           <View accessible accessibilityLabel="Silverstone" style={s.brand}>
             <SilverstoneMark color={colors.text} />
@@ -30,9 +35,7 @@ export function AuthFrame({ children, onBack, backDisabled = false, footer }) {
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>}
         </View>
-        <View style={s.content}>{children}</View>
-        {footer ? <Text style={[s.footer, { color: colors.secondary }]}>{footer}</Text> : null}
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
@@ -117,7 +120,8 @@ export function PinKeypad({ onDigit, onDelete, disabled = false, biometric }) {
 
 const s = StyleSheet.create({
   root: { flex: 1 }, scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 20, width: '100%', maxWidth: 488, alignSelf: 'center' },
-  header: { minHeight: 88, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  fixedHeader: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+  header: { width: '100%', maxWidth: 488, alignSelf: 'center', paddingHorizontal: 24, minHeight: 88, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   brandText: { fontFamily: fonts.bodySemi, fontSize: 13, letterSpacing: 0.2, flexShrink: 1 },
   back: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

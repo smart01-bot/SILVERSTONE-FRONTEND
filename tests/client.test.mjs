@@ -157,3 +157,45 @@ test("late login cannot overwrite a newer account session", async () => {
     "new",
   );
 });
+
+test("origin, legacy API root and versioned root all use versioned auth routes", async () => {
+  for (const baseUrl of [
+    "https://silverstone-backend.onrender.com",
+    "https://silverstone-backend.onrender.com/",
+    "https://silverstone-backend.onrender.com/api",
+    " https://silverstone-backend.onrender.com/api/v1/// ",
+  ]) {
+    const urls = [];
+    const client = createApiClient({
+      baseUrl, storage: storage(),
+      fetchImpl: async (url) => {
+        urls.push(url);
+        return response({ accessToken: "synthetic", refreshToken: "synthetic", agent: { id: "synthetic" } });
+      },
+    });
+    await client.login("agent@example.test", "synthetic");
+    await client.register({ email: "agent@example.test", password: "synthetic" });
+    await client.recovery("agent@example.test");
+    assert.deepEqual(urls, ["login", "register", "recovery"].map(action =>
+      `https://silverstone-backend.onrender.com/api/v1/auth/${action}`));
+  }
+});
+
+test("invalid API configuration cannot send credentials", async () => {
+  for (const baseUrl of [undefined, "", "ftp://example.test", "https://user:secret@example.test", "https://example.test/api/v2", "https://example.test?target=other", "https://example.test/#fragment"]) {
+    let requests = 0;
+    const client = createApiClient({ baseUrl, storage: storage(), fetchImpl: async () => { requests++; } });
+    await assert.rejects(client.login("agent@example.test", "synthetic"), /Check the app API address/);
+    assert.equal(requests, 0);
+  }
+});
+
+test("local development API keeps its own host and port", async () => {
+  let requested;
+  const client = createApiClient({
+    baseUrl: "http://10.0.2.2:8800", storage: storage(),
+    fetchImpl: async (url) => { requested = url; return response({ accessToken: "synthetic", refreshToken: "synthetic", agent: { id: "synthetic" } }); },
+  });
+  await client.login("agent@example.test", "synthetic");
+  assert.equal(requested, "http://10.0.2.2:8800/api/v1/auth/login");
+});

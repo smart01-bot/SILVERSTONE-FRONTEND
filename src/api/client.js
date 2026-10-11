@@ -1,3 +1,5 @@
+import { normalizeApiBaseUrl } from "./baseUrl.js";
+
 // Platform-independent client. SecureStore is injected by the native wrapper.
 export function createApiClient({
   baseUrl,
@@ -16,12 +18,11 @@ export function createApiClient({
     path,
     { method = "GET", body, token, headers = {} } = {},
   ) {
-    if (!baseUrl || !/^https?:\/\//.test(baseUrl))
-      throw new Error("Set the API address before signing in.");
+    const apiBaseUrl = normalizeApiBaseUrl(baseUrl);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}${path}`, {
+      const response = await fetchImpl(`${apiBaseUrl}${path}`, {
         method,
         signal: controller.signal,
         headers: {

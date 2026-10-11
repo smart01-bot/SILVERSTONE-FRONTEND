@@ -33,19 +33,11 @@ export function RegistrationFrame({ title, description, step, onBack, busy = fal
     const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduced);
     return () => { live = false; sub?.remove(); };
   }, []);
+  const [headerHeight, setHeaderHeight] = useState(74);
   return <Transparency.Provider value={reduced}><SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]}>
     <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={styles.page}>
-        <View style={styles.header}>
-          {onBack && <Pressable accessibilityRole="button" accessibilityLabel={copy('Back', 'Rudi')} accessibilityState={{ disabled: busy }} disabled={busy} onPress={onBack} style={styles.iconButton}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </Pressable>}
-          <View accessible accessibilityLabel="Silverstone" style={styles.brand}><SilverstoneMark size={23} color={colors.text} /><Text style={[styles.wordmark, { color: colors.text }]}>SILVERSTONE</Text></View>
-          <Pressable accessibilityRole="button" accessibilityLabel={copy('Switch to Swahili', 'Badili kwenda Kiingereza')} onPress={() => setLang(lang === 'sw' ? 'en' : 'sw')} style={styles.language}>
-            <Text style={[styles.small, { color: colors.text }]}>{lang === 'sw' ? 'EN' : 'SW'}</Text>
-          </Pressable>
-        </View>
+    <KeyboardAvoidingView style={[styles.root, { overflow: 'hidden' }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={[styles.page, { paddingTop: headerHeight }]}>
         {step && <View accessible accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: 6, now: step }} accessibilityLabel={copy(`Registration step ${step} of 6`, `Hatua ya usajili ${step} kati ya 6`)} style={styles.progress}>
           <View style={styles.segments}>{[1, 2, 3, 4, 5, 6].map(n => <View key={n} style={[styles.segment, { backgroundColor: n <= step ? colors.text : colors.border }]} />)}</View>
           <Text style={[styles.small, { color: colors.secondary }]}>{step}/6</Text>
@@ -56,6 +48,17 @@ export function RegistrationFrame({ title, description, step, onBack, busy = fal
         <View style={styles.content}>{children}</View>
         {footer && <View style={styles.footer}>{footer}</View>}
       </ScrollView>
+      <View onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)} style={[styles.fixedHeader, { backgroundColor: colors.bg }]}>
+        <View style={styles.header}>
+          {onBack && <Pressable accessibilityRole="button" accessibilityLabel={copy('Back', 'Rudi')} accessibilityState={{ disabled: busy }} disabled={busy} onPress={onBack} style={styles.iconButton}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </Pressable>}
+          <View accessible accessibilityLabel="Silverstone" style={styles.brand}><SilverstoneMark size={23} color={colors.text} /><Text style={[styles.wordmark, { color: colors.text }]}>SILVERSTONE</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={copy('Switch to Swahili', 'Badili kwenda Kiingereza')} onPress={() => setLang(lang === 'sw' ? 'en' : 'sw')} style={styles.language}>
+            <Text style={[styles.small, { color: colors.text }]}>{lang === 'sw' ? 'EN' : 'SW'}</Text>
+          </Pressable>
+        </View>
+      </View>
     </KeyboardAvoidingView>
   </SafeAreaView></Transparency.Provider>;
 }
@@ -126,7 +129,8 @@ export function CheckRow({ label, checked, onPress, disabled = false }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 }, page: { flexGrow: 1, width: '100%', maxWidth: 488, alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 20 },
-  header: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fixedHeader: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+  header: { width: '100%', maxWidth: 488, alignSelf: 'center', paddingHorizontal: 24, minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 8 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }, wordmark: { fontFamily: fonts.bodySemi, fontSize: 11, letterSpacing: 0.7, flexShrink: 1 },
   iconButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }, language: { minWidth: 48, minHeight: 48, justifyContent: 'center', alignItems: 'flex-end' },
   progress: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 28 }, segments: { flexDirection: 'row', flex: 1, gap: 5 }, segment: { height: 3, borderRadius: 2, flex: 1 },
