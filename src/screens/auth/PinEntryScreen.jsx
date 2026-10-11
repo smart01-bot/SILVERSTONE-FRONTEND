@@ -1,324 +1,89 @@
-// src/screens/auth/PinEntryScreen.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, SafeAreaView, Image, Animated, Alert,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, AppState } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { useAuth }  from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useLoader } from '../../context/LoaderContext';
-import { spacing, radius, fonts } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { checkLockout, recordFailedAttempt, clearLockout } from '../../utils/pinLockout';
+import { AuthFrame, AuthHeading, AuthLink, AuthNotice, PinDots, PinKeypad, useAuthStyle } from '../../components/auth/AuthUI';
 
-// ── Animated PIN dot ──────────────────────────────────────────────────────────
-function PinDot({ filled }) {
-  const scale   = useRef(new Animated.Value(filled ? 1 : 0)).current;
-  const opacity = useRef(new Animated.Value(filled ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale,  { toValue: filled ? 1 : 0, tension: 260, friction: 10, useNativeDriver: true }),
-      Animated.timing(opacity,{ toValue: filled ? 1 : 0, duration: 120, useNativeDriver: true }),
-    ]).start();
-  }, [filled]);
-
-  return (
-    <View style={s.dotOuter}>
-      <Animated.View style={[s.dotFill, { transform: [{ scale }], opacity }]} />
-    </View>
-  );
-}
-
-export default function PinEntryScreen({
-  onSuccess,
-  onForgotPin,
-  isSessionUnlock = false,
-}) {
+export default function PinEntryScreen({ onSuccess, onForgotPin }) {
   const { verifyPin, profile, logout } = useAuth();
-  const { theme, isDark } = useTheme();
-  const { hideLoader } = useLoader();
-
-  const [pin,           setPin]           = useState('');
-  const [error,         setError]         = useState('');
-  const [locked,        setLocked]        = useState(false);
-  const [lockRemaining, setLockRemaining] = useState(0);
-  const [bioAvailable,  setBioAvailable]  = useState(false);
-
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const firstName = profile?.name?.split(' ')[0] ?? 'Agent';
-  const timerRef  = useRef(null);
-
+  const { copy } = useAuthStyle();
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [lockUntil, setLockUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const input = useRef('');
+  const verifying = useRef(false);
+  const firstName = profile?.name?.trim().split(/\s+/)[0] || copy('Agent', 'Wakala');
+  const remaining = Math.max(0, Math.ceil((lockUntil - now) / 1000));
+  const locked = remaining > 0;
   useEffect(() => {
-    // Fade out the login overlay to reveal this screen (cross-fade effect)
-    const t = setTimeout(() => hideLoader(), 50);
-    checkLockoutStatus();
-    checkBiometrics();
-    return () => { clearTimeout(t); if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
-
-  const checkLockoutStatus = async () => {
-    const result = await checkLockout();
-    if (result.locked) { setLocked(true); startCountdown(result.remaining); }
-  };
-
-  const startCountdown = (ms) => {
-    setLockRemaining(Math.ceil(ms / 1000));
-    timerRef.current = setInterval(() => {
-      setLockRemaining(prev => {
-        if (prev <= 1) { clearInterval(timerRef.current); setLocked(false); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const checkBiometrics = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled  = await LocalAuthentication.isEnrolledAsync();
-    setBioAvailable(hasHardware && isEnrolled);
-  };
-
-  const shake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue:  8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue:  6, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue:  0, duration: 60, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const handleDigit = async (digit) => {
-    if (locked || pin.length >= 4) return;
-    const next = pin + digit;
-    setPin(next);
-    setError('');
-
-    if (next.length === 4) {
-      const correct = await verifyPin(next);
-      if (correct) {
-        await clearLockout();
-        setTimeout(() => onSuccess?.(), 150);
-      } else {
-        shake();
-        const result = await recordFailedAttempt();
-        if (result.locked) {
-          setLocked(true);
-          startCountdown(30 * 60 * 1000);
-          setError('Too many attempts. Locked for 30 minutes.');
-        } else {
-          setError(`Incorrect PIN. ${result.remaining} attempt${result.remaining !== 1 ? 's' : ''} remaining.`);
-        }
-        setTimeout(() => setPin(''), 400);
-      }
+    let active = true;
+    async function inspect() {
+      if (active) setChecking(true);
+      try {
+        const result = await checkLockout();
+        if (active) { setLockUntil(result.locked ? Date.now() + result.remaining : 0); setNow(Date.now()); setChecking(false); }
+      } catch { if (active) setError(copy('Unable to read PIN protection. Close and reopen the app.', 'Imeshindikana kusoma ulinzi wa PIN. Funga na ufungue programu tena.')); }
     }
-  };
-
-  const handleDelete = () => { if (locked) return; setPin(p => p.slice(0, -1)); setError(''); };
-
-  const handleBiometric = async () => {
+    inspect();
+    Promise.all([LocalAuthentication.hasHardwareAsync(), LocalAuthentication.isEnrolledAsync()])
+      .then(([hardware, enrolled]) => { if (active) setBioAvailable(hardware && enrolled); }).catch(() => {});
+    const foreground = AppState.addEventListener('change', state => { if (state === 'active') inspect(); });
+    const timer = setInterval(() => { if (active) setNow(Date.now()); }, 1000);
+    return () => { active = false; clearInterval(timer); foreground.remove(); };
+  }, []);
+  function clear() { input.current = ''; setPin(''); }
+  async function handleDigit(digit) {
+    if (checking || locked || verifying.current || input.current.length >= 4) return;
+    const next = input.current + digit;
+    input.current = next; setPin(next); setError('');
+    if (next.length !== 4) return;
+    verifying.current = true; setBusy(true);
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Sign in to Silverstone',
-        fallbackLabel: 'Use PIN',
-      });
+      const guard = await checkLockout();
+      if (guard.locked) { setLockUntil(Date.now() + guard.remaining); setNow(Date.now()); return; }
+      if (await verifyPin(next)) { await clearLockout(); onSuccess?.(); }
+      else {
+        const result = await recordFailedAttempt();
+        if (result.locked) { setLockUntil(result.lockUntil); setNow(Date.now()); }
+        setError(result.locked ? copy('Too many attempts. Try again when the timer ends.', 'Majaribio mengi mno. Jaribu tena muda ukiisha.') :
+          copy(`Incorrect PIN. ${result.remaining} attempts remaining.`, `PIN si sahihi. Majaribio ${result.remaining} yamebaki.`));
+      }
+    } catch { setError(copy('Unable to unlock. Please try again.', 'Imeshindikana kufungua. Jaribu tena.')); }
+    finally { clear(); verifying.current = false; setBusy(false); }
+  }
+  async function handleBiometric() {
+    if (checking || locked || verifying.current) return;
+    verifying.current = true; setBusy(true); setError('');
+    try {
+      const guard = await checkLockout();
+      if (guard.locked) { setLockUntil(Date.now() + guard.remaining); setNow(Date.now()); return; }
+      const result = await LocalAuthentication.authenticateAsync({ promptMessage: copy('Unlock Silverstone', 'Fungua Silverstone'), fallbackLabel: copy('Use PIN', 'Tumia PIN') });
       if (result.success) { await clearLockout(); onSuccess?.(); }
-    } catch (e) { setError('Biometric failed. Use your PIN.'); }
-  };
-
-  const handleSwitchAccount = () => {
-    Alert.alert('Switch Account', 'You will be signed out. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: logout },
+    } catch { setError(copy('Biometrics unavailable. Use your PIN.', 'Biometriki haipatikani. Tumia PIN yako.')); }
+    finally { verifying.current = false; setBusy(false); }
+  }
+  function handleSwitchAccount() {
+    Alert.alert(copy('Switch account?', 'Badili akaunti?'), copy('This signs out your retained account.', 'Hii itaondoa akaunti yako iliyohifadhiwa.'), [
+      { text: copy('Cancel', 'Ghairi'), style: 'cancel' },
+      { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: logout },
     ]);
-  };
-
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const sv = secs % 60;
-    return `${m}:${sv.toString().padStart(2, '0')}`;
-  };
-
-  const KEYS = [
-    ['1','2','3'],
-    ['4','5','6'],
-    ['7','8','9'],
-    ['', '0','del'],
-  ];
-
-  return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
-
-      {/* Logo */}
-      <View style={s.logoRow}>
-        <View style={s.logoTile}>
-          <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
-        </View>
-        <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
-      </View>
-
-      {/* Icon */}
-      <View style={s.iconWrap}>
-        <LinearGradient
-          colors={[theme.gradPrimA, theme.gradPrimB]}
-          style={s.iconGradient}
-        >
-          <Ionicons name="phone-portrait-outline" size={40} color="#fff" />
-        </LinearGradient>
-      </View>
-
-      <Text style={[s.heading, { color: theme.primary }]}>Enter your PIN</Text>
-      <Text style={[s.sub, { color: theme.textDim }]}>
-        Welcome back,{' '}
-        <Text style={{ color: theme.text, fontFamily: fonts.bodyBold }}>{firstName}</Text>
-      </Text>
-
-      {/* Animated PIN dots */}
-      <Animated.View style={[s.dotsRow, { transform: [{ translateX: shakeAnim }] }]}>
-        {[0,1,2,3].map(i => <PinDot key={i} filled={i < pin.length} />)}
-      </Animated.View>
-
-      {/* Helper row */}
-      <View style={s.helperRow}>
-        <TouchableOpacity onPress={onForgotPin} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={[s.helper, { color: theme.textDim }]}>Forgot PIN?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSwitchAccount} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={[s.helper, { color: theme.textDim }]}>Not {firstName}?</Text>
-        </TouchableOpacity>
-      </View>
-
-      {locked ? (
-        <Text style={s.error}>Locked · try again in {formatTime(lockRemaining)}</Text>
-      ) : error ? (
-        <Text style={s.error}>{error}</Text>
-      ) : (
-        <View style={{ height: 22 }} />
-      )}
-
-      {bioAvailable && !locked && (
-        <View style={s.bioWrap}>
-          <TouchableOpacity
-            onPress={handleBiometric}
-            style={[s.bioTile, { backgroundColor: theme.surfaceAlt }]}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="finger-print-outline" size={32} color={theme.primary} />
-          </TouchableOpacity>
-          <Text style={[s.bioLabel, { color: theme.textDim }]}>Biometric</Text>
-        </View>
-      )}
-
-      <View style={{ flex: 1 }} />
-
-      {/* Keypad */}
-      <View style={[s.keypad, {
-        backgroundColor: theme.surfaceAlt,
-        borderTopWidth: isDark ? 1 : 0,
-        borderTopColor: theme.border,
-      }]}>
-        {KEYS.map((row, ri) => (
-          <View key={ri} style={s.keyRow}>
-            {row.map((key, ki) => {
-              if (key === '') return <View key={ki} style={s.keyEmpty} />;
-              if (key === 'del') {
-                return (
-                  <TouchableOpacity key={ki} onPress={handleDelete} style={s.keyGhost} activeOpacity={0.6}>
-                    <Ionicons name="backspace-outline" size={26} color={theme.text} />
-                  </TouchableOpacity>
-                );
-              }
-              return (
-                <TouchableOpacity
-                  key={ki}
-                  onPress={() => handleDigit(key)}
-                  disabled={locked}
-                  activeOpacity={0.7}
-                  style={[s.key, { backgroundColor: theme.surface, opacity: locked ? 0.4 : 1 }]}
-                >
-                  <Text style={[s.keyText, { color: theme.text }]}>{key}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
-      </View>
-    </SafeAreaView>
-  );
+  }
+  return <AuthFrame>
+    <AuthHeading eyebrow={copy(`Welcome back, ${firstName}`, `Karibu tena, ${firstName}`)} title={copy('Enter your PIN.', 'Weka PIN yako.')}
+      description={copy('Pick up where you left off.', 'Endelea ulipoishia.')} />
+    <PinDots length={pin.length} />
+    <AuthNotice error>{error}</AuthNotice>
+    {locked && <AuthNotice>{copy('Try again in', 'Jaribu tena baada ya')} {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</AuthNotice>}
+    {busy && <AuthNotice>{copy('Unlocking…', 'Inafungua…')}</AuthNotice>}
+    <AuthLink disabled={busy} onPress={onForgotPin}>{copy('Forgot PIN?', 'Umesahau PIN?')}</AuthLink>
+    <PinKeypad disabled={checking || locked || busy} onDigit={handleDigit}
+      onDelete={() => { if (!verifying.current) { input.current = input.current.slice(0, -1); setPin(input.current); setError(''); } }}
+      biometric={bioAvailable ? handleBiometric : undefined} />
+    <AuthLink disabled={busy} onPress={handleSwitchAccount}>{copy(`Not ${firstName}?`, `Si ${firstName}?`)}</AuthLink>
+  </AuthFrame>;
 }
-
-const s = StyleSheet.create({
-  safe: { flex: 1 },
-
-  logoRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm + 2, paddingTop: spacing.md - 2,
-  },
-  logoTile: {
-    width: 36, height: 36, borderRadius: radius.sm + 1,
-    backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center', padding: spacing.sm - 2,
-  },
-  logoImg:  { width: '100%', height: '100%' },
-  logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
-
-  iconWrap:    { alignItems: 'center', marginTop: spacing.lg },
-  iconGradient: {
-    width: 88, height: 88, borderRadius: radius.lg + 2,
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  heading: { fontSize: 22, fontFamily: fonts.heading, letterSpacing: -0.2, textAlign: 'center', marginTop: spacing.md + 2 },
-  sub:     { fontSize: 17, fontFamily: fonts.body,    textAlign: 'center', marginTop: spacing.sm - 2 },
-
-  dotsRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    gap: spacing.md, marginTop: spacing.lg,
-  },
-  dotOuter: {
-    width: 52, height: 52, borderRadius: radius.md,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 1.5, borderColor: '#16A34A40',
-  },
-  dotFill: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#16A34A',
-  },
-
-  helperRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg + spacing.xs, marginTop: spacing.md - 2,
-  },
-  helper: { fontSize: 16, fontFamily: fonts.bodyMed },
-
-  error: {
-    color: '#C8102E', fontSize: 16, fontFamily: fonts.body,
-    textAlign: 'center', marginTop: spacing.sm, height: 22,
-  },
-
-  bioWrap:  { alignItems: 'center', marginTop: spacing.md },
-  bioTile:  {
-    width: 72, height: 72, borderRadius: radius.lg,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  bioLabel: { fontSize: 14, fontFamily: fonts.body, marginTop: spacing.sm - 2 },
-
-  keypad: {
-    paddingHorizontal: spacing.sm + 2,
-    paddingTop:        spacing.md - 4,
-    paddingBottom:     spacing.sm - 2,
-  },
-  keyRow:  { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  key: {
-    flex: 1, height: 58, borderRadius: radius.md,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
-  },
-  keyGhost: { flex: 1, height: 58, alignItems: 'center', justifyContent: 'center' },
-  keyEmpty: { flex: 1, height: 58 },
-  keyText:  { fontSize: 28, fontFamily: fonts.bodyMed },
-});

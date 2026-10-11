@@ -1,5 +1,5 @@
-// These tokens belong to the post-login sub-agent UI only.
-// Auth and main-agent surfaces continue to use constants/theme.js.
+// Shared silver/AMOLED tokens for auth and post-login sub-agent screens.
+// Main-agent and registration screens retain constants/theme.js until their design pass.
 export const AGENT_LIGHT = Object.freeze({
   bg: '#C4C7CB', text: '#16191D', secondary: '#454B53', muted: '#49515A',
   surface: '#F4F5F6', border: '#A6ABB1', strongBorder: '#797F87',

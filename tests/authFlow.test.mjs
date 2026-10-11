@@ -34,7 +34,7 @@ test("ordinary sign out locks while Not-name performs true logout", async () => 
     source("src/context/AuthContext.jsx"),
   ]);
 
-  assert.match(pinEntry, /Not \{firstName\}\?/);
+  assert.match(pinEntry, /Not \$\{firstName\}\?/);
   assert.match(pinEntry, /onPress: logout/);
   assert.match(profile, /onPress: lockSession/);
   assert.match(drawer, /onPress=\{lockSession\}/);

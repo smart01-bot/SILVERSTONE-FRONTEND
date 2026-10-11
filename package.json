@@ -11,7 +11,8 @@
     "build:android": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile preview --platform android",
     "build:dev": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile development --platform android",
     "test": "node --test tests/*.test.mjs",
-    "build:check": "expo export --platform android --output-dir dist --max-workers 2"
+    "build:check": "expo export --platform android --output-dir dist --max-workers 2",
+    "build": "npm run build:check"
   },
   "engines": {
     "node": ">=20.19.4"

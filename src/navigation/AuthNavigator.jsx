@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen       from '../screens/auth/SplashScreen';
 import RoleSelectScreen   from '../screens/auth/RoleSelectScreen';
 import LoginScreen        from '../screens/auth/LoginScreen';
+import PasswordRecoveryScreen from '../screens/auth/PasswordRecoveryScreen';
 import ForgotPinScreen    from '../screens/auth/ForgotPinScreen';
 import PinEntryScreen     from '../screens/auth/PinEntryScreen';
 import PinSetupScreen     from '../screens/auth/PinSetupScreen';
@@ -43,6 +44,7 @@ export default function AuthNavigator({ initialRoute } = {}) {
       <Stack.Screen name="Splash"         component={SplashScreen} />
       <Stack.Screen name="RoleSelect"     component={RoleSelectScreen} />
       <Stack.Screen name="Login"          component={LoginScreen} />
+      <Stack.Screen name="PasswordRecovery" component={PasswordRecoveryScreen} />
       <Stack.Screen name="ForgotPin"      component={ForgotPinScreen} />
       <Stack.Screen name="PinEntry"       component={PinEntryScreen} />
       <Stack.Screen name="PinSetup"       component={PinSetupScreen} />

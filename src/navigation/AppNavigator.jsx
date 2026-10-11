@@ -1,12 +1,13 @@
 // src/navigation/AppNavigator.jsx
 import React, { useEffect, useState } from 'react';
 import { createNavigationContainerRef } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { canOperate } from '../api/presentation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenLoader } from '../components/Loader';
+import { AuthFrame, AuthHeading, AuthNotice, AuthButton, useAuthStyle } from '../components/auth/AuthUI';
 
 import AuthNavigator from './AuthNavigator';
 import SubAgentNavigator from './SubAgentNavigator';
@@ -23,6 +24,7 @@ export const navigationRef = createNavigationContainerRef();
 export default function AppNavigator() {
   const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists, connectionError, retryConnection } = useAuth();
   const { theme, isDark } = useTheme();
+  const { copy } = useAuthStyle();
 
   const [pinExists,   setPinExists]   = useState(false);
   const [checking,    setChecking]    = useState(true);
@@ -79,10 +81,11 @@ export default function AppNavigator() {
   }
 
   if (connectionError) {
-    return <View style={[styles.center, {flex:1,backgroundColor:theme.bg,padding:24}]}>
-      <Text style={{color:theme.text}}>{connectionError}</Text>
-      <TouchableOpacity onPress={retryConnection}><Text style={{color:theme.primary,padding:16}}>Try again</Text></TouchableOpacity>
-    </View>;
+    return <AuthFrame>
+      <AuthHeading title={copy('Let’s reconnect.', 'Tuunganishe tena.')} description={copy('We couldn’t restore your account connection.', 'Hatukuweza kurejesha muunganisho wa akaunti yako.')} />
+      <AuthNotice error>{connectionError}</AuthNotice>
+      <AuthButton label={copy('Try again', 'Jaribu tena')} onPress={retryConnection} />
+    </AuthFrame>;
   }
 
   // No retained account — show email/password. Registration stays available from Login.
@@ -97,7 +100,7 @@ export default function AppNavigator() {
   // Profile loading
   // Profile still fetching — show blank bg, login overlay already handled the visual
   if (!profile) {
-    return <View style={[styles.root, { backgroundColor: theme.bg }]} />;
+    return <ScreenLoader />;
   }
 
   // Pending or rejected

@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
-import Svg, { Path } from 'react-native-svg';
+import SilverstoneMark from '../SilverstoneMark';
 import { useTheme } from '../../context/ThemeContext';
 import { fonts } from '../../constants/theme';
 import { AGENT_TABS, isBoxyAgentDevice } from './agentTheme';
@@ -62,14 +62,6 @@ export function AgentFrame({ children }) {
   );
 }
 
-function SilverstoneMark({ color }) {
-  return (
-    <Svg width={28} height={31} viewBox="0 0 28 31" accessible={false}>
-      <Path fill={color} d="M14 1 27 8.5 22 11.4 14 6.8 6 11.4 22 20.6 22 15.9 27 18.8 27 23.1 14 30.6 1 23.1 1 17.3 14 24.8 19 21.9 1 11.5 1 8.5Z" />
-      <Path fill={color} d="M8 13.7 13 10.8 27 18.9 22 21.8Z" />
-    </Svg>
-  );
-}
 
 export function AgentHeader({ activeName, onHistory }) {
   const { colors, isDark, copy, reducedMotion, setHeaderHeight } = useAgentUI();

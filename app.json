@@ -7,9 +7,9 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/SilverS.png",
     "splash": {
-      "image": "./assets/images/SilverS.png",
+      "image": "./assets/images/splash-light.png",
       "resizeMode": "contain",
-      "backgroundColor": "#D32F2F"
+      "backgroundColor": "#C4C7CB"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,12 +17,30 @@
         "backgroundColor": "#D32F2F"
       },
       "package": "com.silverstone.floatmanager",
-      "versionCode": 2
+      "versionCode": 2,
+      "splash": {
+        "image": "./assets/images/splash-light.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#C4C7CB",
+        "dark": {
+          "image": "./assets/images/splash-dark.png",
+          "backgroundColor": "#000000"
+        }
+      }
     },
     "ios": {
       "bundleIdentifier": "com.silverstone.floatmanager",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "splash": {
+        "image": "./assets/images/splash-light.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#C4C7CB",
+        "dark": {
+          "image": "./assets/images/splash-dark.png",
+          "backgroundColor": "#000000"
+        }
       }
     },
     "plugins": [
