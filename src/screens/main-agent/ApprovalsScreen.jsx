@@ -1,3 +1,5 @@
+import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { workflowError } from '../../api/workflowState';
 import React, { useEffect, useState } from "react";
 import {
@@ -6,20 +8,19 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   Image,
   Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
 import { spacing, radius, fonts } from "../../constants/theme";
 import { api } from "../../config/api";
 
-export default function ApprovalsScreen() {
-  const { theme } = useTheme();
+export default function ApprovalsScreen({ navigation } = {}) {
+  const { theme, lang } = useTheme();
+  const copy=(en,sw)=>lang==='sw'?sw:en;
   const [agents, setAgents] = useState([]),
     [detail, setDetail] = useState(null),
     [reason, setReason] = useState(""),
@@ -102,35 +103,28 @@ export default function ApprovalsScreen() {
     documentIds: "Documents",
   };
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }}>
-      <LinearGradient
-        colors={[theme.gradPrimA, theme.gradPrimB]}
-        style={s.header}
-      >
-        <Text style={s.headerTitle}>Applications</Text>
-        <Text style={s.headerSub}>Review your assigned applicants</Text>
-        <Text style={s.headerBadgeText}>{agents.length} awaiting review</Text>
-      </LinearGradient>
+    <SafeAreaView edges={['top','left','right']} style={{ flex: 1, backgroundColor: theme.bg }}>
+      <MainHeader navigation={navigation} title={lang==='sw'?'Maombi ya usajili':'Applications'} subtitle={listLoading?'…':`${agents.length} ${lang==='sw'?'yanasubiri ukaguzi':'awaiting review'}`} />
       <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, gap: 14 }}
+        contentContainerStyle={{paddingHorizontal:24,paddingBottom:24,gap:16}}
         keyboardShouldPersistTaps="handled"
       >
         {error ? (
-          <Text accessibilityRole="alert" style={{ color: theme.primary }}>
+          <Text accessibilityRole="alert" style={{ color: theme.danger }}>
             {error}
           </Text>
         ) : null}
         <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled:busy || listLoading,busy:listLoading}} disabled={busy || listLoading} onPress={load}>
           <Text style={{ color: theme.primary, paddingVertical: 12 }}>
-            Refresh applications
+            {copy('Refresh applications','Pakua maombi tena')}
           </Text>
         </TouchableOpacity>
         {listLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading applications…</Text>}
         {documentLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading private document…</Text>}
         {!detail && !listLoading && !error && agents.length === 0 && (
           <Text style={{ color: theme.textDim }}>
-            No applications awaiting your review.
+            {lang==='sw'?'Hakuna maombi yanayosubiri ukaguzi wako.':'No applications awaiting your review.'}
           </Text>
         )}
         {!detail &&
@@ -150,7 +144,7 @@ export default function ApprovalsScreen() {
             >
               <Text style={[s.agentName, { color: theme.text }]}>{a.name}</Text>
               <Text style={{ color: theme.textDim }}>
-                Submitted · Open application →
+                {copy('Submitted · Open application','Limetumwa · Fungua ombi')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -168,7 +162,7 @@ export default function ApprovalsScreen() {
           >
             <TouchableOpacity onPress={() => setDetail(null)}>
               <Text style={{ color: theme.primary }}>
-                ← Back to applications
+                {copy('Back to applications','Rudi kwenye maombi')}
               </Text>
             </TouchableOpacity>
             <Text style={[s.agentName, { color: theme.text }]}>
@@ -264,12 +258,12 @@ export default function ApprovalsScreen() {
                   opacity: busy || stale || detail.status !== "submitted" || reason.trim().length < 3 || (decision === "changes_requested" && !corrections.length) ? 0.45 : 1,
                 }}
               >
-                <Text style={s.btnFilledText}>
+                <Text style={[s.btnFilledText,{color:theme.onPrimary}]}>
                   {decision === "approved"
-                    ? "Approve application"
+                    ? copy("Approve application","Idhinisha ombi")
                     : decision === "rejected"
-                      ? "Reject application"
-                      : "Request corrections"}
+                      ? copy("Reject application","Kataa ombi")
+                      : copy("Request corrections","Omba marekebisho")}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -285,7 +279,7 @@ export default function ApprovalsScreen() {
       <Modal
         visible={!!evidence}
         onRequestClose={() => setEvidence(null)}
-        animationType="slide"
+        animationType="fade"
       >
         <SafeAreaView
           style={{ flex: 1, backgroundColor: theme.bg, padding: 20 }}
@@ -318,7 +312,7 @@ export default function ApprovalsScreen() {
 
 const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: spacing.md, paddingBottom: 100 },
+  scroll: { paddingHorizontal:24,paddingTop:8,paddingBottom:24 },
 
   header: {
     paddingHorizontal:       spacing.md + 2,
@@ -347,10 +341,10 @@ const s = StyleSheet.create({
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
 
   card: {
     borderRadius: radius.lg, borderWidth: 1,

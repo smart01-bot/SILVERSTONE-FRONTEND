@@ -1,3 +1,4 @@
+import { useReducedMotion } from './Loader';
 // src/components/SkeletonLoader.jsx
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
@@ -7,8 +8,11 @@ import { useTheme } from '../context/ThemeContext';
 export function SkeletonBox({ width, height, borderRadius = 8, style }) {
   const { theme } = useTheme();
   const shimmer   = useRef(new Animated.Value(0)).current;
+  const reduced=useReducedMotion();
 
   useEffect(() => {
+    shimmer.stopAnimation();
+    if(reduced){shimmer.setValue(0.5);return;}
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmer, { toValue: 1, duration: 850, useNativeDriver: true }),
@@ -17,7 +21,7 @@ export function SkeletonBox({ width, height, borderRadius = 8, style }) {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [reduced,shimmer]);
 
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
 

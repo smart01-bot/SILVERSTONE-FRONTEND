@@ -1,3 +1,4 @@
+import { fonts } from '../constants/theme';
 import { recordedTime, reservationLabel } from '../api/operations';
 import { api } from '../config/api';
 import { requestView } from '../api/presentation';
@@ -93,6 +94,8 @@ export default function RequestDetailModal({
     })
   ).current;
 
+  const [auditExpanded,setAuditExpanded]=useState(false);
+  useEffect(()=>setAuditExpanded(false),[request?.id]);
   if (!request) return null;
 
   const copyId = async () => {
@@ -291,10 +294,15 @@ export default function RequestDetailModal({
 
           <Text style={{color:theme.textDim}}>{nextActionLabel(request)}</Text>
           <Text style={{color:theme.textDim}}>Silverstone fee: TZS 0 · {providerChargeLabel(request.provider)}</Text>
-          <Text style={{color:theme.textDim}}>Provider unavailable. Do not send funds.</Text>
+          {!request.providerExecutionEnabled && <Text style={{color:theme.textDim}}>Payment connection is unavailable.</Text>}
+          <TouchableOpacity accessibilityRole="button" accessibilityState={{expanded:auditExpanded}} onPress={()=>setAuditExpanded(v=>!v)} style={{minHeight:48,justifyContent:'center'}}>
+            <Text style={{color:theme.text,fontFamily:fonts.bodySemi}}>Payment and audit details {auditExpanded?'−':'+'}</Text>
+          </TouchableOpacity>
+          {auditExpanded && <View style={{gap:10}}>
           {request.providerEvidence?.map(evidence => <Text key={evidence.id} style={{color:theme.textDim}}>{providerEvidenceLabel(evidence)}</Text>)}
           {request.legs?.map(leg=><Text key={leg.id} style={{color:theme.textDim}}>{legLabel(leg)}</Text>)}
           {request.history?.map((event,i)=><Text key={i} style={{color:theme.textDim}}>{recordedTime(event.createdAt)} · {event.event}: {event.reason}</Text>)}
+          </View>}
           {request.reservation && <Text style={{color:theme.textDim}}>{reservationLabel(request.reservation)}</Text>}
           {error ? <Text accessibilityRole="alert" style={{color:theme.text}}>{error}</Text> : null}
           <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled:loading,busy:loading}} disabled={loading} onPress={refresh} style={{minHeight:48,justifyContent:'center'}}><Text style={{color:theme.primary}}>{loading ? 'Please wait…' : 'Refresh request details'}</Text></TouchableOpacity>
@@ -305,16 +313,16 @@ export default function RequestDetailModal({
                 onPress={() => { onClose(); onRetry?.(request); }}
                 style={[styles.actionBtn, { backgroundColor: theme.primary }]}
               >
-                <Text style={styles.actionBtnText}>Prepare a new request</Text>
+                <Text style={[styles.actionBtnText,{color:theme.onPrimary || '#fff'}]}>Prepare a new request</Text>
               </TouchableOpacity>
             )}
             {role === 'sub-agent' && request.status === 'awaiting_review' && (
               <TouchableOpacity
                 onPress={handleCancel}
                 disabled={loading}
-                style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}
+                style={[styles.actionBtn, { backgroundColor: theme.surfaceAlt,borderColor:theme.danger,borderWidth:1 }]}
               >
-                {<Text style={styles.actionBtnText}>Cancel Request</Text>
+                {<Text style={[styles.actionBtnText,{color:theme.danger}]}>Cancel Request</Text>
                 }
               </TouchableOpacity>
             )}
@@ -322,9 +330,9 @@ export default function RequestDetailModal({
               <TouchableOpacity
                 onPress={handleApprove}
                 disabled={loading}
-                style={[styles.actionBtn, { backgroundColor: '#0891B2' }]}
+                style={[styles.actionBtn, { backgroundColor: theme.primary }]}
               >
-                {<Text style={styles.actionBtnText}>Accept and reserve</Text>
+                {<Text style={[styles.actionBtnText,{color:theme.onPrimary || '#fff'}]}>Accept and reserve</Text>
                 }
               </TouchableOpacity>
             )}
@@ -333,9 +341,9 @@ export default function RequestDetailModal({
               <TouchableOpacity
                 onPress={handleReject}
                 disabled={loading}
-                style={[styles.actionBtn, { backgroundColor: '#DC2626' }]}
+                style={[styles.actionBtn, { backgroundColor: theme.surfaceAlt,borderColor:theme.danger,borderWidth:1 }]}
               >
-                <Text style={styles.actionBtnText}>Reject</Text>
+                <Text style={[styles.actionBtnText,{color:theme.danger}]}>Reject</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -403,8 +411,8 @@ const styles = StyleSheet.create({
   closeBtn: {
     borderWidth:    1,
     borderRadius:   20,
-    width:          32,
-    height:         32,
+    width:          48,
+    height:         48,
     alignItems:     'center',
     justifyContent: 'center',
   },
@@ -423,7 +431,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   routeCard: {
-    flexDirection:  'row',
+    flexWrap:'wrap',gap:12,flexDirection:  'row',
     alignItems:     'center',
     justifyContent: 'space-around',
     borderWidth:    1,
@@ -450,7 +458,7 @@ const styles = StyleSheet.create({
     overflow:     'hidden',
   },
   detailRow: {
-    flexDirection:  'row',
+    flexWrap:'wrap',gap:8,flexDirection:  'row',
     justifyContent: 'space-between',
     padding:        12,
     borderBottomWidth: 1,

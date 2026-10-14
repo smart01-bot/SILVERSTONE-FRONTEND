@@ -1,16 +1,19 @@
+import { useMainCollection } from '../../hooks/useMainCollection';
+import { MainError } from '../../components/agent/MainAgentUI';
+import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // src/screens/main-agent/AgentsScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView,
-  StyleSheet, StatusBar, SafeAreaView,
+  StyleSheet, StatusBar,
   RefreshControl, TextInput, TouchableOpacity,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
-import EmptyState     from '../../components/EmptyState';
+const EmptyState=({subtitle,...props})=><MainEmpty {...props} description={subtitle}/>;
 import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, onSnapshot,
@@ -42,33 +45,12 @@ function SkeletonAgentCard({ theme }) {
   );
 }
 
-export default function AgentsScreen() {
-  const { theme, isDark, tr } = useTheme();
+export default function AgentsScreen({ navigation }) {
+  const { theme, isDark, tr, lang } = useTheme();
 
-  const [agents,     setAgents]     = useState([]);
-  const [search,     setSearch]     = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(true);
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'agents'),
-        where('status', '==', 'approved'),
-        where('role',   '==', 'sub-agent')
-      ),
-      snap => {
-        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
-      (err) => {
-        console.warn('AgentsScreen snapshot error:', err);
-        setLoading(false);
-      }
-    );
-    return unsub;
-  }, []);
-
+  const collectionState=useMainCollection('agents');
+  const {rows:agents,loading,refreshing,error:loadError}=collectionState;
+  const [search,setSearch]=useState('');
   const filtered = agents.filter(a => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -79,31 +61,20 @@ export default function AgentsScreen() {
     );
   });
 
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
+  const onRefresh=collectionState.refresh;
 
   const avatarColor = (name) => {
-    const colors = ['#C8102E', '#0891B2', '#16A34A', '#7C3AED', '#F59E0B'];
-    return colors[(name?.charCodeAt(0) ?? 0) % colors.length];
+    return theme.primary;
   };
 
   const initials = (name) =>
     name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'AG';
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView edges={['top','left','right']} style={[s.safe, { backgroundColor: theme.bg }]}>
 
       {/* ── Gradient header ── */}
-      <LinearGradient
-        colors={[theme.gradPrimA, theme.gradPrimB]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={s.header}
-      >
-        <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>{tr('agents')}</Text>
-        <Text style={s.headerSub}>{loading ? '—' : agents.length} {tr('active').toLowerCase()}</Text>
-      </LinearGradient>
+      <MainHeader navigation={navigation} title={tr('agents')} subtitle={loading?'…':`${agents.length} ${lang==='sw'?'wakala walioidhinishwa':'approved agents'}`} />
 
       {/* ── Search ── */}
       <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
@@ -127,8 +98,9 @@ export default function AgentsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
+        <MainError message={loadError} onRetry={onRefresh} busy={refreshing}/>
         {loading ? (
           <>
             <SkeletonAgentCard theme={theme} />
@@ -143,9 +115,8 @@ export default function AgentsScreen() {
           />
         ) : (
           filtered.map(agent => (
-            <PressableScale
+            <View
               key={agent.id}
-              scaleDown={0.98}
               style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
             >
               <View style={s.cardTop}>
@@ -156,11 +127,11 @@ export default function AgentsScreen() {
                   <Text style={[s.agentName,  { color: theme.text }]}>{agent.name}</Text>
                   <Text style={[s.agentPhone, { color: theme.textDim }]}>{agent.phone}</Text>
                   <Text style={[s.agentBiz,   { color: theme.textDim }]}>
-                    {agent.businessName} · {agent.businessLocation}
+                    {[agent.businessName,agent.businessLocation].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
                 <View style={[s.activeBadge, { backgroundColor: '#16A34A20' }]}>
-                  <Text style={s.activeText}>{tr('active')}</Text>
+                  <Text style={[s.activeText,{color:theme.success}]}>{tr('active')}</Text>
                 </View>
               </View>
 
@@ -174,18 +145,7 @@ export default function AgentsScreen() {
                 </View>
               )}
 
-              <View style={[s.statsRow, { borderTopColor: theme.border }]}>
-                <View style={s.stat}>
-                  <Text style={[s.statValue, { color: theme.text }]}>{agent.requestCount ?? 0}</Text>
-                  <Text style={[s.statLabel, { color: theme.textDim }]}>{tr('totalRequests')}</Text>
-                </View>
-                <View style={[s.statDivider, { backgroundColor: theme.border }]} />
-                <View style={s.stat}>
-                  <Text style={[s.statValue, { color: theme.text }]}>{agent.businessLocation ?? '—'}</Text>
-                  <Text style={[s.statLabel, { color: theme.textDim }]}>{tr('location')}</Text>
-                </View>
-              </View>
-            </PressableScale>
+            </View>
           ))
         )}
       </ScrollView>
@@ -195,7 +155,7 @@ export default function AgentsScreen() {
 
 const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: spacing.md, paddingBottom: 100 },
+  scroll: { paddingHorizontal:24,paddingTop:8,paddingBottom:24 },
 
   header: {
     paddingHorizontal:       spacing.md + 2,
@@ -212,19 +172,19 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
   headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md - 4, paddingBottom: spacing.xs },
+  searchWrap: { paddingHorizontal: 24, paddingTop: spacing.md - 4, paddingBottom: spacing.xs },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    height: 48, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
+    minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
-  searchInput: { flex: 1, fontSize: 18, fontFamily: fonts.body },
+  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 16, fontFamily: fonts.body },
 
   card: {
-    borderRadius: radius.lg, borderWidth: 1,
+    borderRadius:20,borderWidth:1,
     marginBottom: spacing.md - 4, overflow: 'hidden',
   },
   cardTop: {
-    flexDirection: 'row', alignItems: 'flex-start',
+    flexWrap:'wrap',flexDirection: 'row', alignItems: 'flex-start',
     gap: spacing.md - 4, padding: spacing.md - 2,
   },
   avatar: {
@@ -234,7 +194,7 @@ const s = StyleSheet.create({
   avatarText:  { fontSize: 20, fontFamily: fonts.bodyBold },
   agentInfo:   { flex: 1, gap: 2 },
   agentName:   { fontSize: 19, fontFamily: fonts.bodyBold },
-  agentPhone:  { fontSize: 17, fontFamily: fonts.body },
+  agentPhone:  { fontSize: 14,lineHeight:22, fontFamily: fonts.body },
   agentBiz:    { fontSize: 15, fontFamily: fonts.body },
   activeBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
   activeText:  { color: '#16A34A', fontSize: 15, fontFamily: fonts.bodyBold },

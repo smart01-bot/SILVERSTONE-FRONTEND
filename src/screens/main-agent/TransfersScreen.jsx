@@ -1,16 +1,21 @@
+import { useMainCollection } from '../../hooks/useMainCollection';
+import { formatTzs } from '../../api/exchanges';
+import RequestDetailModal from '../../components/RequestDetailModal';
+import { MainError } from '../../components/agent/MainAgentUI';
+import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // src/screens/main-agent/TransfersScreen.jsx
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, SafeAreaView,
+  StyleSheet, StatusBar,
   RefreshControl, TextInput,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
-import EmptyState     from '../../components/EmptyState';
+const EmptyState=({subtitle,...props})=><MainEmpty {...props} description={subtitle}/>;
 import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, orderBy, onSnapshot,
@@ -36,38 +41,23 @@ function SkeletonTransferRow({ theme, last }) {
   );
 }
 
-export default function TransfersScreen() {
-  const { theme, isDark, tr } = useTheme();
+export default function TransfersScreen({ navigation }) {
+  const { theme, isDark, tr, lang } = useTheme();
 
-  const [transfers,  setTransfers]  = useState([]);
-  const [filter,     setFilter]     = useState('All');
-  const [search,     setSearch]     = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(true);
-
-  const FILTERS = ['All', 'Today', 'This Week', 'This Month'];
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'requests'),
-        where('status', '==', 'completed'),
-        orderBy('processedAt', 'desc')
-      ),
-      snap => {
-        setTransfers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      }
-    );
-    return unsub;
-  }, []);
-
+  const collectionState=useMainCollection('requests');
+  const assignedAgents=useMainCollection('agents');
+  const names=Object.fromEntries(assignedAgents.rows.map(a=>[a.id,a.name]));
+  const transfers=collectionState.rows.filter(r=>r.status==='completed').map(r=>({...r,agentName:r.agentName||names[r.agentId||r.subAgentId]}));
+  const {loading,refreshing,error:loadError}=collectionState;
+  const [filter,setFilter]=useState('All'),[search,setSearch]=useState(''),[selected,setSelected]=useState(null);
+  const FILTERS=['All','Today','This Week','This Month'];
+  const completedAt=t=>t.processedAt||t.history?.find(e=>e.event==='payout_confirmed')?.createdAt;
   const filterByDate = (items) => {
     const day   = new Date(); day.setHours(0, 0, 0, 0);
     const week  = new Date(); week.setDate(week.getDate() - 7);
     const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
     return items.filter(t => {
-      const d = t.processedAt?.toDate?.() ?? new Date(0);
+      const d = completedAt(t) ? new Date(completedAt(t)) : new Date(0);
       if (filter === 'Today')      return d >= day;
       if (filter === 'This Week')  return d >= week;
       if (filter === 'This Month') return d >= month;
@@ -86,40 +76,15 @@ export default function TransfersScreen() {
     );
   });
 
-  const totalVolume = filtered.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-
-  const fmt = (n) => {
-    if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `TZS ${(n / 1_000).toFixed(0)}k`;
-    return `TZS ${n}`;
-  };
-
-  const timeAgo = (ts) => {
-    if (!ts?.toDate) return '';
-    const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
-    if (secs < 60)    return 'Just now';
-    if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-    return `${Math.floor(secs / 86400)}d ago`;
-  };
-
-  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); };
-
+  const totalVolume=filtered.reduce((sum,t)=>sum+BigInt(t.amount||0),0n);
+  const fmt=n=>`TZS ${formatTzs(n)}`;
+  const timeAgo=ts=>ts?new Date(ts).toLocaleDateString(lang==='sw'?'sw-TZ':'en-TZ',{day:'numeric',month:'short'}):'';
+  const onRefresh=collectionState.refresh;
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView edges={['top','left','right']} style={[s.safe, { backgroundColor: theme.bg }]}>
 
       {/* ── Gradient header ── */}
-      <LinearGradient
-        colors={[theme.gradPrimA, theme.gradPrimB]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={s.header}
-      >
-        <View style={s.headerDecor} />
-        <Text style={s.headerTitle}>{tr('transfers')}</Text>
-        <Text style={s.headerSub}>{loading ? '—' : filtered.length} {tr('completed').toLowerCase()}</Text>
-      </LinearGradient>
+      <MainHeader navigation={navigation} title={tr('transfers')} subtitle={lang==='sw'?'Historia ya miamala iliyokamilika':'Confirmed exchange history'} />
 
       {/* ── Search ── */}
       <View style={[s.searchWrap, { backgroundColor: theme.bg }]}>
@@ -129,7 +94,7 @@ export default function TransfersScreen() {
             style={[s.searchInput, { color: theme.text }]}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search agent or amount..."
+            placeholder={lang==='sw'?'Tafuta wakala au kiasi':'Search agent or amount'} accessibilityLabel={lang==='sw'?'Tafuta miamala':'Search transfers'}
             placeholderTextColor={theme.muted}
           />
           {search.length > 0 && (
@@ -154,7 +119,7 @@ export default function TransfersScreen() {
                 }]}
                 activeOpacity={0.75}
               >
-                <Text style={[s.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>{f}</Text>
+                <Text style={[s.pillText, { color: filter === f ? theme.onPrimary : theme.textDim }]}>{f}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -164,20 +129,18 @@ export default function TransfersScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
-        {/* ── Volume summary card ── */}
-        <LinearGradient
-          colors={isDark ? [theme.surfaceAlt, theme.surface] : [theme.gradSurfA, theme.gradSurfB]}
-          style={[s.volumeCard, { borderColor: theme.border }]}
-        >
-          <Text style={[s.volumeLabel,  { color: theme.textDim }]}>TOTAL VOLUME</Text>
+        <MainError message={loadError} onRetry={onRefresh} busy={refreshing}/>
+        {/* Volume of loaded, completed exchanges */}
+        <View style={[s.volumeCard,{borderColor:theme.border}]}>
+          <Text style={[s.volumeLabel,  { color: theme.textDim }]}>{lang==='sw'?'Kiasi kilichokamilika':'Completed volume'}</Text>
           {loading
             ? <SkeletonBox width={160} height={36} borderRadius={8} style={{ marginTop: spacing.xs }} />
             : <Text style={[s.volumeAmount, { color: theme.text }]}>{fmt(totalVolume)}</Text>
           }
           <Text style={[s.volumeSub, { color: theme.textDim }]}>{loading ? '—' : filtered.length} transactions</Text>
-        </LinearGradient>
+        </View>
 
         {/* ── Transfer list ── */}
         {loading ? (
@@ -196,15 +159,15 @@ export default function TransfersScreen() {
           <View style={[s.listCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             {filtered.map((t, i) => (
               <View key={t.id}>
-                <PressableScale style={s.row} scaleDown={0.98}>
+                <PressableScale onPress={()=>setSelected(t)} accessibilityLabel={`TZS ${formatTzs(t.amount)}, ${t.agentName||'Agent'}`} style={s.row} scaleDown={0.98}>
                   <View style={s.rowLeft}>
                     <Text style={[s.rowId,    { color: theme.textDim }]}>#{t.id.slice(-6).toUpperCase()}</Text>
                     <Text style={[s.rowAgent, { color: theme.text }]}>{t.agentName ?? 'Agent'}</Text>
                     <Text style={[s.rowRoute, { color: theme.textDim }]}>{t.sourceNetwork} → {t.destNetwork}</Text>
                   </View>
                   <View style={s.rowRight}>
-                    <Text style={[s.rowAmount, { color: theme.primary }]}>{fmt(Number(t.amount) || 0)}</Text>
-                    <Text style={[s.rowTime,   { color: theme.textDim }]}>{timeAgo(t.processedAt)}</Text>
+                    <Text style={[s.rowAmount, { color: theme.primary }]}>{fmt(t.amount)}</Text>
+                    <Text style={[s.rowTime,   { color: theme.textDim }]}>{timeAgo(completedAt(t))}</Text>
                   </View>
                 </PressableScale>
                 {i < filtered.length - 1 && (
@@ -215,13 +178,14 @@ export default function TransfersScreen() {
           </View>
         )}
       </ScrollView>
+      <RequestDetailModal request={selected} visible={!!selected} role="main-agent" onClose={()=>setSelected(null)}/>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: spacing.md, paddingBottom: 100 },
+  scroll: { paddingHorizontal:24,paddingTop:8,paddingBottom:24 },
 
   header: {
     paddingHorizontal:       spacing.md + 2,
@@ -238,38 +202,37 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
   headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md - 4 },
+  searchWrap: { paddingHorizontal: 24, paddingTop: spacing.md - 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    height: 48, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
+    minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
-  searchInput: { flex: 1, fontSize: 18, fontFamily: fonts.body },
+  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 16, fontFamily: fonts.body },
 
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
 
   volumeCard: {
-    borderRadius:  radius.lg,
-    borderWidth:   1,
+    borderBottomWidth:1,
     padding:       spacing.md,
     marginBottom:  spacing.md,
-    alignItems:    'center',
+    alignItems:    'flex-start',
   },
   volumeLabel:  { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 1 },
   volumeAmount: { fontSize: 36, fontFamily: fonts.display, marginTop: spacing.xs },
   volumeSub:    { fontSize: 17, fontFamily: fonts.body, marginTop: spacing.xs },
 
-  listCard: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  listCard: { overflow:'hidden' },
   row: {
-    flexDirection: 'row', justifyContent: 'space-between',
+    flexWrap:'wrap',gap:12,flexDirection: 'row', justifyContent: 'space-between',
     padding: spacing.md - 2,
   },
-  rowLeft:   { gap: 2 },
+  rowLeft:   { flex:1,minWidth:140,gap:5 },
   rowId:     { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 0.4 },
   rowAgent:  { fontSize: 18, fontFamily: fonts.bodyBold },
   rowRoute:  { fontSize: 15, fontFamily: fonts.body },

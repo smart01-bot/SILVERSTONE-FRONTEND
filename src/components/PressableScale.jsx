@@ -1,5 +1,6 @@
+import { useReducedMotion } from './Loader';
 // src/components/PressableScale.jsx
-import React, { useRef } from 'react';
+import React, { useEffect,useRef } from 'react';
 import { Animated, TouchableOpacity } from 'react-native';
 
 /**
@@ -25,9 +26,11 @@ export default function PressableScale({
   ...props
 }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const reduced=useReducedMotion();
+  useEffect(()=>{if(reduced||disabled){scale.stopAnimation();scale.setValue(1);}return()=>scale.stopAnimation();},[reduced,disabled,scale]);
 
   const onIn = () => {
-    if (disabled) return;
+    if (disabled || reduced) return;
     Animated.spring(scale, {
       toValue:         scaleDown,
       useNativeDriver: true,
@@ -37,6 +40,7 @@ export default function PressableScale({
   };
 
   const onOut = () => {
+    if(reduced||disabled)return;
     Animated.spring(scale, {
       toValue:         1,
       useNativeDriver: true,

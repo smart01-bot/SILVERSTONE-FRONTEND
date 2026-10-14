@@ -1,3 +1,4 @@
+import PressFeedback from './PressFeedback';
 // src/components/DrawerContent.jsx
 import React, { useRef } from 'react';
 import {
@@ -18,29 +19,16 @@ function getInitials(name = '') {
     .join('');
 }
 
-function SpringItem({ onPress, style, children }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const onIn  = () =>
-    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 80, bounciness: 2 }).start();
-  const onOut = () =>
-    Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 20, bounciness: 8 }).start();
-
-  return (
-    <TouchableOpacity onPressIn={onIn} onPressOut={onOut} onPress={onPress} activeOpacity={1}>
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </TouchableOpacity>
-  );
+function SpringItem({onPress,style,children}) {
+  return <PressFeedback onPress={onPress} accessibilityRole="button" style={style}>{children}</PressFeedback>;
 }
 
 export default function DrawerContent({ navigation, items }) {
   const { theme, isDark, setTheme, lang, setLang, tr } = useTheme();
-  const { profile, lockSession } = useAuth();
+  const { profile,user,lockSession } = useAuth();
 
   const name     = profile?.name  || 'Agent';
-  const email    = profile?.email || '';
+  const email    = user?.email || profile?.email || '';
   const initials = getInitials(name);
   const s        = styles(theme);
   const isSw     = lang === 'sw';
@@ -53,7 +41,6 @@ export default function DrawerContent({ navigation, items }) {
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
-          <View style={s.avatarRing} />
         </View>
         <Text style={s.name} numberOfLines={1}>{name}</Text>
         {!!email && <Text style={s.email} numberOfLines={1}>{email}</Text>}
@@ -97,7 +84,7 @@ export default function DrawerContent({ navigation, items }) {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[s.langPillText, { color: isSw ? theme.textDim : '#fff' }]}>EN</Text>
+              <Text style={[s.langPillText, { color: isSw ? theme.textDim : theme.onPrimary }]}>EN</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setLang('sw')}
@@ -107,7 +94,7 @@ export default function DrawerContent({ navigation, items }) {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[s.langPillText, { color: isSw ? '#fff' : theme.textDim }]}>SW</Text>
+              <Text style={[s.langPillText, { color: isSw ? theme.onPrimary : theme.textDim }]}>SW</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -129,7 +116,7 @@ export default function DrawerContent({ navigation, items }) {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[s.langPillText, { color: !isDark ? '#fff' : theme.textDim }]}>{tr('light')}</Text>
+              <Text style={[s.langPillText, { color: !isDark ? theme.onPrimary : theme.textDim }]}>{tr('light')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setTheme('dark')}
@@ -139,7 +126,7 @@ export default function DrawerContent({ navigation, items }) {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[s.langPillText, { color: isDark ? '#fff' : theme.textDim }]}>{tr('dark')}</Text>
+              <Text style={[s.langPillText, { color: isDark ? theme.onPrimary : theme.textDim }]}>{tr('dark')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -169,7 +156,7 @@ const styles = (theme) => StyleSheet.create({
   header:      { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   avatarOuter: { position: 'relative', marginBottom: spacing.md - 2, width: 68, height: 68 },
   avatar: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64, height: 64, borderRadius: 22,
     backgroundColor: theme.primary,
     alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
@@ -182,7 +169,7 @@ const styles = (theme) => StyleSheet.create({
     width: 70, height: 70, borderRadius: 35,
     borderWidth: 2, borderColor: theme.primary + '40',
   },
-  avatarText: { color: '#fff', fontSize: 24, fontFamily: fonts.bodyXBold },
+  avatarText: { color: theme.onPrimary, fontSize: 24, fontFamily: fonts.bodyXBold },
   name:       { color: theme.text,    fontSize: 20, fontFamily: fonts.display,  letterSpacing: -0.3 },
   email:      { color: theme.textDim, fontSize: 15, fontFamily: fonts.body,     marginTop: spacing.xs - 1 },
 

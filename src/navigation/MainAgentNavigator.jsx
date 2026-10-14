@@ -1,11 +1,15 @@
 // src/navigation/MainAgentNavigator.jsx
-import React, { useRef, useEffect } from 'react';
+import React, { useState,useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator }    from '@react-navigation/drawer';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, Keyboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/DrawerContent';
+import { MainAgentUIProvider } from '../components/agent/MainAgentUI';
+import { useAgentUI } from '../components/agent/AgentUI';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PressFeedback from '../components/PressFeedback';
 import { spacing, radius, fonts } from '../constants/theme';
 
 import OverviewScreen  from '../screens/main-agent/OverviewScreen';
@@ -17,62 +21,30 @@ import ApprovalsScreen from '../screens/main-agent/ApprovalsScreen';
 const Tab    = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-// ─── Animated tab icon — matches SubAgentNavigator pattern exactly ────────────
-// CRASH-SAFE: native driver (scale) and non-native (glow) in separate useEffects
-function TabIcon({ name, focused, color, badge }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const glow  = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(scale, {
-      toValue:         focused ? 1.25 : 1,
-      useNativeDriver: true,
-      tension:         200,
-      friction:        7,
-    }).start();
-  }, [focused]);
-
-  useEffect(() => {
-    Animated.timing(glow, {
-      toValue:         focused ? 1 : 0,
-      duration:        180,
-      useNativeDriver: false,
-    }).start();
-  }, [focused]);
-
-  const bgColor = glow.interpolate({
-    inputRange:  [0, 1],
-    outputRange: ['rgba(0,0,0,0)', color + '25'],
-  });
-
-  return (
-    <Animated.View style={[styles.tabIconWrap, { backgroundColor: bgColor }]}>
-      <Animated.View style={{ transform: [{ scale }], alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons
-          name={focused ? name : `${name}-outline`}
-          size={26}
-          color={color}
-          style={focused && Platform.OS === 'ios' ? {
-            shadowColor:   color,
-            shadowOffset:  { width: 0, height: 3 },
-            shadowOpacity: 0.6,
-            shadowRadius:  6,
-          } : undefined}
-        />
-        {badge > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
-          </View>
-        )}
-      </Animated.View>
-    </Animated.View>
-  );
+export function MainTabBar({state,descriptors,navigation}) {
+  const {colors}=useAgentUI();const insets=useSafeAreaInsets();
+  const [keyboardVisible,setKeyboardVisible]=useState(false);
+  useEffect(()=>{const show=Keyboard.addListener('keyboardDidShow',()=>setKeyboardVisible(true));const hide=Keyboard.addListener('keyboardDidHide',()=>setKeyboardVisible(false));return()=>{show.remove();hide.remove();};},[]);
+  if(keyboardVisible)return null;
+  const icons={Overview:'grid',Queue:'list',Transfers:'swap-horizontal',Agents:'people',Approvals:'checkmark-circle'};
+  return <View style={{backgroundColor:colors.bg,paddingHorizontal:12,paddingTop:8,paddingBottom:Math.max(insets.bottom,8)}}>
+    <View style={{flexDirection:'row',padding:5,borderRadius:26,borderWidth:1,borderColor:colors.glassBorder,backgroundColor:colors.glass}}>
+      {state.routes.map((route,index)=>{const selected=index===state.index;const options=descriptors[route.key].options;return <PressFeedback key={route.key}
+        containerStyle={{flex:1}} accessibilityRole="tab" accessibilityLabel={options.tabBarLabel} accessibilityState={{selected}}
+        onPress={()=>{const event=navigation.emit({type:'tabPress',target:route.key,canPreventDefault:true});if(!selected&&!event.defaultPrevented)navigation.navigate(route.name);}}
+        onLongPress={()=>navigation.emit({type:'tabLongPress',target:route.key})}
+        style={{minHeight:64,paddingVertical:8,paddingHorizontal:2,borderRadius:21,alignItems:'center',justifyContent:'center',backgroundColor:selected?colors.selected:'transparent',gap:5}}>
+        <Ionicons name={icons[route.name]+(selected?'':'-outline')} size={23} color={selected?colors.text:colors.secondary}/>
+        <Text style={{fontFamily:selected?fonts.bodySemi:fonts.body,fontSize:10,lineHeight:15,color:selected?colors.text:colors.secondary,textAlign:'center'}}>{options.tabBarLabel}</Text>
+      </PressFeedback>})}
+    </View>
+  </View>;
 }
 
 function MainTabs() {
   const { theme, tr } = useTheme();
   return (
-    <Tab.Navigator
+    <Tab.Navigator tabBar={props=><MainTabBar {...props}/>}
       screenOptions={{
         headerShown: false,
         lazy:        true,
@@ -103,7 +75,6 @@ function MainTabs() {
         component={OverviewScreen}
         options={{
           tabBarLabel: tr('overview'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="bar-chart"       focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -111,7 +82,6 @@ function MainTabs() {
         component={QueueScreen}
         options={{
           tabBarLabel: tr('queue'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="list"            focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -119,7 +89,6 @@ function MainTabs() {
         component={TransfersScreen}
         options={{
           tabBarLabel: tr('transfers'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="swap-horizontal" focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -127,7 +96,6 @@ function MainTabs() {
         component={AgentsScreen}
         options={{
           tabBarLabel: tr('agents'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="people"         focused={focused} color={color} />,
         }}
       />
       <Tab.Screen
@@ -135,14 +103,13 @@ function MainTabs() {
         component={ApprovalsScreen}
         options={{
           tabBarLabel: tr('approvals'),
-          tabBarIcon:  ({ focused, color }) => <TabIcon name="checkmark-circle" focused={focused} color={color} />,
         }}
       />
     </Tab.Navigator>
   );
 }
 
-export default function MainAgentNavigator() {
+function MainAgentContent() {
   const { theme, tr } = useTheme();
 
   const DRAWER_ITEMS = [
@@ -177,25 +144,6 @@ export default function MainAgentNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabIconWrap: {
-    width:          46,
-    height:         38,
-    borderRadius:   radius.md,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    position:          'absolute',
-    top:               -4,
-    right:             -8,
-    backgroundColor:   '#C8102E',
-    borderRadius:      radius.full,
-    minWidth:          18,
-    height:            18,
-    alignItems:        'center',
-    justifyContent:    'center',
-    paddingHorizontal: spacing.xs,
-  },
-  badgeText: { color: '#fff', fontSize: 11, fontFamily: fonts.bodyXBold },
-});
+export default function MainAgentNavigator() {
+  return <MainAgentUIProvider><MainAgentContent/></MainAgentUIProvider>;
+}

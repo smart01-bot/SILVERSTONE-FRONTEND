@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LIGHT, DARK } from '../constants/theme';
 import { useTr } from '../constants/translations';
 
-const ThemeContext = createContext({});
+export const ThemeContext = createContext({});
 
 export const useTheme = () => useContext(ThemeContext);
 

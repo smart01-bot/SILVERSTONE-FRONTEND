@@ -1,3 +1,6 @@
+import { useMainCollection } from '../../hooks/useMainCollection';
+import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import OperationsPanel from '../../components/OperationsPanel';
 import { needsReconciliation, requestAge, reservationLabel } from '../../api/operations';
 import { loadRequests, workflowError } from '../../api/workflowState';
@@ -9,16 +12,15 @@ import { api } from '../../config/api';
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, SafeAreaView,
+  StyleSheet, StatusBar,
   RefreshControl, Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
 import { SkeletonBox } from '../../components/SkeletonLoader';
-import EmptyState     from '../../components/EmptyState';
+const EmptyState=({subtitle,...props})=><MainEmpty {...props} description={subtitle}/>;
 import PressableScale from '../../components/PressableScale';
 import {
   collection, query, orderBy,
@@ -71,38 +73,27 @@ function SkeletonQueueCard({ theme }) {
   );
 }
 
-export default function QueueScreen() {
-  const { theme, isDark, tr } = useTheme();
+export default function QueueScreen({ navigation }) {
+  const { theme, isDark, tr, lang } = useTheme();
   const { showLoader, hideLoader } = useLoader();
 
+  const {rows:assignedAgents}=useMainCollection('agents');
+  const agentNames=Object.fromEntries(assignedAgents.map(a=>[a.id,a.name]));
   const [operationsVisible,setOperationsVisible]=useState(false);
-  const [loadError, setLoadError] = useState('');
-  const [requests,   setRequests]   = useState([]);
+  const requestCollection=useMainCollection('requests','asc');
+  const {rows:requests,error:loadError,refreshing,loading}=requestCollection;
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [filter,     setFilter]     = useState('All');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading,    setLoading]    = useState(true);
-  
+
+
   const FILTERS = ['All', 'Unresolved', 'Urgent', 'Pending', 'Approved'];
   const FILTER_LABELS = {
-    All:      tr('queue'),
+    All:      lang==='sw'?'Yote':'All',
     Urgent:   tr('markUrgent'),
     Pending:  tr('statusPending'),
-    Approved: 'Reserved',
+    Approved: lang==='sw'?'Inashughulikiwa':'Processing',
+    Unresolved:lang==='sw'?'Yanahitaji uhakiki':'Needs attention',
   };
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'requests'), orderBy('createdAt', 'asc')),
-      snap => {
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setLoadError('');
-        setRequests(docs);
-        setLoading(false);
-      }, e=>{setLoading(false);setLoadError(workflowError(e));}
-    );
-    return unsub;
-  }, []);
 
   const filtered = requests.filter(r => {
     if (filter === 'Unresolved') return needsReconciliation(r);
@@ -111,7 +102,7 @@ export default function QueueScreen() {
     if (filter === 'Pending')  return r.status === 'awaiting_review';
     if (filter === 'Approved') return ['awaiting_source','source_confirmed','payout_pending'].includes(r.status);
     return true;
-  });
+  }).map(r=>({...r,agentName:r.agentName||agentNames[r.agentId||r.subAgentId]}));
 
   const pendingCount  = requests.filter(r => r.status === 'awaiting_review').length;
   const urgentCount   = requests.filter(r => r.status === 'awaiting_review' && r.urgent).length;
@@ -122,7 +113,7 @@ export default function QueueScreen() {
   const handleApprove = async (req) => {
     showLoader();
     try {
-      const result=await exchangeAction(req,'accept');setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
+      await exchangeAction(req,'accept');await requestCollection.refresh();
     } catch (e) { Alert.alert('Error', workflowError(e)); }
     finally { hideLoader(); }
   };
@@ -134,7 +125,7 @@ export default function QueueScreen() {
         onPress: async () => {
           showLoader();
           try {
-            const result=await exchangeAction(req,'reject',reason);setRequests(rows=>rows.map(r=>r.id===result.id?requestView(result):r));
+            await exchangeAction(req,'reject',reason);await requestCollection.refresh();
           } catch (e) { Alert.alert('Error', workflowError(e)); }
           finally { hideLoader(); }
         },
@@ -143,7 +134,7 @@ export default function QueueScreen() {
     ]);
   };
 
-  const onRefresh = async () => { if(refreshing)return; setRefreshing(true); try {setRequests((await loadRequests(api)).map(requestView));setLoadError('');} catch(e){setLoadError(workflowError(e));} finally{setRefreshing(false);setLoading(false);} };
+  const onRefresh=requestCollection.refresh;
 
   const emptyMessages = {
     Unresolved: { title: 'No unresolved outcomes in loaded requests', subtitle: 'This does not verify settlement or provider readiness.' },
@@ -154,29 +145,10 @@ export default function QueueScreen() {
   };
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView edges={['top','left','right']} style={[s.safe, { backgroundColor: theme.bg }]}>
 
       {/* ── Gradient header ── */}
-      <LinearGradient
-        colors={[theme.gradPrimA, theme.gradPrimB]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={s.header}
-      >
-        <View style={s.headerDecor} />
-        <View style={s.headerRow}>
-          <View>
-            <Text style={s.headerTitle}>Queue</Text>
-            <Text style={s.headerSub}>
-              {pendingCount} pending · {urgentCount} urgent · {approvedCount} reserved
-            </Text>
-          </View>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Open operational controls" hitSlop={8} onPress={()=>setOperationsVisible(true)} style={s.iconBtn}>
-            <Ionicons name="options-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <MainHeader navigation={navigation} title={lang==='sw'?'Foleni':'Queue'} subtitle={loading?(lang==='sw'?'Inapakia maombi…':'Loading requests…'):`${pendingCount} ${lang==='sw'?'yanasubiri ukaguzi':'awaiting review'}`} action={()=>setOperationsVisible(true)} actionLabel={lang==='sw'?'Fungua udhibiti wa shughuli':'Open operational controls'} />
 
       <OperationsPanel visible={operationsVisible} onClose={()=>setOperationsVisible(false)} />
       {/* ── Filter pills ── */}
@@ -193,7 +165,7 @@ export default function QueueScreen() {
                 }]}
                 activeOpacity={0.75}
               >
-                <Text style={[s.pillText, { color: filter === f ? '#fff' : theme.textDim }]}>
+                <Text style={[s.pillText, { color: filter === f ? theme.onPrimary : theme.textDim }]}>
                   {FILTER_LABELS[f] ?? f}
                   {f === 'Urgent'  && urgentCount  > 0 ? ` ${urgentCount}`  : ''}
                   {f === 'Pending' && pendingCount  > 0 ? ` ${pendingCount}` : ''}
@@ -207,7 +179,7 @@ export default function QueueScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C8102E']} tintColor="#C8102E" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
         {loadError ? <View accessibilityLiveRegion="polite" style={{padding: 12}}>
           <Text style={{color: theme.text}}>{loadError} Existing results may be out of date.</Text>
@@ -235,7 +207,7 @@ export default function QueueScreen() {
                 style={[s.card, {
                   backgroundColor: theme.surfaceAlt,
                   borderColor:     theme.border,
-                  borderLeftColor: req.urgent ? '#F59E0B' : theme.border,
+                  borderLeftColor: needsReconciliation(req)?theme.danger:req.urgent?theme.warning:theme.border,
                 }]}
               >
                 <View style={s.cardTop}>
@@ -253,11 +225,11 @@ export default function QueueScreen() {
                   <View style={s.cardTopRight}>
                     {req.urgent && (
                       <View style={s.urgentTag}>
-                        <Text style={s.urgentText}>URGENT</Text>
+                        <Text style={[s.urgentText,{color:theme.warning}]}>{lang==='sw'?'Haraka':'Urgent'}</Text>
                       </View>
                     )}
                     <View style={[s.waitBadge, { backgroundColor: theme.surfaceAlt }]}>
-                      <Text style={[s.waitText, { color: theme.textDim }]}>{needsReconciliation(req) ? 'Unresolved' : 'Open'}</Text>
+                      <Text style={[s.waitText, { color: theme.textDim }]}>{needsReconciliation(req) ? (lang==='sw'?'Uhakiki':'Needs attention') : (lang==='sw'?'Wazi':'Open')}</Text>
                     </View>
                   </View>
                 </View>
@@ -274,13 +246,13 @@ export default function QueueScreen() {
                   <Text style={[s.phone, { color: theme.textDim }]}>To: {req.destPhone}</Text>
                 </View>
 
-                <Text style={{color:theme.textDim}}>{req.nextAction}</Text>
-                {req.reservation && <Text style={{color:theme.textDim}}>{reservationLabel(req.reservation)}</Text>}
-                <Text style={{color:theme.textDim}}>#{req.id.slice(-8)} · Queue {req.queueSequence} · Fee TZS 0</Text>
+                <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:13,lineHeight:20}}>{req.nextAction}</Text>
+                {req.reservation && <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:12,lineHeight:19}}>{reservationLabel(req.reservation)}</Text>}
+
                 <View style={s.actions}>
                   {req.status === 'awaiting_review' && (
-                    <TouchableOpacity onPress={() => handleApprove(req)} style={[s.btnOutline, { borderColor: '#0891B2' }]} activeOpacity={0.75}>
-                      {<Text style={[s.btnOutlineText, { color: '#0891B2' }]}>Accept and reserve</Text>
+                    <TouchableOpacity onPress={() => handleApprove(req)} style={[s.btnOutline, { borderColor: theme.primary,backgroundColor:theme.primary }]} activeOpacity={0.75}>
+                      {<Text style={[s.btnOutlineText, { color: theme.onPrimary }]}>Accept and reserve</Text>
                       }
                     </TouchableOpacity>
                   )}
@@ -301,7 +273,7 @@ export default function QueueScreen() {
 
 const s = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { padding: spacing.md, paddingBottom: 100 },
+  scroll: { paddingHorizontal:24,paddingTop:8,paddingBottom:24 },
 
   header: {
     paddingHorizontal:       spacing.md + 2,
@@ -327,24 +299,24 @@ const s = StyleSheet.create({
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   pill: {
-    paddingHorizontal: spacing.md - 2, paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 17, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
 
   card: {
-    borderRadius: radius.lg, borderWidth: 1, borderLeftWidth: 4,
+    borderRadius:20,borderWidth:1,borderLeftWidth:2,
     padding: spacing.md, marginBottom: spacing.md - 4, gap: spacing.md - 4,
   },
-  cardTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTop:      { flexDirection: 'row',flexWrap:'wrap',gap:12, justifyContent: 'space-between', alignItems: 'center' },
   agentRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText:   { fontSize: 20, fontFamily: fonts.bodyBold },
-  agentName:    { fontSize: 20, fontFamily: fonts.bodyBold },
-  agentSub:     { fontSize: 17, fontFamily: fonts.body, marginTop: 1 },
+  avatarText:   { fontSize: 17, fontFamily: fonts.bodySemi },
+  agentName:    { fontSize: 17, fontFamily: fonts.bodySemi },
+  agentSub:     { fontSize: 12,lineHeight:19,fontFamily:fonts.body,marginTop:3 },
   cardTopRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
   urgentTag: {
     backgroundColor: '#F59E0B20', paddingHorizontal: spacing.sm,
@@ -354,20 +326,20 @@ const s = StyleSheet.create({
   waitBadge:  { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
   waitText:   { fontSize: 15, fontFamily: fonts.bodyBold },
 
-  routeRow:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  route:     { fontSize: 20, fontFamily: fonts.bodyBold },
+  routeRow:  { flexDirection: 'row',flexWrap:'wrap',alignItems:'center',gap: spacing.sm },
+  route:     { fontSize: 17, fontFamily: fonts.bodySemi },
   amount:    { fontSize: 22, fontFamily: fonts.bodyXBold, marginLeft: 'auto' },
-  phonesRow: { flexDirection: 'row', gap: spacing.md },
-  phone:     { fontSize: 17, fontFamily: fonts.body },
+  phonesRow: { gap:6 },
+  phone:     { fontSize: 13,lineHeight:20, fontFamily: fonts.body },
 
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   btnOutline: {
-    flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1.5,
+    flex: 1, minHeight:48,paddingVertical:12,paddingHorizontal:8,borderRadius: radius.md, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnOutlineText: { fontSize: 17, fontFamily: fonts.bodySemi },
+  btnOutlineText: { fontSize: 14, fontFamily: fonts.bodySemi },
   btnFilled: {
-    flex: 1, height: 46, borderRadius: radius.md,
+    flex: 1, minHeight:48,paddingVertical:12,paddingHorizontal:8,borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
   },
   btnFilledText: { color: '#fff', fontSize: 17, fontFamily: fonts.bodyBold },
