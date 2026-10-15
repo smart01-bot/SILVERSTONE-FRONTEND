@@ -13,18 +13,26 @@ export function ThemeProvider({ children }) {
   // null = follow device; 'light' | 'dark' = user override
   const [userPreference, setUserPreference] = useState(null);
   const [lang, setLangState] = useState('sw');
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const [savedPref, savedLang] = await Promise.all([
-        AsyncStorage.getItem('silverstone_theme_preference'),
-        AsyncStorage.getItem('silverstone_lang'),
-      ]);
-      if (savedPref === 'light' || savedPref === 'dark') {
-        setUserPreference(savedPref);
-      }
-      if (savedLang === 'sw' || savedLang === 'en') setLangState(savedLang);
+      try {
+        const [savedPref, savedLang] = await Promise.all([
+          AsyncStorage.getItem('silverstone_theme_preference'),
+          AsyncStorage.getItem('silverstone_lang'),
+        ]);
+        if (!active) return;
+        if (savedPref === 'light' || savedPref === 'dark') {
+          setUserPreference(savedPref);
+        }
+        if (savedLang === 'sw' || savedLang === 'en') setLangState(savedLang);
+      } catch {
+        // Fall back to the device theme if preferences cannot be read.
+      } finally { if (active) setThemeReady(true); }
     })();
+    return () => { active = false; };
   }, []);
 
   const isDark = userPreference
@@ -52,7 +60,7 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={{
-      theme, isDark, setTheme, userPreference,
+      theme, isDark, setTheme, userPreference, themeReady,
       lang, setLang, tr,
     }}>
       {children}

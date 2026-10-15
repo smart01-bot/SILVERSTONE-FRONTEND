@@ -3,7 +3,7 @@ import { AccessibilityInfo, View, Text, Animated, Easing, StyleSheet, StatusBar 
 import { useTheme } from '../context/ThemeContext';
 import { fonts } from '../constants/theme';
 import { agentColors } from './agent/agentTheme';
-import SilverstoneMark from './SilverstoneMark';
+import SwiftWakalaMark from './SwiftWakalaMark';
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(true);
@@ -54,8 +54,8 @@ export function ScreenLoader({ label }) {
   const colors = agentColors(isDark);
   return <View style={[s.root, { backgroundColor: colors.bg }]}>
     <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
-    <SilverstoneMark color={colors.text} size={42} />
-    <LoadingIndicator label={label || (lang === 'sw' ? 'Inafungua Silverstone…' : 'Opening Silverstone…')} />
+    <SwiftWakalaMark color={colors.text} size={42} />
+    <LoadingIndicator label={label || (lang === 'sw' ? 'Inafungua Swift Wakala…' : 'Opening Swift Wakala…')} />
   </View>;
 }
 

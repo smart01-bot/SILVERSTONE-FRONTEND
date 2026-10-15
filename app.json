@@ -7,9 +7,8 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/SilverS.png",
     "splash": {
-      "image": "./assets/images/splash-light.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#C4C7CB"
+      "backgroundColor": "#EEF0F2",
+      "resizeMode": "contain"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,11 +18,9 @@
       "package": "com.silverstone.floatmanager",
       "versionCode": 2,
       "splash": {
-        "image": "./assets/images/splash-light.png",
+        "backgroundColor": "#EEF0F2",
         "resizeMode": "contain",
-        "backgroundColor": "#C4C7CB",
         "dark": {
-          "image": "./assets/images/splash-dark.png",
           "backgroundColor": "#000000"
         }
       }
@@ -34,11 +31,9 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "splash": {
-        "image": "./assets/images/splash-light.png",
+        "backgroundColor": "#EEF0F2",
         "resizeMode": "contain",
-        "backgroundColor": "#C4C7CB",
         "dark": {
-          "image": "./assets/images/splash-dark.png",
           "backgroundColor": "#000000"
         }
       }
@@ -51,7 +46,8 @@
         {
           "color": "#D32F2F"
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
     "extra": {
       "firebaseApiKey": "AIzaSyCvD5JbWjzEEF2CbG5r8_YkvoRaY3X9qpA",
