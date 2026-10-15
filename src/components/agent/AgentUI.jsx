@@ -69,16 +69,16 @@ export function AgentButton({ label, onPress, disabled = false, busy = false, ic
   </Animated.View>;
 }
 
-export function AgentRow({ label, value, icon, onPress, disabled = false, children, style, ...props }) {
+export function AgentRow({ label, value, icon, onPress, disabled = false, children, style, labelStyle, valueStyle, iconSize = 21, ...props }) {
   const { colors } = useAgentUI();
   return <Pressable onPress={onPress} disabled={disabled || !onPress}
     accessibilityLabel={label} accessibilityValue={value ? { text:value } : undefined}
     accessibilityRole={onPress ? 'button' : undefined}
     accessibilityState={onPress ? { disabled } : undefined}
     style={({ pressed }) => [styles.row, { borderBottomColor: colors.border, backgroundColor: pressed ? colors.selected : 'transparent', opacity: disabled ? 0.5 : 1 }, style]} {...props}>
-    {icon ? <Ionicons name={icon} size={21} color={colors.text} /> : null}
-    <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
-    {value ? <Text style={[styles.rowValue, { color: colors.secondary }]}>{value}</Text> : null}
+    {icon ? <Ionicons name={icon} size={iconSize} color={colors.text} /> : null}
+    <Text style={[styles.rowLabel, { color: colors.text }, labelStyle]}>{label}</Text>
+    {value ? <Text style={[styles.rowValue, { color: colors.secondary }, valueStyle]}>{value}</Text> : null}
     {children}
     {onPress ? <Ionicons name="chevron-forward" size={17} color={colors.secondary} /> : null}
   </Pressable>;

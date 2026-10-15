@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
 import SilverstoneMark from '../SilverstoneMark';
-import { useTheme } from '../../context/ThemeContext';
+import { ThemeReveal, useThemeReveal } from './ThemeReveal';
 import { fonts } from '../../constants/theme';
 import { AGENT_TABS, isBoxyAgentDevice } from './agentTheme';
 import { AgentButton, AgentNotice, AgentSheet, useAgentUI } from './AgentUI';
@@ -55,21 +55,20 @@ export function AgentFrame({ children }) {
   }, [colors.bg, isDark]);
 
   return (
-    <SafeAreaView edges={{ top: 'additive', left: 'additive', right: 'additive', bottom: 'off' }} style={[s.frame, { backgroundColor: colors.bg }]}>
+    <ThemeReveal><SafeAreaView edges={{ top: 'additive', left: 'additive', right: 'additive', bottom: 'off' }} style={[s.frame, { backgroundColor: colors.bg }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? 'light-content' : 'dark-content'} />
       {children}
-    </SafeAreaView>
+    </SafeAreaView></ThemeReveal>
   );
 }
 
 
 export function AgentHeader({ activeName, onHistory }) {
   const { colors, isDark, copy, reducedMotion, setHeaderHeight } = useAgentUI();
-  const { setTheme, userPreference } = useTheme();
+  const { toggle, error: appearanceError } = useThemeReveal();
   const [sheet, setSheet] = useState(null);
-  const [appearanceError, setAppearanceError] = useState('');
   const tab = AGENT_TABS.find(item => item.name === activeName) || AGENT_TABS[0];
-  const label = copy(tab.en, tab.sw);
+  const label = activeName === 'NewRequest' ? copy('New request', 'Ombi jipya') : copy(tab.en, tab.sw);
   const transition = useRef(new Animated.Value(1)).current;
   const [titles, setTitles] = useState({ current: label, previous: null });
   const latestTitle = useRef(label);
@@ -100,16 +99,6 @@ export function AgentHeader({ activeName, onHistory }) {
     return () => animation.stop();
   }, [label, reducedMotion, transition]);
 
-  const chooseAppearance = async preference => {
-    setAppearanceError('');
-    try {
-      await setTheme(preference);
-      setSheet(null);
-    } catch {
-      setAppearanceError(copy('Appearance changed, but your preference could not be saved. Try again.', 'Mwonekano umebadilika, lakini chaguo lako halijahifadhiwa. Jaribu tena.'));
-    }
-  };
-
   return (
     <>
       <View onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)}>
@@ -119,8 +108,8 @@ export function AgentHeader({ activeName, onHistory }) {
           <Text numberOfLines={1} style={[s.brandText, { color: colors.text }]}>SILVERSTONE</Text>
         </View>
         <View style={s.headerActions}>
-          <Pressable onPress={() => { setAppearanceError(''); setSheet('appearance'); }}
-            accessibilityRole="button" accessibilityLabel={copy('Appearance', 'Mwonekano')}
+          <Pressable testID="theme-toggle" onPress={event => toggle({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })}
+            accessibilityRole="button" accessibilityLabel={isDark ? copy('Switch to light theme', 'Badili kwenda mwanga') : copy('Switch to dark theme', 'Badili kwenda giza')}
             style={({ pressed }) => [s.iconButton, { backgroundColor: colors.glass, borderColor: colors.glassBorder, opacity: pressed ? 0.6 : 1 }]}>
             <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={23} color={colors.text} />
           </Pressable>
@@ -131,7 +120,8 @@ export function AgentHeader({ activeName, onHistory }) {
           </Pressable>
         </View>
       </View>
-      <View style={s.titleSlot}>
+      {appearanceError ? <AgentNotice error style={{ paddingHorizontal: 24 }}>{appearanceError}</AgentNotice> : null}
+      {activeName !== 'Home' ? <View style={s.titleSlot}>
         {titles.previous && (
           <Animated.Text accessible={false} importantForAccessibility="no-hide-descendants"
             style={[s.pageTitle, s.previousTitle, { color: colors.text,
@@ -143,27 +133,10 @@ export function AgentHeader({ activeName, onHistory }) {
           style={[s.pageTitle, { color: colors.text, opacity: transition,
             transform: [{ translateY: transition.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
           }]}>{titles.current}</Animated.Text>
-      </View>
+      </View> : null}
 
       </View>
 
-      <AgentSheet visible={sheet === 'appearance'} onClose={() => setSheet(null)} title={copy('Appearance', 'Mwonekano')}>
-        {[
-          { value: 'auto', label: copy('System', 'Mfumo'), icon: 'phone-portrait-outline' },
-          { value: 'light', label: copy('Light', 'Mwanga'), icon: 'sunny-outline' },
-          { value: 'dark', label: copy('Dark', 'Giza'), icon: 'moon-outline' },
-        ].map(option => {
-          const selected = (userPreference || 'auto') === option.value;
-          return <Pressable key={option.value} onPress={() => chooseAppearance(option.value)}
-            accessibilityRole="radio" accessibilityLabel={option.label} accessibilityState={{ checked: selected }}
-            style={({ pressed }) => [s.sheetRow, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
-            <Ionicons name={option.icon} size={22} color={colors.text} />
-            <Text style={[s.sheetLabel, { color: colors.text }]}>{option.label}</Text>
-            {selected && <Ionicons name="checkmark" size={21} color={colors.text} />}
-          </Pressable>;
-        })}
-        {appearanceError ? <AgentNotice error>{appearanceError}</AgentNotice> : null}
-      </AgentSheet>
       <AgentSheet visible={sheet === 'notifications'} onClose={() => setSheet(null)} title={copy('Notifications', 'Arifa')}>
         <Text style={[s.sheetDescription, { color: colors.secondary }]}>
           {copy('Request updates are available in History. Push notifications are not available yet.', 'Taarifa za maombi zinapatikana kwenye Historia. Arifa za moja kwa moja bado hazipatikani.')}

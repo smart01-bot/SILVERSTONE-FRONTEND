@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Switch,
-  StyleSheet, KeyboardAvoidingView, Platform,
+  StyleSheet, KeyboardAvoidingView, Keyboard, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { validateAmount } from '../../api/workflowState';
 import { normalizePaymentEndpoint } from '../../api/paymentEndpoints';
@@ -12,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader } from '../../context/LoaderContext';
 import { fonts } from '../../constants/theme';
+import NetworkLogo from '../../components/agent/NetworkLogo';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import {
   AgentScroll, AgentButton, AgentSheet, AgentNotice, useAgentUI,
@@ -27,7 +29,7 @@ export default function NewRequestScreen({ navigation, route }) {
   const { user, profile } = useAuth();
   const { showLoader, hideLoader } = useLoader();
   const { tr } = useTheme();
-  const { colors, copy, headerHeight } = useAgentUI();
+  const { colors, copy, headerHeight, isDark, reducedTransparency } = useAgentUI();
   const insets = useSafeAreaInsets();
   const { isOnline, syncing, syncedCount, enqueue, syncQueue, pendingCount, queueError } = useOfflineQueue(user?.id, profile?.name);
 
@@ -45,10 +47,14 @@ export default function NewRequestScreen({ navigation, route }) {
   const [urgent,        setUrgent]        = useState(false);
   const [error,         setError]         = useState('');
   const [notice, setNotice] = useState('');
-  const [sourceType, setSourceType] = useState('phone');
-  const [destType, setDestType] = useState('phone');
+  const [sourceType, setSourceType] = useState(prefill?.sourceType ?? 'phone');
+  const [destType, setDestType] = useState(prefill?.destType ?? 'phone');
   const [review, setReview] = useState(null);
-  const [focusedEndpoint, setFocusedEndpoint] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [editorError, setEditorError] = useState('');
+  const [optionsExpanded, setOptionsExpanded] = useState(false);
+  const scrollRef = useRef(null);
+  const amountPosition = useRef(0);
 
   useEffect(()=>setSubmitted(false),[sourceNetwork,destNetwork,sourcePhone,destPhone,sourceType,destType,amount,urgent]);
 
@@ -58,11 +64,6 @@ export default function NewRequestScreen({ navigation, route }) {
   };
 
   const handleAmountChange = (val) => setAmount(formatAmount(val));
-
-  const addQuick = (n) => {
-    const current = BigInt(amount.replace(/,/g, '') || '0');
-    setAmount(formatAmount(String(current + BigInt(n))));
-  };
 
   const validate = () => {
     if (!sourceNetwork) return tr('sourceNetwork') + ' ' + tr('error');
@@ -75,12 +76,14 @@ export default function NewRequestScreen({ navigation, route }) {
 
   const reviewRequest = () => {
     if (busy.current || submitted) return;
+    Keyboard.dismiss();
     const problem = validate(); if (problem) { setError(problem); return; }
     try {
       const source = normalizePaymentEndpoint({ networkCode: codes[sourceNetwork], identifierType: sourceType, identifier: sourcePhone });
       const destination = normalizePaymentEndpoint({ networkCode: codes[destNetwork], identifierType: destType, identifier: destPhone });
       if (source.networkCode === destination.networkCode) throw new Error('Choose two different networks.');
       setError('');
+      setEditor(null);
       setReview({ source, destination, amountTzs: String(BigInt(amount.replace(/,/g,''))), currency:'TZS', urgent });
     } catch (e) { setError(e.message); }
   };
@@ -108,6 +111,8 @@ export default function NewRequestScreen({ navigation, route }) {
     setSourceType(prefill.sourceType ?? 'phone');
     setDestType(prefill.destType ?? 'phone');
     setReview(null);
+    setEditor(null);
+    setEditorError('');
     setAmount(prefill.amount ? formatAmount(String(prefill.amount)) : '');
     setUrgent(false);
     setError('');
@@ -116,259 +121,230 @@ export default function NewRequestScreen({ navigation, route }) {
     navigation.setParams({ prefill: undefined });
   }, [prefill, loading, navigation]);
 
-  const [picker, setPicker] = useState(null);
-  const [optionsExpanded, setOptionsExpanded] = useState(false);
-  const pickerSelection = picker === 'source' ? sourceNetwork : destNetwork;
-
-  const accountField = (kind, label, network, identifier) => {
-    const type = kind === 'source' ? sourceType : destType;
-    const setType = kind === 'source' ? setSourceType : setDestType;
-    const setNumber = kind === 'source' ? setSourcePhone : setDestPhone;
-    return (
-      <View style={[s.endpoint, { borderBottomColor: colors.border, borderLeftColor:focusedEndpoint===kind?colors.text:colors.border }]}>
-        <TouchableOpacity onPress={() => setPicker(kind)} style={s.accountField} accessibilityRole="button"
-          accessibilityLabel={`${label}: ${NETWORK_NAMES[network] || copy('Choose network','Chagua mtandao')}`}>
-          <View style={s.fieldContent}>
-            <Text style={[s.label, { color: colors.secondary }]}>{label}</Text>
-            <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network] || copy('Choose network','Chagua mtandao')}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={19} color={colors.text} />
-        </TouchableOpacity>
-        <View style={s.typeRow}>
-          {[['phone',copy('Wallet','Wallet')],['agent',copy('Agent','Wakala')],['till',copy('Till','Lipa namba')]].map(([value,title]) => (
-            <TouchableOpacity key={value} onPress={() => setType(value)} style={[s.typeChoice,{backgroundColor:type===value?colors.selected:'transparent'}]} accessibilityRole="radio"
-              accessibilityState={{selected:type===value}} accessibilityLabel={`${label}: ${title}`}>
-              <Text style={[s.typeText,{color:type===value?colors.text:colors.secondary,fontFamily:type===value?fonts.bodySemi:fonts.body}]}>{title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TextInput value={identifier} onChangeText={setNumber} onFocus={()=>setFocusedEndpoint(kind)} onBlur={()=>setFocusedEndpoint(null)} maxLength={type==='phone'?24:32}
-          keyboardType={type==='phone'?'phone-pad':'default'} autoCapitalize="none" autoCorrect={false}
-          placeholder={type==='phone'?'07XX XXX XXX':copy('Enter agent / till number','Weka namba ya wakala / lipa')}
-          placeholderTextColor={colors.secondary} selectionColor={colors.text}
-          style={[s.numberInput,{color:colors.text}]} accessibilityLabel={`${label}: ${type} number`} />
-        <Text style={[s.endpointHint,{color:colors.secondary}]}>{kind==='source'
-          ? copy('Approves the payment to Silverstone','Itaidhinisha malipo kwenda Silverstone')
-          : copy('Receives the payout from your agency','Itapokea fedha kutoka kwa wakala wako')}</Text>
-      </View>
-    );
+  const typeLabel = type => type === 'agent' ? copy('Agent', 'Wakala') : type === 'till' ? copy('Till', 'Lipa namba') : copy('Wallet', 'Wallet');
+  const endpointLabel = kind => kind === 'source' ? copy('Collect from', 'Kusanya kutoka') : copy('Pay out to', 'Tuma kwenda');
+  const openEditor = kind => {
+    if (busy.current) return;
+    Keyboard.dismiss();
+    setReview(null);
+    setEditorError('');
+    setEditor(kind === 'source'
+      ? { kind, network: sourceNetwork, type: sourceType, identifier: sourcePhone }
+      : { kind, network: destNetwork, type: destType, identifier: destPhone });
   };
+  const closeSheet = () => {
+    if (busy.current) return;
+    Keyboard.dismiss();
+    setEditor(null);
+    setEditorError('');
+    setReview(null);
+  };
+  const saveEndpoint = () => {
+    if (!editor || busy.current) return;
+    try {
+      normalizePaymentEndpoint({ networkCode: codes[editor.network], identifierType: editor.type, identifier: editor.identifier });
+      const other = editor.kind === 'source' ? destNetwork : sourceNetwork;
+      if (editor.network === other) throw new Error(copy('Choose two different networks.', 'Chagua mitandao miwili tofauti.'));
+      if (editor.kind === 'source') {
+        setSourceNetwork(editor.network); setSourceType(editor.type); setSourcePhone(editor.identifier.trim());
+      } else {
+        setDestNetwork(editor.network); setDestType(editor.type); setDestPhone(editor.identifier.trim());
+      }
+      setError(''); setNotice(''); closeSheet();
+    } catch (e) { setEditorError(e.message); }
+  };
+  const changeEditor = patch => { setEditor(value => ({ ...value, ...patch })); setEditorError(''); };
+  const editAmount = () => {
+    closeSheet();
+    scrollRef.current?.scrollTo({ y: Math.max(0, amountPosition.current - 12), animated: false });
+  };
+  const accountRow = (kind, network, identifier, type) => (
+    <TouchableOpacity testID={`request-account-${kind}`} onPress={() => openEditor(kind)} disabled={loading}
+      accessibilityRole="button" accessibilityLabel={`${endpointLabel(kind)}: ${NETWORK_NAMES[network] || copy('Choose network', 'Chagua mtandao')}${identifier ? `, ${typeLabel(type)}, ${identifier}` : ''}`}
+      activeOpacity={0.65} style={s.accountRow}>
+      <NetworkLogo network={network} />
+      <View style={s.fieldContent}>
+        <Text style={[s.label, { color: colors.secondary }]}>{endpointLabel(kind)}</Text>
+        <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network] || copy('Choose network', 'Chagua mtandao')}</Text>
+        <Text style={[s.identifier, { color: colors.secondary }]}>{identifier ? `${typeLabel(type)} · ${identifier}` : copy('Add account details', 'Weka taarifa za akaunti')}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.secondary} />
+    </TouchableOpacity>
+  );
 
   return (
-    <KeyboardAvoidingView
-      style={[s.screen, { backgroundColor: colors.bg }]}
+    <KeyboardAvoidingView style={[s.screen, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + headerHeight : 0}
-    >
-      <AgentScroll keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
-        {!isOnline && (
-          <AgentNotice>
-            {copy(
-              'Offline or checking connection. Save on this device; submission retries while this screen is open and connected.',
-              'Nje ya mtandao au muunganisho unakaguliwa. Hifadhi kwenye kifaa hiki; ombi litajaribiwa kutumwa tena ukurasa huu ukiwa wazi na mtandaoni.',
-            )}
-          </AgentNotice>
-        )}
-        {syncedCount > 0 && (
-          <Text accessibilityLiveRegion="polite" style={[s.message, { color: colors.text }]}>
-            {copy(`${syncedCount} request${syncedCount > 1 ? 's' : ''} synced`, `Maombi ${syncedCount} yametumwa`)}
-          </Text>
-        )}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + headerHeight : 0}>
+      <AgentScroll ref={scrollRef} contentContainerStyle={s.content}>
+        <Text style={[s.subtitle, { color: colors.secondary }]}>{copy('Set up your next transfer', 'Andaa uhamisho wako unaofuata')}</Text>
+        {!isOnline ? <AgentNotice>{copy('Offline or checking connection. Save on this device; submission retries while this screen is open and connected.', 'Nje ya mtandao au muunganisho unakaguliwa. Hifadhi kwenye kifaa hiki; ombi litajaribiwa kutumwa tena ukurasa huu ukiwa wazi na mtandaoni.')}</AgentNotice> : null}
+        {syncedCount > 0 ? <Text accessibilityLiveRegion="polite" style={[s.message, { color: colors.text }]}>{copy(`${syncedCount} request${syncedCount > 1 ? 's' : ''} synced`, `Maombi ${syncedCount} yametumwa`)}</Text> : null}
 
-        {accountField('source', copy('Collect from', 'Kusanya kutoka'), sourceNetwork, sourcePhone)}
-        {accountField('destination', copy('Pay out to', 'Tuma kwenda'), destNetwork, destPhone)}
-
-        <View style={[s.amountField, { borderBottomColor: colors.border }]}>
-          <Text style={[s.label, { color: colors.secondary }]}>{tr('amount')}</Text>
-          <View style={s.amountRow}>
-            <Text style={[s.currency, { color: colors.text }]}>TZS</Text>
-            <TextInput
-              value={amount}
-              onChangeText={handleAmountChange}
-              placeholder="0"
-              placeholderTextColor={colors.muted}
-              keyboardType="numeric"
-              selectionColor={colors.text}
-              style={[s.amountInput, { color: colors.text }]}
-              accessibilityLabel={`${tr('amount')}, TZS`}
-              underlineColorAndroid="transparent"
-            />
+        <View testID="request-route-panel" style={[s.routePanel, { borderColor: colors.glassBorder, backgroundColor: reducedTransparency ? colors.surface : colors.glass }]}>
+          {Platform.OS === 'ios' && !reducedTransparency ? <BlurView intensity={18} tint={isDark ? 'dark' : 'light'} pointerEvents="none" style={StyleSheet.absoluteFill} /> : null}
+          {accountRow('source', sourceNetwork, sourcePhone, sourceType)}
+          <View accessible={false} style={[s.routeDivider, { backgroundColor: colors.border }]}>
+            <View style={[s.direction, { backgroundColor: colors.surface, borderColor: colors.glassBorder }]}>
+              <Ionicons name="arrow-down" size={15} color={colors.secondary} />
+            </View>
           </View>
+          {accountRow('destination', destNetwork, destPhone, destType)}
         </View>
 
-        <TouchableOpacity
-          onPress={() => setOptionsExpanded(value => !value)}
-          style={s.optionsToggle}
-          activeOpacity={0.65}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: optionsExpanded }}
-        >
-          <Text style={[s.optionsLabel, { color: colors.text }]}>{copy('More options', 'Chaguo zaidi')}</Text>
-          <Ionicons name={optionsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text} />
-        </TouchableOpacity>
-        {!optionsExpanded && urgent && (
-          <Text style={[s.urgentIndicator, { color: colors.text }]}>
-            {copy('Urgent flag is on · Queue order unchanged', 'Alama ya dharura imewashwa · Mpangilio wa foleni haujabadilika')}
-          </Text>
-        )}
-        {optionsExpanded && (
-          <View style={s.optionsContent}>
-            <Text style={[s.label, { color: colors.secondary }]}>{copy('Add to amount', 'Ongeza kiasi')}</Text>
-            <View style={s.quickRow}>
-              {[10000, 50000, 100000, 500000].map(n => (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => addQuick(n)}
-                  style={[s.quickButton, { borderColor: colors.border }]}
-                  activeOpacity={0.65}
-                  accessibilityRole="button"
-                  accessibilityLabel={copy(`Add ${n.toLocaleString('en-US')} Tanzanian shillings`, `Ongeza shilingi za Tanzania ${n.toLocaleString('en-US')}`)}
-                >
-                  <Text style={[s.quickText, { color: colors.text }]}>+{n / 1000}k</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={s.urgentRow}>
-              <View style={s.urgentCopy}>
-                <Text style={[s.optionsLabel, { color: colors.text }]}>{tr('markUrgent')}</Text>
-                <Text style={[s.smallText, { color: colors.secondary }]}>
-                  {copy('Flag for review; queue remains first-in, first-out.', 'Weka alama kwa ukaguzi; ombi la kwanza huanza kushughulikiwa.')}
-                </Text>
-              </View>
-              <Switch
-                value={urgent}
-                onValueChange={() => setUrgent(value => !value)}
-                accessibilityLabel={tr('markUrgent')}
-                trackColor={{ false: colors.border, true: colors.text }}
-                thumbColor={colors.bg}
-                ios_backgroundColor={colors.border}
-              />
-            </View>
+        <View onLayout={event => { amountPosition.current = event.nativeEvent.layout.y; }} style={[s.amountField, { borderBottomColor: colors.border }]}>
+          <Text style={[s.label, { color: colors.secondary }]}>{copy('Amount', 'Kiasi')}</Text>
+          <View style={s.amountRow}>
+            <Text style={[s.currency, { color: colors.secondary }]}>TZS</Text>
+            <TextInput testID="request-amount" value={amount} onChangeText={handleAmountChange} placeholder="0"
+              placeholderTextColor={colors.muted} keyboardType="numeric" selectionColor={colors.text}
+              style={[s.amountInput, { color: colors.text }]} accessibilityLabel={`${copy('Amount', 'Kiasi')}, TZS`}
+              underlineColorAndroid="transparent" editable={!loading} />
           </View>
-        )}
-
-        <Text style={[s.fee, { color: colors.secondary }]}>
-          {copy('Silverstone fee: TZS 0', 'Ada ya Silverstone: TZS 0')}
-        </Text>
-        <Text style={[s.executionNotice, { color: colors.secondary }]}>
-          {copy('Payment connection pending. Requests can be saved for review.', 'Muunganisho wa malipo unasubiriwa. Maombi yanaweza kuhifadhiwa kwa ukaguzi.')}
-        </Text>
-
-        {pendingCount > 0 && (
-          <TouchableOpacity
-            onPress={syncQueue}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !isOnline || loading || syncing, busy: syncing }}
-            style={s.retry}
-            disabled={!isOnline || loading || syncing}
-          >
-            <Text style={[s.retryText, { color: !isOnline || loading || syncing ? colors.secondary : colors.text }]}>
-              {copy(`${pendingCount} saved request(s) — Retry submission`, `Maombi ${pendingCount} yaliyohifadhiwa — Jaribu kutuma tena`)}
-            </Text>
-          </TouchableOpacity>
-        )}
+        </View>
+        <TouchableOpacity testID="request-more-options" onPress={() => setOptionsExpanded(value => !value)} style={s.optionsToggle}
+          activeOpacity={0.65} accessibilityRole="button" accessibilityState={{ expanded: optionsExpanded }}>
+          <Text style={[s.optionsLabel, { color: colors.text }]}>{copy('More options', 'Chaguo zaidi')}</Text>
+          <Ionicons name={optionsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.secondary} />
+        </TouchableOpacity>
+        {!optionsExpanded && urgent ? <Text style={[s.urgentIndicator, { color: colors.secondary }]}>{copy('Urgent flag is on · Queue order unchanged', 'Alama ya dharura imewashwa · Mpangilio wa foleni haujabadilika')}</Text> : null}
+        {optionsExpanded ? <View style={s.urgentRow}>
+          <View style={s.urgentCopy}>
+            <Text style={[s.optionsLabel, { color: colors.text }]}>{tr('markUrgent')}</Text>
+            <Text style={[s.smallText, { color: colors.secondary }]}>{copy('Flag for review; queue remains first-in, first-out.', 'Weka alama kwa ukaguzi; ombi la kwanza huanza kushughulikiwa.')}</Text>
+          </View>
+          <Switch value={urgent} disabled={loading} onValueChange={setUrgent} accessibilityLabel={tr('markUrgent')}
+            trackColor={{ false: colors.border, true: colors.text }} thumbColor={colors.bg} ios_backgroundColor={colors.border} />
+        </View> : null}
+        {pendingCount > 0 ? <TouchableOpacity onPress={syncQueue} accessibilityRole="button"
+          accessibilityState={{ disabled: !isOnline || loading || syncing, busy: syncing }} style={s.retry} disabled={!isOnline || loading || syncing}>
+          <Text style={[s.retryText, { color: colors.secondary }]}>{copy(`${pendingCount} saved request(s) — Retry submission`, `Maombi ${pendingCount} yaliyohifadhiwa — Jaribu kutuma tena`)}</Text>
+        </TouchableOpacity> : null}
         {queueError ? <AgentNotice error>{queueError}</AgentNotice> : null}
         {notice ? <Text accessibilityLiveRegion="polite" style={[s.message, { color: colors.text }]}>{notice}</Text> : null}
-        {error ? <AgentNotice error>{error}</AgentNotice> : null}
-
-        <AgentButton
-          onPress={reviewRequest}
-          disabled={loading || submitted}
-          busy={loading}
-          label={loading
-            ? copy('Saving…', 'Inahifadhi…')
-            : submitted
-              ? copy('Request saved', 'Ombi limehifadhiwa')
-              : copy('Review request', 'Kagua ombi')}
-        />
       </AgentScroll>
 
-      <AgentSheet
-        visible={picker !== null}
-        onClose={() => setPicker(null)}
-        title={picker === 'source' ? tr('sourceNetwork') : tr('destNetwork')}
-      >
-        {NETWORKS.map(network => {
-          const selected = pickerSelection === network;
-          return (
-            <TouchableOpacity
-              key={network}
-              onPress={() => {
-                if (picker === 'source') setSourceNetwork(network);
-                else setDestNetwork(network);
-                setPicker(null);
-              }}
-              style={[s.networkChoice, { borderBottomColor: colors.border }]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              accessibilityLabel={NETWORK_NAMES[network]}
-              activeOpacity={0.65}
-            >
-              <View style={s.fieldContent}>
-                <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network]}</Text>
-              </View>
-              {selected && <Ionicons name="checkmark" size={22} color={colors.text} />}
-            </TouchableOpacity>
-          );
-        })}
-      </AgentSheet>
-      <AgentSheet visible={!!review} onClose={() => { if (!loading) setReview(null); }} title={copy('Review request','Kagua ombi')}>
-        {review && <View style={s.reviewContent}>
-          <Text style={[s.reviewAmount,{color:colors.text}]}>TZS {formatAmount(review.amountTzs)}</Text>
-          {[[copy('From · approves collection','Kutoka · itaidhinisha malipo'),review.source],
-            [copy('To · receives payout','Kwenda · itapokea fedha'),review.destination]].map(([label,endpoint]) => (
-            <View key={label} style={s.reviewEndpoint}>
-              <Text style={[s.label,{color:colors.secondary}]}>{label}</Text>
-              <Text style={[s.accountName,{color:colors.text}]}>{NETWORK_NAMES[Object.keys(codes).find(key=>codes[key]===endpoint.networkCode)]}</Text>
-              <Text selectable style={[s.reviewNumber,{color:colors.text}]}>{endpoint.identifier}</Text>
-              <Text style={[s.label,{color:colors.secondary}]}>{endpoint.identifierType==='phone'?copy('Mobile wallet','Wallet ya simu'):endpoint.identifierType==='agent'?copy('Agent number','Namba ya wakala'):copy('Till number','Lipa namba')}</Text>
+      <View testID="request-footer" style={[s.footer, { backgroundColor: colors.bg }]}>
+        {error ? <AgentNotice error style={s.footerError}>{error}</AgentNotice> : null}
+        <View style={s.feeRow}>
+          <Text style={[s.fee, { color: colors.secondary }]}>{copy('Silverstone fee', 'Ada ya Silverstone')}</Text>
+          <Text style={[s.feeValue, { color: colors.text }]}>TZS 0</Text>
+        </View>
+        <Text style={[s.executionNotice, { color: colors.secondary }]}>{copy('Requests are saved for approval. Payments are not yet connected.', 'Maombi yanahifadhiwa kwa idhini. Malipo bado hayajaunganishwa.')}</Text>
+        <AgentButton testID="request-review" onPress={reviewRequest} disabled={loading || submitted} busy={loading} style={s.reviewButton}
+          label={loading ? copy('Saving…', 'Inahifadhi…') : submitted ? copy('Request saved', 'Ombi limehifadhiwa') : copy('Review request', 'Kagua ombi')} />
+      </View>
+
+      <AgentSheet visible={!!editor || !!review} onClose={closeSheet}
+        title={editor ? endpointLabel(editor.kind) : copy('Review request', 'Kagua ombi')}>
+        {editor ? <View>
+          <Text style={[s.editorHint, { color: colors.secondary }]}>{editor.kind === 'source'
+            ? copy('This account approves the payment to Silverstone.', 'Akaunti hii itaidhinisha malipo kwenda Silverstone.')
+            : copy('This account receives the payout from your agency.', 'Akaunti hii itapokea fedha kutoka kwa wakala wako.')}</Text>
+          <View style={s.networkGrid}>
+            {NETWORKS.map(network => <TouchableOpacity key={network} testID={`request-network-${network}`}
+              onPress={() => { if (editor.network !== network) changeEditor({ network, identifier: '' }); }}
+              accessibilityRole="radio" accessibilityState={{ selected: editor.network === network }} accessibilityLabel={NETWORK_NAMES[network]}
+              style={[s.networkChoice, { borderColor: editor.network === network ? colors.strongBorder : colors.border, backgroundColor: editor.network === network ? colors.selected : 'transparent' }]}>
+              <NetworkLogo network={network} size={36} />
+              <Text style={[s.networkName, { color: colors.text }]}>{NETWORK_NAMES[network]}</Text>
+              {editor.network === network ? <Ionicons name="checkmark" size={15} color={colors.text} /> : null}
+            </TouchableOpacity>)}
+          </View>
+          <View style={[s.typeRow, { backgroundColor: colors.selected }]}>
+            {['phone', 'agent', 'till'].map(type => <TouchableOpacity key={type} testID={`request-type-${type}`}
+              onPress={() => { if (editor.type !== type) changeEditor({ type, identifier: '' }); }}
+              style={[s.typeChoice, { backgroundColor: editor.type === type ? colors.surface : 'transparent' }]}
+              accessibilityRole="radio" accessibilityState={{ selected: editor.type === type }} accessibilityLabel={typeLabel(type)}>
+              <Text style={[s.typeText, { color: colors.text }]}>{typeLabel(type)}</Text>
+            </TouchableOpacity>)}
+          </View>
+          <Text style={[s.label, { color: colors.secondary }]}>{editor.type === 'phone' ? copy('Mobile number', 'Namba ya simu') : editor.type === 'agent' ? copy('Agent number', 'Namba ya wakala') : copy('Till number', 'Lipa namba')}</Text>
+          <TextInput testID="request-account-number" value={editor.identifier} onChangeText={identifier => changeEditor({ identifier })}
+            maxLength={editor.type === 'phone' ? 24 : 32} keyboardType={editor.type === 'phone' ? 'phone-pad' : 'default'} autoCapitalize="none" autoCorrect={false}
+            placeholder={editor.type === 'phone' ? '07XX XXX XXX' : copy('Enter number', 'Weka namba')}
+            placeholderTextColor={colors.muted} selectionColor={colors.text} accessibilityLabel={`${endpointLabel(editor.kind)}: ${editor.type} number`}
+            style={[s.numberInput, { color: colors.text, borderColor: editorError ? colors.danger : colors.border }]}
+            onSubmitEditing={saveEndpoint} />
+          <Text style={[s.editorHint, { color: colors.secondary }]}>{copy('Changing network or account type clears this number.', 'Kubadili mtandao au aina ya akaunti hufuta namba hii.')}</Text>
+          {editorError ? <AgentNotice error>{editorError}</AgentNotice> : null}
+          <AgentButton testID="request-save-account" label={copy('Use this account', 'Tumia akaunti hii')} onPress={saveEndpoint} />
+        </View> : review ? <View style={s.reviewContent}>
+          <View style={s.reviewHeading}>
+            <View style={s.fieldContent}>
+              <Text style={[s.label, { color: colors.secondary }]}>{copy('Amount', 'Kiasi')}</Text>
+              <Text testID="request-review-amount" style={[s.reviewAmount, { color: colors.text }]}>TZS {formatAmount(review.amountTzs)}</Text>
             </View>
-          ))}
-          <Text style={[s.executionNotice,{color:colors.secondary}]}>{copy('Submit for main-agent approval. No funds move at this step.','Tuma kwa idhini ya wakala mkuu. Hakuna fedha zitakazohamishwa katika hatua hii.')}</Text>
-          <AgentButton onPress={handleSubmit} disabled={loading || submitted} busy={loading}
-            label={isOnline?copy('Confirm request','Thibitisha ombi'):copy('Save on this device','Hifadhi kwenye kifaa hiki')} />
-        </View>}
+            <TouchableOpacity testID="request-edit-amount" accessibilityRole="button" accessibilityLabel={copy('Edit amount', 'Badili kiasi')} onPress={editAmount} style={s.editButton}>
+              <Ionicons name="create-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          {[[copy('From · approves collection', 'Kutoka · itaidhinisha malipo'), review.source, 'source'],
+            [copy('To · receives payout', 'Kwenda · itapokea fedha'), review.destination, 'destination']].map(([label, endpoint, kind]) => {
+              const network = Object.keys(codes).find(key => codes[key] === endpoint.networkCode);
+              return <View key={kind} style={[s.reviewEndpoint, { borderColor: colors.border }]}>
+                <NetworkLogo network={network} size={40} />
+                <View style={s.fieldContent}>
+                  <Text style={[s.label, { color: colors.secondary }]}>{label}</Text>
+                  <Text style={[s.accountName, { color: colors.text }]}>{NETWORK_NAMES[network]}</Text>
+                  <Text testID={`request-review-${kind}`} selectable style={[s.reviewNumber, { color: colors.text }]}>{endpoint.identifier}</Text>
+                  <Text style={[s.label, { color: colors.secondary }]}>{typeLabel(endpoint.identifierType)}</Text>
+                </View>
+                <TouchableOpacity testID={`request-edit-${kind}`} accessibilityRole="button" accessibilityLabel={copy(`Edit ${kind} account`, kind === 'source' ? 'Badili akaunti ya kutoa' : 'Badili akaunti ya kupokea')}
+                  disabled={loading} onPress={() => openEditor(kind)} style={s.editButton}><Ionicons name="create-outline" size={21} color={colors.text} /></TouchableOpacity>
+              </View>;
+            })}
+          <View style={s.feeRow}><Text style={[s.fee, { color: colors.secondary }]}>{copy('Silverstone fee', 'Ada ya Silverstone')}</Text><Text style={[s.feeValue, { color: colors.text }]}>TZS 0</Text></View>
+          {review.urgent ? <Text style={[s.editorHint, { color: colors.secondary }]}>{copy('Flagged urgent · Queue order unchanged', 'Dharura · Mpangilio wa foleni haujabadilika')}</Text> : null}
+          <Text style={[s.reviewNotice, { color: colors.secondary }]}>{copy('Submit for main-agent approval. No funds move at this step.', 'Tuma kwa idhini ya wakala mkuu. Hakuna fedha zitakazohamishwa katika hatua hii.')}</Text>
+          {error ? <AgentNotice error>{error}</AgentNotice> : null}
+          <AgentButton testID="request-confirm" onPress={handleSubmit} disabled={loading || submitted} busy={loading}
+            label={isOnline ? copy('Confirm request', 'Thibitisha ombi') : copy('Save on this device', 'Hifadhi kwenye kifaa hiki')} />
+        </View> : null}
       </AgentSheet>
     </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1 },
-  content: { paddingTop: 0 },
-  fieldContent: { flex: 1, paddingRight: 16 },
-  endpoint: { paddingBottom:20,paddingLeft:18,marginBottom:18,borderLeftWidth:2,borderBottomWidth:StyleSheet.hairlineWidth },
-  accountField: { minHeight:72,paddingTop:16,paddingBottom:8,flexDirection:'row',alignItems:'center' },
-  typeRow: { flexDirection:'row',gap:4,flexWrap:'wrap',marginTop:6 },
-  typeChoice: { minHeight:48,minWidth:64,paddingHorizontal:12,borderRadius:12,justifyContent:'center',alignItems:'center' },
-  typeText: { fontFamily:fonts.bodyMed,fontSize:14 },
-  numberInput: { minWidth:0,width:'100%',minHeight:50,paddingVertical:8,fontFamily:fonts.bodySemi,fontSize:23 },
-  endpointHint: { fontFamily:fonts.body,fontSize:12,lineHeight:18 },
-  reviewContent: { paddingVertical:10 },
-  reviewAmount: { fontFamily:fonts.bodySemi,fontSize:30,marginBottom:24 },
-  reviewEndpoint: { marginBottom:24 },
-  reviewNumber: { fontFamily:fonts.bodySemi,fontSize:24,marginVertical:5 },
-  label: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
-  accountName: { fontFamily: fonts.bodySemi, fontSize: 18, lineHeight: 25, marginTop: 2 },
-  identifier: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 3 },
-  amountField: { paddingTop: 6, paddingBottom: 18, borderBottomWidth: StyleSheet.hairlineWidth },
+  screen: { flex: 1 }, content: { paddingTop: 0, paddingBottom: 12 },
+  subtitle: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, marginBottom: 14 },
+  routePanel: { borderRadius: 25, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  accountRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, minHeight: 87 },
+  fieldContent: { flex: 1, minWidth: 0, paddingRight: 6 },
+  label: { fontFamily: fonts.body, fontSize: 12, lineHeight: 17 },
+  accountName: { fontFamily: fonts.bodySemi, fontSize: 17, lineHeight: 24, marginTop: 2 },
+  identifier: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  routeDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
+  direction: { position: 'absolute', left: 12, top: -12, width: 24, height: 24, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  amountField: { marginTop: 20, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   currency: { fontFamily: fonts.bodyMed, fontSize: 18 },
-  amountInput: { flex: 1, minWidth:0, minHeight: 50, paddingVertical: 4, fontFamily: fonts.bodySemi, fontSize: 40,fontVariant:['tabular-nums'] },
-  optionsToggle: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  optionsLabel: { fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22 },
-  optionsContent: { paddingBottom: 12 },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 9, marginBottom: 12 },
-  quickButton: { flexGrow: 1, minWidth: 60, minHeight: 46, paddingHorizontal: 10, paddingVertical: 12, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
-  quickText: { fontFamily: fonts.bodyMed, fontSize: 14 },
-  urgentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  urgentCopy: { flex: 1, paddingRight: 14 },
+  amountInput: { flex: 1, minWidth: 0, minHeight: 64, paddingVertical: 2, fontFamily: fonts.heading, fontSize: 44, fontVariant: ['tabular-nums'], letterSpacing: -1 },
+  optionsToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  optionsLabel: { fontFamily: fonts.bodyMed, fontSize: 14, lineHeight: 21 },
+  urgentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }, urgentCopy: { flex: 1, paddingRight: 14 },
   smallText: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginTop: 3 },
-  urgentIndicator: { fontFamily: fonts.bodyMed, fontSize: 12, lineHeight: 18, marginBottom: 12 },
-  fee: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, marginBottom: 7 },
-  executionNotice: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginBottom: 17 },
-  retry: { minHeight: 48, justifyContent: 'center', marginBottom: 8 },
-  retryText: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 21 },
-  message: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginBottom: 16 },
-  networkChoice: { minHeight: 79, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
+  urgentIndicator: { fontFamily: fonts.bodyMed, fontSize: 11, lineHeight: 17, marginBottom: 6 },
+  retry: { minHeight: 48, justifyContent: 'center', marginBottom: 8 }, retryText: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 20 },
+  message: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, marginBottom: 10 },
+  footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 4 }, footerError: { paddingVertical: 4 },
+  feeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  fee: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18 }, feeValue: { fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 18 },
+  executionNotice: { fontFamily: fonts.body, fontSize: 11, lineHeight: 16, marginTop: 4, marginBottom: 10 },
+  reviewButton: { borderRadius: 24 },
+  editorHint: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginBottom: 14 },
+  networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  networkChoice: { width: '48%', flexGrow: 1, minHeight: 76, borderWidth: 1, borderRadius: 16, padding: 10, flexDirection: 'row', alignItems: 'center' },
+  networkName: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 12, lineHeight: 17 },
+  typeRow: { flexDirection: 'row', padding: 4, borderRadius: 16, marginBottom: 18 },
+  typeChoice: { flex: 1, minHeight: 44, paddingHorizontal: 8, paddingVertical: 10, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  typeText: { fontFamily: fonts.bodyMed, fontSize: 13, lineHeight: 19 },
+  numberInput: { minWidth: 0, width: '100%', minHeight: 56, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderRadius: 14, fontFamily: fonts.bodySemi, fontSize: 22, marginTop: 6, marginBottom: 10 },
+  reviewContent: { paddingBottom: 4 }, reviewHeading: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  reviewAmount: { fontFamily: fonts.heading, fontSize: 30, lineHeight: 40 },
+  reviewEndpoint: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: 12 },
+  reviewNumber: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 23, marginVertical: 3 },
+  editButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  reviewNotice: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginVertical: 14 },
 });

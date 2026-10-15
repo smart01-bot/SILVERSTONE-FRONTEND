@@ -12,6 +12,10 @@ import {
 
 const providedText = value => typeof value === 'string' && value.trim() ? value.trim() : null;
 
+function ProfileRow(props) {
+  return <AgentRow style={s.settingsRow} labelStyle={s.settingsLabel} valueStyle={s.settingsValue} iconSize={23} {...props} />;
+}
+
 export default function ProfileScreen({ navigation }) {
   const { user, profile, lockSession } = useAuth();
   const { userPreference, setTheme, setLang } = useTheme();
@@ -90,13 +94,13 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <>
-      <AgentScroll>
+      <AgentScroll testID="profile-screen" contentContainerStyle={s.content}>
         <View style={s.identity}>
           <View style={[s.avatar, { backgroundColor: colors.text }]}>
             <Text style={[s.initials, { color: colors.bg }]}>{initials}</Text>
           </View>
           <View style={s.identityText}>
-            <Text style={[s.name, { color: colors.text }]}>{name}</Text>
+            <Text testID="profile-name" style={[s.name, { color: colors.text }]}>{name}</Text>
             <Text style={[s.agency, { color: colors.secondary }]}>
               {agency || user?.email || copy('Your agent account', 'Akaunti yako ya uwakala')}
             </Text>
@@ -104,10 +108,12 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <View style={[s.numberRow, { borderBottomColor: colors.border }]}>
-          <Text style={[s.numberLabel, { color: colors.secondary }]}>{copy('Agent number', 'Namba ya wakala')}</Text>
-          <Text selectable style={[s.numberValue, { color: agentNumber ? colors.text : colors.secondary }]}>
-            {agentNumber || copy('Not assigned', 'Haijatolewa')}
-          </Text>
+          <View style={s.numberContent}>
+            <Text style={[s.numberLabel, { color: colors.secondary }]}>{copy('Agent number', 'Namba ya wakala')}</Text>
+            <Text testID="profile-agent-number" selectable style={[s.numberValue, { color: agentNumber ? colors.text : colors.secondary }]}>
+              {agentNumber || copy('Not assigned', 'Haijatolewa')}
+            </Text>
+          </View>
           {agentNumber && (
             <TouchableOpacity
               onPress={copyAgentNumber}
@@ -121,15 +127,16 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <Text style={[s.groupLabel,{color:colors.secondary}]}>{copy('Account','Akaunti')}</Text>
-        <AgentRow icon="person-outline" label={copy('Personal details', 'Taarifa binafsi')} onPress={() => setSheet('personal')} />
-        <AgentRow icon="swap-horizontal-outline" label={copy('Network accounts', 'Akaunti za mitandao')} onPress={() => navigation.navigate('Networks')} />
+        <ProfileRow icon="person-outline" label={copy('Personal details', 'Taarifa binafsi')} onPress={() => setSheet('personal')} />
+        <ProfileRow icon="swap-horizontal-outline" label={copy('Network accounts', 'Akaunti za mitandao')} onPress={() => navigation.navigate('Networks')} />
         <Text style={[s.groupLabel,{color:colors.secondary}]}>{copy('Make it yours','Mapendeleo yako')}</Text>
-        <AgentRow icon="sunny-outline" label={copy('Appearance', 'Mwonekano')} value={appearance} onPress={() => setSheet('appearance')} />
-        <AgentRow icon="globe-outline" label={copy('Language', 'Lugha')} value={lang === 'sw' ? 'Kiswahili' : 'English'} onPress={() => setSheet('language')} />
+        <ProfileRow icon="sunny-outline" label={copy('Appearance', 'Mwonekano')} value={appearance} onPress={() => setSheet('appearance')} />
+        <ProfileRow icon="globe-outline" label={copy('Language', 'Lugha')} value={lang === 'sw' ? 'Kiswahili' : 'English'} onPress={() => setSheet('language')} />
 
-        <TouchableOpacity onPress={handleLogout} style={s.signOut} accessibilityRole="button">
+        <TouchableOpacity onPress={handleLogout} testID="profile-sign-out" style={[s.signOut, { borderBottomColor: colors.border }]} accessibilityRole="button">
           <Ionicons name="log-out-outline" size={23} color={colors.text} />
           <Text style={[s.rowLabel, { color: colors.text }]}>{copy('Sign out', 'Ondoka')}</Text>
+          <Ionicons name="chevron-forward" size={17} color={colors.secondary} />
         </TouchableOpacity>
       </AgentScroll>
 
@@ -191,38 +198,43 @@ export default function ProfileScreen({ navigation }) {
           ['light', copy('Light', 'Mwanga'), 'sunny-outline'],
           ['dark', copy('Dark', 'Giza'), 'moon-outline'],
         ].map(([value, label, icon]) => (
-          <AgentRow key={value} icon={icon} label={label} value={(userPreference || 'auto') === value ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseAppearance(value)} />
+          <ProfileRow key={value} icon={icon} label={label} value={(userPreference || 'auto') === value ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseAppearance(value)} />
         ))}
         <Text style={[s.note, { color: colors.secondary }]}>{copy('System follows your device appearance.', 'Mfumo hufuata mwonekano wa kifaa chako.')}</Text>
       </AgentSheet>
 
       <AgentSheet visible={sheet === 'language'} onClose={closeSheet} title={copy('Language', 'Lugha')}>
-        <AgentRow label="English" value={lang === 'en' ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseLanguage('en')} />
-        <AgentRow label="Kiswahili" value={lang === 'sw' ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseLanguage('sw')} />
+        <ProfileRow label="English" value={lang === 'en' ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseLanguage('en')} />
+        <ProfileRow label="Kiswahili" value={lang === 'sw' ? copy('Selected', 'Imechaguliwa') : undefined} onPress={() => chooseLanguage('sw')} />
       </AgentSheet>
     </>
   );
 }
 
 const s = StyleSheet.create({
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 10, paddingBottom: 20 },
-  groupLabel: { fontFamily:fonts.bodyMed,fontSize:13,lineHeight:20,marginTop:26,marginBottom:2 },
-  avatar: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontSize: 21, fontFamily: fonts.bodySemi },
+  content: { paddingTop: 4, paddingBottom: 16 },
+  settingsRow: { minHeight: 68, paddingVertical: 18, gap: 16 },
+  settingsLabel: { fontSize: 17, lineHeight: 25, fontFamily: fonts.bodyMed },
+  settingsValue: { fontSize: 15, lineHeight: 23 },
+  numberContent: { flex: 1, minWidth: 0, gap: 5 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 8, paddingBottom: 20 },
+  groupLabel: { fontFamily:fonts.bodyMed,fontSize:15,lineHeight:22,marginTop:22,marginBottom:4 },
+  avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontSize: 26, fontFamily: fonts.bodySemi },
   identityText: { flex: 1, gap: 4 },
-  name: { fontSize: 24, lineHeight: 31, fontFamily: fonts.bodySemi },
-  agency: { fontSize: 14, lineHeight: 21, fontFamily: fonts.body },
-  numberRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, minHeight: 58, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
-  numberLabel: { flexGrow: 1, fontSize: 13, lineHeight: 20, fontFamily: fonts.body },
-  numberValue: { flexShrink: 1, fontSize: 13, lineHeight: 20, fontFamily: fonts.body },
+  name: { fontSize: 26, lineHeight: 34, fontFamily: fonts.bodySemi },
+  agency: { fontSize: 15, lineHeight: 23, fontFamily: fonts.body },
+  numberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  numberLabel: { fontSize: 15, lineHeight: 22, fontFamily: fonts.body },
+  numberValue: { fontSize: 18, lineHeight: 26, fontFamily: fonts.bodyMed },
   copyButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  signOut: { minHeight: 62, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10 },
-  rowLabel: { fontSize: 15, fontFamily: fonts.body },
+  signOut: { minHeight: 68, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  rowLabel: { flex: 1, fontSize: 17, lineHeight: 25, fontFamily: fonts.bodyMed },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 80, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  detailContent: { flex: 1, gap: 5 },
-  detailLabel: { fontSize: 13, lineHeight: 19, fontFamily: fonts.body },
-  detailValue: { fontSize: 16, lineHeight: 23, fontFamily: fonts.body },
+  detailContent: { flex: 1, minWidth: 0, gap: 5 },
+  detailLabel: { fontSize: 15, lineHeight: 22, fontFamily: fonts.body },
+  detailValue: { fontSize: 17, lineHeight: 25, fontFamily: fonts.body },
   nameInput: { minHeight: 44, fontSize: 17, fontFamily: fonts.body, paddingVertical: 7, borderBottomWidth: 1 },
   editActions: { gap: 6, marginTop: 16 },
-  note: { fontSize: 13, lineHeight: 20, fontFamily: fonts.body, paddingTop: 18 },
+  note: { fontSize: 15, lineHeight: 23, fontFamily: fonts.body, paddingTop: 18 },
 });
