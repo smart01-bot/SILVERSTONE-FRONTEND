@@ -1,7 +1,8 @@
+import { WingLoader, BrandRefreshControl, RefreshIndicator } from '../../components/Loader';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, BackHandler, FlatList, Pressable,
-  RefreshControl, StyleSheet, Text, View,
+  BackHandler, FlatList, Pressable,
+  StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -167,9 +168,10 @@ export default function MyRequestsScreen({ navigation, route }) {
         keyExtractor={request => request.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />}
         ListHeaderComponent={(
           <View>
+            <RefreshIndicator refreshing={refreshing} color={colors.text} />
             <View style={s.filterBar}>
               <Text style={[s.caption, { color: colors.secondary }]}>{copy('Your activity', 'Shughuli zako')}</Text>
               <Pressable
@@ -193,7 +195,7 @@ export default function MyRequestsScreen({ navigation, route }) {
         )}
         ListEmptyComponent={reading ? (
           <View style={s.empty} accessibilityLiveRegion="polite">
-            <ActivityIndicator color={colors.text} />
+            <WingLoader color={colors.text} />
             <Text style={[s.emptyText, { color: colors.secondary }]}>{copy('Loading history…', 'Inapakia historia…')}</Text>
           </View>
         ) : !visibleError ? (

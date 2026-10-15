@@ -1,6 +1,7 @@
+import { WingLoader } from '../Loader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Keyboard, Platform, Pressable, StatusBar,
+  Animated, Keyboard, Platform, Pressable, StatusBar,
   StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -207,7 +208,7 @@ export function AgentTabBar({ navigationState, position, navigation }) {
 export function AgentPagePlaceholder() {
   const { colors, copy } = useAgentUI();
   return <View style={[s.placeholder, { backgroundColor: colors.bg }]}>
-    <ActivityIndicator color={colors.secondary} accessibilityLabel={copy('Loading page', 'Inapakia ukurasa')} />
+    <WingLoader color={colors.secondary} label={copy('Loading page', 'Inapakia ukurasa')} />
   </View>;
 }
 

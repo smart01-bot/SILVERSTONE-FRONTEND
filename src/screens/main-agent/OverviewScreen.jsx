@@ -1,5 +1,6 @@
+import { WingLoader, BrandRefreshControl, RefreshIndicator } from '../../components/Loader';
 import React from 'react';
-import { View,Text,ScrollView,StyleSheet,RefreshControl,ActivityIndicator } from 'react-native';
+import { View,Text,ScrollView,StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +26,8 @@ export default function OverviewScreen({navigation}) {
   return <SafeAreaView edges={['top','left','right']} style={[s.root,{backgroundColor:theme.bg}]}>
     <MainHeader navigation={navigation} title={copy('Overview','Muhtasari')} subtitle={profile?.name}/>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={requests.refreshing||agents.refreshing} onRefresh={refresh} colors={[theme.text]} tintColor={theme.text}/> }>
+      refreshControl={<BrandRefreshControl refreshing={requests.refreshing||agents.refreshing} onRefresh={refresh} colors={[theme.text]} tintColor={theme.text}/> }>
+      <RefreshIndicator refreshing={requests.refreshing||agents.refreshing} color={theme.text} />
       <View style={[s.hero,{backgroundColor:theme.text}]}>
         <Text style={[s.heroLabel,{color:theme.bg}]}>{copy('Your agency, coordinated.','Uwakala wako, umeunganishwa.')}</Text>
         <Text style={[s.heroTitle,{color:theme.bg}]}>{copy('Review.\nKeep float moving.','Kagua.\nEndeleza float.')}</Text>
@@ -46,7 +48,7 @@ export default function OverviewScreen({navigation}) {
         <Text style={[s.metricLabel,{color:theme.textDim}]}>{copy('Across your loaded completed exchanges','Katika miamala yako iliyopakiwa na kukamilika')}</Text>
       </View>
       <View style={s.sectionHeading}><Text style={[s.sectionTitle,{color:theme.text}]}>{copy('Recent requests','Maombi ya karibuni')}</Text></View>
-      {requests.loading?<ActivityIndicator color={theme.text}/>:!requests.rows.length&&!requests.error
+      {requests.loading?<WingLoader color={theme.text}/>:!requests.rows.length&&!requests.error
         ?<MainEmpty title={copy('No requests yet','Bado hakuna maombi')} description={copy('Requests from your assigned agents appear here.','Maombi kutoka kwa wakala wako yataonekana hapa.')}/>
         :requests.rows.slice(0,5).map(r=><PressFeedback key={r.id} onPress={()=>navigation.navigate('Queue')} accessibilityRole="button" accessibilityLabel={`${r.agentName||agentNames[r.agentId||r.subAgentId]||copy('Agent','Wakala')}, TZS ${formatTzs(r.amount)}`} style={[s.request,{borderColor:theme.border}]}>
           <View style={{flex:1,gap:5}}><Text style={[s.requestName,{color:theme.text}]}>{r.agentName||agentNames[r.agentId||r.subAgentId]||copy('Agent','Wakala')}</Text>

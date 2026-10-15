@@ -1,3 +1,4 @@
+import { LoadingModal as Modal } from '../context/LoaderContext';
 import { fonts } from '../constants/theme';
 import { recordedTime, reservationLabel } from '../api/operations';
 import { api } from '../config/api';
@@ -8,7 +9,7 @@ import { providerChargeLabel, providerEvidenceLabel } from '../api/providerEvide
 // src/components/RequestDetailModal.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   Animated, PanResponder, ScrollView, Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -106,7 +107,7 @@ export default function RequestDetailModal({
   };
 
   const handleApprove = async () => {
-    setLoading(true);showLoader();
+    setLoading(true);showLoader(lang === 'sw' ? 'Inasasisha ombi…' : 'Updating request…');
     try {
       await exchangeAction(request,'accept');
       onClose();
@@ -120,7 +121,7 @@ export default function RequestDetailModal({
   const handleReject = () => {
     Alert.alert('Reject request','Select a reason',[
       ...['Insufficient capacity','Incorrect account details','Duplicate request'].map(reason=>({text:reason,onPress:async()=>{
-        setLoading(true);showLoader();
+        setLoading(true);showLoader(lang === 'sw' ? 'Inasasisha ombi…' : 'Updating request…');
         try {await exchangeAction(request,'reject',reason);onClose();}
         catch(e){setError(workflowError(e));}
         finally{setLoading(false);hideLoader();}
@@ -138,7 +139,7 @@ export default function RequestDetailModal({
           text: 'Cancel Request',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);showLoader();
+            setLoading(true);showLoader(lang === 'sw' ? 'Inasasisha ombi…' : 'Updating request…');
             try {
               await exchangeAction(request,'cancel');
               onClose();

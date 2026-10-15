@@ -39,7 +39,7 @@ export default function NetworksScreen({ navigation }) {
   const handleSave = async () => {
     if (busy) return;
     setBusy(true);
-    showLoader();
+    showLoader(copy('Saving accounts…', 'Inahifadhi akaunti…'));
     try {
       for (const net of NETWORKS.filter(item => active.includes(item.name) && phones[item.name])) {
         const body = {

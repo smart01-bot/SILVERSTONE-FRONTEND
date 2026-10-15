@@ -1,6 +1,8 @@
+import { LoadingModal as Modal } from '../../context/LoaderContext';
+import { WingLoader } from '../Loader';
 import React, { createContext, forwardRef, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo, ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable,
+  AccessibilityInfo, Animated, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,9 +64,10 @@ export function AgentButton({ label, onPress, disabled = false, busy = false, ic
     <Pressable accessibilityRole="button" accessibilityLabel={label}
       accessibilityState={{ disabled: blocked, busy }} disabled={blocked} onPress={onPress}
       onPressIn={() => animate(0.985)} onPressOut={() => animate(1)}
-      style={[styles.button, { backgroundColor: primary ? colors.action : 'transparent', opacity: blocked ? 0.58 : 1 }, style]} {...props}>
+      style={[styles.button, { backgroundColor: primary ? colors.action : 'transparent', opacity: disabled && !busy ? 0.58 : 1 }, style]} {...props}>
+      {busy ? <WingLoader color={ink} size={29} /> : null}
       <Text style={[styles.buttonText, { color: ink }]}>{label}</Text>
-      {busy ? <ActivityIndicator color={ink} size="small" /> : icon ? <Ionicons name={icon} size={20} color={ink} /> : null}
+      {!busy && icon ? <Ionicons name={icon} size={20} color={ink} /> : null}
     </Pressable>
   </Animated.View>;
 }

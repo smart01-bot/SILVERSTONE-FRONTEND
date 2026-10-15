@@ -1,9 +1,10 @@
+import { LoadingModal as Modal } from '../context/LoaderContext';
 import { exchangeAction, formatTzs } from '../api/exchanges';
 // src/components/RequestDetailModal.jsx
 import React, { useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Modal, Animated, PanResponder, Alert,
+  Animated, PanResponder, Alert,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

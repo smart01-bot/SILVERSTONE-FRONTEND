@@ -1,5 +1,6 @@
+import { BrandRefreshControl, RefreshIndicator } from '../Loader';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { api } from '../../config/api';
@@ -80,7 +81,7 @@ export default function AgentRequestDetails({ request: initialRequest, onClose, 
             if (inFlight.current || requestRevision.current !== revision) return;
             inFlight.current = true;
             setLoading(true);
-            showLoader();
+            showLoader(copy('Updating request…', 'Inasasisha ombi…'));
             try {
               await exchangeAction(request, 'cancel');
               if (requestRevision.current === revision) onClose();
@@ -120,7 +121,8 @@ export default function AgentRequestDetails({ request: initialRequest, onClose, 
   };
 
   return (
-    <AgentScroll refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} colors={[colors.text]} tintColor={colors.text} />}>
+    <AgentScroll refreshControl={<BrandRefreshControl refreshing={loading} onRefresh={refresh} colors={[colors.text]} tintColor={colors.text} />}>
+      <RefreshIndicator refreshing={loading} color={colors.text} />
       <View style={s.toolbar}>
         <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [s.back, { opacity: pressed ? 0.6 : 1 }]}>
           <Ionicons name="arrow-back" size={20} color={colors.text} />

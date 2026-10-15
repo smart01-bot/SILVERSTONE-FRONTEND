@@ -1,6 +1,6 @@
+import { LoadingModal as Modal } from '../context/LoaderContext';
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Modal,
   SafeAreaView,
   ScrollView,
   View,

@@ -1,5 +1,6 @@
+import { WingLoader } from '../Loader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Line, Path, Stop } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
 import { fonts } from '../../constants/theme';
@@ -108,7 +109,7 @@ export default function TransferActivity({ requests, loading, error }) {
           </> : null}
         </Svg>
         {unavailable || activity.count === 0 ? <View pointerEvents="none" style={s.chartState}>
-          {loading ? <ActivityIndicator color={colors.secondary} /> : null}
+          {loading ? <WingLoader color={colors.secondary} /> : null}
           <Text style={[s.stateText, { color: colors.secondary, backgroundColor: colors.bg }]}>{loading ? copy('Loading activity…', 'Inapakia miamala…') : unavailable
             ? copy('Activity unavailable. Try refreshing.', 'Miamala haijapatikana. Jaribu kupakia tena.')
             : copy('Completed transfers will appear here.', 'Miamala iliyokamilika itaonekana hapa.')}</Text>

@@ -1,3 +1,4 @@
+import { BrandRefreshControl, RefreshIndicator, LoadingIndicator } from '../../components/Loader';
 import { useMainCollection } from '../../hooks/useMainCollection';
 import { MainError } from '../../components/agent/MainAgentUI';
 import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
@@ -7,43 +8,17 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView,
   StyleSheet, StatusBar,
-  RefreshControl, TextInput, TouchableOpacity,
+  TextInput, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../constants/theme';
-import { SkeletonBox } from '../../components/SkeletonLoader';
 const EmptyState=({subtitle,...props})=><MainEmpty {...props} description={subtitle}/>;
 import PressableScale from '../../components/PressableScale';
 import {
   collection, query, where, onSnapshot,
 } from '../../api/screenData';
 import { db } from '../../api/screenData';
-
-function SkeletonAgentCard({ theme }) {
-  return (
-    <View style={[s.card, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, overflow: 'hidden' }]}>
-      <View style={[s.cardTop, { padding: spacing.md - 2 }]}>
-        <SkeletonBox width={52} height={52} borderRadius={26} />
-        <View style={{ flex: 1, gap: spacing.xs }}>
-          <SkeletonBox width={150} height={20} borderRadius={6} />
-          <SkeletonBox width={100} height={16} borderRadius={5} />
-          <SkeletonBox width={130} height={14} borderRadius={5} />
-        </View>
-        <SkeletonBox width={52} height={26} borderRadius={6} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: spacing.sm - 2, paddingHorizontal: spacing.md - 2, paddingBottom: spacing.md - 4 }}>
-        <SkeletonBox width={60} height={28} borderRadius={6} />
-        <SkeletonBox width={50} height={28} borderRadius={6} />
-        <SkeletonBox width={70} height={28} borderRadius={6} />
-      </View>
-      <View style={{ flexDirection: 'row', padding: spacing.md - 4, gap: spacing.md }}>
-        <SkeletonBox width="40%" height={40} borderRadius={radius.sm} />
-        <SkeletonBox width="40%" height={40} borderRadius={radius.sm} />
-      </View>
-    </View>
-  );
-}
 
 export default function AgentsScreen({ navigation }) {
   const { theme, isDark, tr, lang } = useTheme();
@@ -98,15 +73,12 @@ export default function AgentsScreen({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
+        <RefreshIndicator refreshing={refreshing} color={theme.text} />
         <MainError message={loadError} onRetry={onRefresh} busy={refreshing}/>
         {loading ? (
-          <>
-            <SkeletonAgentCard theme={theme} />
-            <SkeletonAgentCard theme={theme} />
-            <SkeletonAgentCard theme={theme} />
-          </>
+          <LoadingIndicator label={lang === 'sw' ? 'Inapakia mawakala…' : 'Loading agents…'} />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="people-outline"

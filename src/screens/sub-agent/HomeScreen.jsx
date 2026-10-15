@@ -1,5 +1,6 @@
+import { BrandRefreshControl, RefreshIndicator } from '../../components/Loader';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import ExchangeHero from '../../components/agent/ExchangeHero';
 import TransferActivity from '../../components/agent/TransferActivity';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,8 +106,9 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <AgentScroll contentContainerStyle={styles.content} refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />
+      <BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.text]} tintColor={colors.text} />
     }>
+      <RefreshIndicator refreshing={refreshing} color={colors.text} />
       <Text style={[styles.greeting, { color: colors.secondary }]}>{copy('Hello', 'Habari')}, {firstName}</Text>
       <ExchangeHero onTransfer={() => navigation.navigate('NewRequest')} />
       {visibleError ? <AgentNotice error>{visibleError}</AgentNotice> : null}

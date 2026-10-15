@@ -1,3 +1,4 @@
+import { BrandRefreshControl, RefreshIndicator, LoadingIndicator } from '../../components/Loader';
 import { useMainCollection } from '../../hooks/useMainCollection';
 import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,13 +14,12 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar,
-  RefreshControl, Alert,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useLoader }      from '../../context/LoaderContext';
 import { spacing, radius, fonts } from '../../constants/theme';
-import { SkeletonBox } from '../../components/SkeletonLoader';
 const EmptyState=({subtitle,...props})=><MainEmpty {...props} description={subtitle}/>;
 import PressableScale from '../../components/PressableScale';
 import {
@@ -34,44 +34,6 @@ const REJECTION_REASONS = [
   'Duplicate request',
   'Other',
 ];
-
-function SkeletonQueueCard({ theme }) {
-  return (
-    <View style={[s.card, {
-      backgroundColor: theme.surfaceAlt,
-      borderColor: theme.border, borderLeftColor: theme.border,
-    }]}>
-      <View style={s.cardTop}>
-        <View style={s.agentRow}>
-          <SkeletonBox width={44} height={44} borderRadius={22} />
-          <View style={{ gap: spacing.xs - 2 }}>
-            <SkeletonBox width={120} height={18} borderRadius={6} />
-            <SkeletonBox width={80}  height={14} borderRadius={5} />
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: spacing.sm - 2 }}>
-          <SkeletonBox width={60} height={26} borderRadius={6} />
-          <SkeletonBox width={44} height={26} borderRadius={6} />
-        </View>
-      </View>
-      <View style={s.routeRow}>
-        <SkeletonBox width={80}  height={20} borderRadius={6} />
-        <SkeletonBox width={16}  height={16} borderRadius={4} />
-        <SkeletonBox width={80}  height={20} borderRadius={6} />
-        <SkeletonBox width={100} height={22} borderRadius={6} style={{ marginLeft: 'auto' }} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <SkeletonBox width={110} height={16} borderRadius={5} />
-        <SkeletonBox width={90}  height={16} borderRadius={5} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <SkeletonBox width="30%" height={46} borderRadius={radius.md} />
-        <SkeletonBox width="40%" height={46} borderRadius={radius.md} />
-        <SkeletonBox width="24%" height={46} borderRadius={radius.md} />
-      </View>
-    </View>
-  );
-}
 
 export default function QueueScreen({ navigation }) {
   const { theme, isDark, tr, lang } = useTheme();
@@ -111,7 +73,7 @@ export default function QueueScreen({ navigation }) {
   // Age is descriptive; escalation deadlines and severity thresholds are not approved.
 
   const handleApprove = async (req) => {
-    showLoader();
+    showLoader(lang === 'sw' ? 'Inasasisha ombi…' : 'Updating request…');
     try {
       await exchangeAction(req,'accept');await requestCollection.refresh();
     } catch (e) { Alert.alert('Error', workflowError(e)); }
@@ -123,7 +85,7 @@ export default function QueueScreen({ navigation }) {
       ...REJECTION_REASONS.map(reason => ({
         text: reason,
         onPress: async () => {
-          showLoader();
+          showLoader(lang === 'sw' ? 'Inasasisha ombi…' : 'Updating request…');
           try {
             await exchangeAction(req,'reject',reason);await requestCollection.refresh();
           } catch (e) { Alert.alert('Error', workflowError(e)); }
@@ -179,18 +141,15 @@ export default function QueueScreen({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
+        <RefreshIndicator refreshing={refreshing} color={theme.text} />
         {loadError ? <View accessibilityLiveRegion="polite" style={{padding: 12}}>
           <Text style={{color: theme.text}}>{loadError} Existing results may be out of date.</Text>
           <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled: refreshing, busy: refreshing}} disabled={refreshing} onPress={onRefresh} style={{minHeight:48, justifyContent:'center'}}><Text style={{color:theme.primary}}>Retry loading requests</Text></TouchableOpacity>
         </View> : null}
         {loading ? (
-          <>
-            <SkeletonQueueCard theme={theme} />
-            <SkeletonQueueCard theme={theme} />
-            <SkeletonQueueCard theme={theme} />
-          </>
+          <LoadingIndicator label={lang === 'sw' ? 'Inapakia maombi…' : 'Loading requests…'} />
         ) : filtered.length === 0 && !loadError ? (
           <EmptyState
             icon="checkmark-circle-outline"

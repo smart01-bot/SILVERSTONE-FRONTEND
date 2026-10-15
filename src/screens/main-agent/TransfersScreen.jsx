@@ -1,3 +1,4 @@
+import { BrandRefreshControl, RefreshIndicator, LoadingIndicator } from '../../components/Loader';
 import { useMainCollection } from '../../hooks/useMainCollection';
 import { formatTzs } from '../../api/exchanges';
 import RequestDetailModal from '../../components/RequestDetailModal';
@@ -9,7 +10,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar,
-  RefreshControl, TextInput,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -21,25 +22,6 @@ import {
   collection, query, where, orderBy, onSnapshot,
 } from '../../api/screenData';
 import { db } from '../../api/screenData';
-
-function SkeletonTransferRow({ theme, last }) {
-  return (
-    <View>
-      <View style={s.row}>
-        <View style={s.rowLeft}>
-          <SkeletonBox width={70}  height={14} borderRadius={4} />
-          <SkeletonBox width={130} height={18} borderRadius={6} style={{ marginTop: 3 }} />
-          <SkeletonBox width={100} height={14} borderRadius={5} style={{ marginTop: 3 }} />
-        </View>
-        <View style={[s.rowRight, { alignItems: 'flex-end', gap: spacing.xs }]}>
-          <SkeletonBox width={80} height={18} borderRadius={6} />
-          <SkeletonBox width={55} height={14} borderRadius={4} />
-        </View>
-      </View>
-      {!last && <View style={[s.divider, { backgroundColor: theme.border }]} />}
-    </View>
-  );
-}
 
 export default function TransfersScreen({ navigation }) {
   const { theme, isDark, tr, lang } = useTheme();
@@ -129,8 +111,9 @@ export default function TransfersScreen({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.text]} tintColor={theme.text} />}
       >
+        <RefreshIndicator refreshing={refreshing} color={theme.text} />
         <MainError message={loadError} onRetry={onRefresh} busy={refreshing}/>
         {/* Volume of loaded, completed exchanges */}
         <View style={[s.volumeCard,{borderColor:theme.border}]}>
@@ -144,11 +127,7 @@ export default function TransfersScreen({ navigation }) {
 
         {/* ── Transfer list ── */}
         {loading ? (
-          <View style={[s.listCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-            {[0,1,2,3,4].map((i, _, arr) => (
-              <SkeletonTransferRow key={i} theme={theme} last={i === arr.length - 1} />
-            ))}
-          </View>
+          <LoadingIndicator label={lang === 'sw' ? 'Inapakia miamala…' : 'Loading transfers…'} />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="swap-horizontal-outline"

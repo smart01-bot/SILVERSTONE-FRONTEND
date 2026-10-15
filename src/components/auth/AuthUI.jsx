@@ -73,9 +73,10 @@ export function AuthButton({ label, onPress, busy = false, disabled = false }) {
   const { colors } = useAuthStyle();
   const blocked = busy || disabled;
   return <PressFeedback accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy, disabled: blocked }}
-    disabled={blocked} onPress={onPress} style={({ pressed }) => [s.button, { backgroundColor: colors.action, opacity: pressed || blocked ? 0.65 : 1 }]}>
+    disabled={blocked} onPress={onPress} style={({ pressed }) => [s.button, { backgroundColor: colors.action, opacity: pressed || (disabled && !busy) ? 0.65 : 1 }]}>
+    {busy ? <ButtonDots color={colors.actionText} /> : null}
     <Text style={[s.buttonText, { color: colors.actionText }]}>{label}</Text>
-    {busy ? <ButtonDots color={colors.actionText} /> : <Ionicons name="arrow-forward" size={22} color={colors.actionText} />}
+    {!busy ? <Ionicons name="arrow-forward" size={22} color={colors.actionText} /> : null}
   </PressFeedback>;
 }
 

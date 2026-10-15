@@ -89,7 +89,7 @@ export default function NewRequestScreen({ navigation, route }) {
   };
   const handleSubmit = async () => {
     if(busy.current||submitted||!review)return;
-    busy.current=true;setLoading(true);setError('');setNotice('');showLoader();
+    busy.current=true;setLoading(true);setError('');setNotice('');showLoader(copy('Submitting request…', 'Inatuma ombi…'));
     try {
       await enqueue(review);
       setReview(null);

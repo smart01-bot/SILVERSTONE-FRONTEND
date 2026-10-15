@@ -1,3 +1,5 @@
+import { LoadingModal as Modal } from '../../context/LoaderContext';
+import { LoadingIndicator } from '../../components/Loader';
 import { MainHeader, MainEmpty } from '../../components/agent/MainAgentUI';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { workflowError } from '../../api/workflowState';
@@ -10,7 +12,6 @@ import {
   StyleSheet,
   TextInput,
   Image,
-  Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -120,8 +121,8 @@ export default function ApprovalsScreen({ navigation } = {}) {
             {copy('Refresh applications','Pakua maombi tena')}
           </Text>
         </TouchableOpacity>
-        {listLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading applications…</Text>}
-        {documentLoading && <Text accessibilityLiveRegion="polite" style={{color:theme.textDim}}>Loading private document…</Text>}
+        {listLoading && <LoadingIndicator label={copy('Loading applications…','Inapakia maombi…')} />}
+        {documentLoading && <LoadingIndicator label={copy('Loading private document…','Inapakia nyaraka binafsi…')} />}
         {!detail && !listLoading && !error && agents.length === 0 && (
           <Text style={{ color: theme.textDim }}>
             {lang==='sw'?'Hakuna maombi yanayosubiri ukaguzi wako.':'No applications awaiting your review.'}

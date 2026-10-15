@@ -90,9 +90,9 @@ export function GlassField({ label, password, error, hint, prefix, editable = tr
 export function GlassButton({ label, onPress, busy = false, disabled = false }) {
   const { colors } = useAuthStyle();
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy, disabled: busy || disabled }} aria-disabled={busy || disabled} aria-busy={busy} disabled={busy || disabled} onPress={onPress}
-    style={({ pressed }) => ({ opacity: pressed || disabled ? 0.5 : 1 })}>
-    <Glass style={styles.button}><Text style={[styles.buttonText, { color: colors.text }]}>{label}</Text>
-      {busy ? <ButtonDots color={colors.text} /> : <Ionicons name="arrow-forward" size={21} color={colors.text} />}
+    style={({ pressed }) => ({ opacity: pressed || (disabled && !busy) ? 0.5 : 1 })}>
+    <Glass style={styles.button}>{busy ? <ButtonDots color={colors.text} /> : null}<Text style={[styles.buttonText, { color: colors.text }]}>{label}</Text>
+      {!busy ? <Ionicons name="arrow-forward" size={21} color={colors.text} /> : null}
     </Glass>
   </Pressable>;
 }
