@@ -227,7 +227,7 @@ export default function NewRequestScreen({ navigation, route }) {
       <View testID="request-footer" style={[s.footer, { backgroundColor: colors.bg }]}>
         {error ? <AgentNotice error style={s.footerError}>{error}</AgentNotice> : null}
         <View style={s.feeRow}>
-          <Text style={[s.fee, { color: colors.secondary }]}>{copy('Silverstone fee', 'Ada ya Silverstone')}</Text>
+          <Text style={[s.fee, { color: colors.secondary }]}>{copy('Swift Wakala fee', 'Ada ya Swift Wakala')}</Text>
           <Text style={[s.feeValue, { color: colors.text }]}>TZS 0</Text>
         </View>
         <Text style={[s.executionNotice, { color: colors.secondary }]}>{copy('Requests are saved for approval. Payments are not yet connected.', 'Maombi yanahifadhiwa kwa idhini. Malipo bado hayajaunganishwa.')}</Text>
@@ -239,7 +239,7 @@ export default function NewRequestScreen({ navigation, route }) {
         title={editor ? endpointLabel(editor.kind) : copy('Review request', 'Kagua ombi')}>
         {editor ? <View>
           <Text style={[s.editorHint, { color: colors.secondary }]}>{editor.kind === 'source'
-            ? copy('This account approves the payment to Silverstone.', 'Akaunti hii itaidhinisha malipo kwenda Silverstone.')
+            ? copy('This account approves your transfer payment.', 'Akaunti hii itaidhinisha malipo ya uhamisho wako.')
             : copy('This account receives the payout from your agency.', 'Akaunti hii itapokea fedha kutoka kwa wakala wako.')}</Text>
           <View style={s.networkGrid}>
             {NETWORKS.map(network => <TouchableOpacity key={network} testID={`request-network-${network}`}
@@ -294,7 +294,7 @@ export default function NewRequestScreen({ navigation, route }) {
                   disabled={loading} onPress={() => openEditor(kind)} style={s.editButton}><Ionicons name="create-outline" size={21} color={colors.text} /></TouchableOpacity>
               </View>;
             })}
-          <View style={s.feeRow}><Text style={[s.fee, { color: colors.secondary }]}>{copy('Silverstone fee', 'Ada ya Silverstone')}</Text><Text style={[s.feeValue, { color: colors.text }]}>TZS 0</Text></View>
+          <View style={s.feeRow}><Text style={[s.fee, { color: colors.secondary }]}>{copy('Swift Wakala fee', 'Ada ya Swift Wakala')}</Text><Text style={[s.feeValue, { color: colors.text }]}>TZS 0</Text></View>
           {review.urgent ? <Text style={[s.editorHint, { color: colors.secondary }]}>{copy('Flagged urgent · Queue order unchanged', 'Dharura · Mpangilio wa foleni haujabadilika')}</Text> : null}
           <Text style={[s.reviewNotice, { color: colors.secondary }]}>{copy('Submit for main-agent approval. No funds move at this step.', 'Tuma kwa idhini ya wakala mkuu. Hakuna fedha zitakazohamishwa katika hatua hii.')}</Text>
           {error ? <AgentNotice error>{error}</AgentNotice> : null}

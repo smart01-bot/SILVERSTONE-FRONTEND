@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
-import SilverstoneMark from '../SilverstoneMark';
+import SwiftWakalaMark from '../SwiftWakalaMark';
 import { ThemeReveal, useThemeReveal } from './ThemeReveal';
 import { fonts } from '../../constants/theme';
 import { AGENT_TABS, isBoxyAgentDevice } from './agentTheme';
@@ -103,9 +103,12 @@ export function AgentHeader({ activeName, onHistory }) {
     <>
       <View onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)}>
       <View style={s.header}>
-        <View style={s.brand} accessibilityLabel="Silverstone" accessible>
-          <SilverstoneMark color={colors.text} />
-          <Text numberOfLines={1} style={[s.brandText, { color: colors.text }]}>SILVERSTONE</Text>
+        <View style={s.brand} accessibilityLabel="Swift Wakala by Silverstone" accessible>
+          <SwiftWakalaMark color={colors.text} size={30} />
+          <View style={s.wordmark}>
+            <Text style={[s.brandText, { color: colors.text }]}>Swift Wakala</Text>
+            <Text style={[s.ownerText, { color: colors.secondary }]}>by Silverstone</Text>
+          </View>
         </View>
         <View style={s.headerActions}>
           <Pressable testID="theme-toggle" onPress={event => toggle({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })}
@@ -211,8 +214,10 @@ export function AgentPagePlaceholder() {
 const s = StyleSheet.create({
   frame: { flex: 1 },
   header: { minHeight: 70, paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandText: { flexShrink: 1, fontFamily: fonts.bodySemi, fontSize: 12, letterSpacing: 0.1 },
+  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
+  wordmark: { flexShrink: 1 },
+  brandText: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 20, letterSpacing: -0.4 },
+  ownerText: { fontFamily: fonts.body, fontSize: 10, lineHeight: 15 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconButton: { width: 48, height: 48, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
   titleSlot: { minHeight: 48, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 10, overflow: 'hidden' },

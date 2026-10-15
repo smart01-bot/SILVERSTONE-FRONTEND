@@ -173,7 +173,7 @@ export default function AgentRequestDetails({ request: initialRequest, onClose, 
           <Text selectable style={[s.evidence, { color: colors.secondary }]}>{copy('Destination account', 'Akaunti ya kupokea')}: {networkDisplayName(request.destNetwork)} · {request.destPhone}</Text>
           <Text style={[s.evidence, { color: colors.secondary }]}>{copy('Submitted (UTC)', 'Limetumwa (UTC)')}: {recordedTime(request.createdAt)}</Text>
           {request.processedAt ? <Text style={[s.evidence, { color: colors.secondary }]}>{copy('Processed', 'Limeshughulikiwa')}: {timeAgo(request.processedAt, lang)}</Text> : null}
-          <Text style={[s.evidence, { color: colors.secondary }]}>Silverstone fee: TZS 0 · {providerChargeLabel(request.provider)}</Text>
+          <Text style={[s.evidence, { color: colors.secondary }]}>{copy('Swift Wakala fee', 'Ada ya Swift Wakala')}: TZS 0 · {providerChargeLabel(request.provider)}</Text>
           {request.reservation ? <Text style={[s.evidence, { color: colors.secondary }]}>{reservationLabel(request.reservation)}</Text> : null}
           {request.providerEvidence?.map((evidence, index) => <Text key={evidence.id || `evidence-${index}`} style={[s.evidence, { color: colors.secondary }]}>{providerEvidenceLabel(evidence)}</Text>)}
           {request.legs?.map((leg, index) => <Text key={leg.id || `leg-${index}`} style={[s.evidence, { color: colors.secondary }]}>{legLabel(leg)}</Text>)}

@@ -20,11 +20,11 @@ export default function ExchangeHero({ onTransfer }) {
   const scroll = useRef(new Animated.Value(0)).current;
   const auto = !paused && !screenReader && !reducedMotion && focused && foreground && !creditInfo;
   const slides = [
-    { key: 'move', eyebrow: copy('MOVE WITH SILVERSTONE', 'HAMISHA NA SILVERSTONE'), title: copy('Move float.\nKeep cash flowing.', 'Hamisha float.\nBiashara iendelee.'),
+    { key: 'move', eyebrow: copy('MOVE WITH SWIFT WAKALA', 'HAMISHA NA SWIFT WAKALA'), title: copy('Move float.\nKeep cash flowing.', 'Hamisha float.\nBiashara iendelee.'),
       detail: copy('Send, receive, and keep business moving.', 'Tuma na pokea. Endeleza biashara yako.'), action: copy('Start a transfer', 'Anza kuhamisha'), icon: 'swap-horizontal', gradient: ['#303B49', '#151C25'], onPress: onTransfer },
     { key: 'instant', eyebrow: copy('YOUR NEXT MOVE', 'HATUA YAKO INAYOFUATA'), title: copy('Float, one\ntap away.', 'Float, kwa\nmguso mmoja.'),
-      detail: copy('Your next transfer starts with Silverstone.', 'Anza uhamisho wako na Silverstone.'), action: copy('Transfer float', 'Hamisha float'), icon: 'flash-outline', gradient: ['#243D44', '#12252B'], onPress: onTransfer },
-    { key: 'credit', eyebrow: copy('COMING SOON', 'INAKUJA HIVI KARIBUNI'), title: copy('More possibility.\nSilverstone credit.', 'Fursa zaidi.\nMkopo wa Silverstone.'),
+      detail: copy('Your next transfer starts with Swift Wakala.', 'Anza uhamisho wako na Swift Wakala.'), action: copy('Transfer float', 'Hamisha float'), icon: 'flash-outline', gradient: ['#243D44', '#12252B'], onPress: onTransfer },
+    { key: 'credit', eyebrow: copy('COMING SOON', 'INAKUJA HIVI KARIBUNI'), title: copy('Swift Wakala credit.\nMore possibility.', 'Mkopo wa Swift Wakala.\nFursa zaidi.'),
       detail: copy('A new chapter for your business.', 'Hatua mpya kwa biashara yako.'), action: copy('Discover credit', 'Kuhusu mkopo'), icon: 'sparkles-outline', gradient: ['#3D3549', '#211D2C'], onPress: () => setCreditInfo(true) },
   ];
 
@@ -86,9 +86,9 @@ export default function ExchangeHero({ onTransfer }) {
       {!reducedMotion && !screenReader ? <Pressable accessibilityRole="button" accessibilityLabel={paused ? copy('Play banners', 'Endeleza mabango') : copy('Pause banners', 'Sitisha mabango')}
         onPress={() => setPaused(value => !value)} style={s.pause}><Ionicons name={paused ? 'play-outline' : 'pause-outline'} size={15} color={colors.secondary} /></Pressable> : null}
     </View>
-    <AgentSheet visible={creditInfo} onClose={() => setCreditInfo(false)} title={copy('Silverstone credit', 'Mkopo wa Silverstone')}>
+    <AgentSheet visible={creditInfo} onClose={() => setCreditInfo(false)} title={copy('Swift Wakala credit', 'Mkopo wa Swift Wakala')}>
       <Text style={[s.creditLabel, { color: colors.text }]}>{copy('Coming soon', 'Inakuja hivi karibuni')}</Text>
-      <Text style={[s.creditBody, { color: colors.secondary }]}>{copy('We’re working on credit features for Silverstone agents. Eligibility, limits, and how to apply will be shared when the service launches.', 'Tunaandaa huduma za mikopo kwa mawakala wa Silverstone. Vigezo, viwango na jinsi ya kuomba vitatangazwa huduma itakapoanza.')}</Text>
+      <Text style={[s.creditBody, { color: colors.secondary }]}>{copy('We’re working on credit features for Swift Wakala agents. Eligibility, limits, and how to apply will be shared when the service launches.', 'Tunaandaa huduma za mikopo kwa mawakala wa Swift Wakala. Vigezo, viwango na jinsi ya kuomba vitatangazwa huduma itakapoanza.')}</Text>
       <AgentButton label={copy('Got it', 'Nimeelewa')} onPress={() => setCreditInfo(false)} />
     </AgentSheet>
   </View>;
