@@ -40,7 +40,7 @@ function harness(initial = {}) {
   return { auth, theme, render(props = {}) { let tree, guard = 0; do { dirty = false; cursor = 0; pending = []; tree = module.exports.default(props); pending.forEach(fn => fn()); assert.ok(++guard < 10); } while (dirty); return tree; } };
 }
 
-test('startup holds for fonts, theme and account restore, then reveals sign-in without replay', () => {
+test('startup holds for fonts, theme and account restore, then reveals role selection without replay', () => {
   const h = harness({ authLoading: true }); h.theme.themeReady = false;
   let tree = h.render({ fontsReady: false });
   assert.equal(find(tree, 'SplashScreen').props.resourcesReady, false);
@@ -49,7 +49,7 @@ test('startup holds for fonts, theme and account restore, then reveals sign-in w
   h.theme.themeReady = true; h.auth.authLoading = false;
   tree = h.render({ fontsReady: true });
   assert.equal(find(tree, 'SplashScreen').props.ready, true);
-  assert.equal(find(tree, 'AuthNavigator').props.initialRoute, 'Login');
+  assert.equal(find(tree, 'AuthNavigator').props.initialRoute, 'RoleSelect');
   assert.equal(find(tree, 'Animated.View').props.pointerEvents, 'none');
   find(tree, 'SplashScreen').props.onDone(); tree = h.render();
   assert.equal(find(tree, 'SplashScreen'), undefined);
@@ -96,4 +96,17 @@ test('PIN setup, pending applications and connection errors keep their own desti
   pending.render(); await tick(); assert.equal(find(pending.render(), 'AuthNavigator').props.initialRoute, 'pending');
   const failed = harness({ connectionError: 'Offline' });
   const tree = failed.render(); assert.equal(find(tree, 'SplashScreen').props.ready, true); assert.equal(find(tree, 'AuthNotice').children[0], 'Offline');
+});
+
+test('removing a retained account returns to role selection without replaying the splash', async () => {
+  const h = harness({ user: { id: 'one' }, profile: approved });
+  h.render(); await tick(); let tree = h.render();
+  find(tree, 'SplashScreen').props.onDone();
+  h.auth.user = null; h.auth.profile = null;
+  tree = h.render();
+  assert.equal(find(tree, 'AuthNavigator').props.initialRoute, 'RoleSelect');
+  assert.equal(find(tree, 'PinEntryScreen'), undefined);
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+  assert.equal(find(tree, 'MainAgentNavigator'), undefined);
+  assert.equal(find(tree, 'SplashScreen'), undefined);
 });

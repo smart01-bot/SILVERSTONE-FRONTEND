@@ -106,11 +106,11 @@ export default function AppNavigator({ fontsReady = true }) {
       </AuthFrame>;
     }
 
-    // No retained account — show email/password. Registration stays available from Login.
+    // New or signed-out users choose their role; retained accounts still use PIN.
     if (!user) {
       return (
         <NavigationContainer ref={navigationRef} theme={navTheme}>
-          <AuthNavigator initialRoute="Login" />
+          <AuthNavigator initialRoute="RoleSelect" />
         </NavigationContainer>
       );
     }

@@ -16,7 +16,7 @@ test("retained account restores behind PIN and new accounts set PIN twice", asyn
   assert.match(context, /apply\(agent, true/);
   assert.match(context, /SecureStore\.setItemAsync\(pinKey\(user\.id\), pin\)/);
 
-  assert.match(navigator, /initialRoute="Login"/);
+  assert.match(navigator, /initialRoute="RoleSelect"/);
   assert.match(navigator, /<PinSetupScreen/);
   assert.match(navigator, /<PinEntryScreen/);
   assert.match(navigator, /sessionLocked/);

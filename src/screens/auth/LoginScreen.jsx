@@ -3,9 +3,11 @@ import { View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { AuthFrame, AuthHeading, AuthField, AuthButton, AuthLink, AuthNotice, useAuthStyle } from '../../components/auth/AuthUI';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const { login } = useAuth();
   const { copy } = useAuthStyle();
+  // Selection supplies context only; the authenticated profile determines access.
+  const mainAgent = route?.params?.selectedRole === 'main-agent';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,8 +22,8 @@ export default function LoginScreen({ navigation }) {
     catch (e) { setError(e.message || copy('Unable to sign in. Please try again.', 'Imeshindikana kuingia. Jaribu tena.')); }
     finally { submitting.current = false; setBusy(false); }
   }
-  return <AuthFrame footer={copy('Silverstone · Float through your main-agent', 'Silverstone · Float kupitia wakala wako mkuu')}>
-    <AuthHeading eyebrow={copy('Your agent workspace', 'Sehemu yako ya uwakala')} title={copy('Welcome back.', 'Karibu tena.')}
+  return <AuthFrame onBack={() => navigation.goBack()} backDisabled={busy} footer="Swift Wakala · by Silverstone">
+    <AuthHeading eyebrow={mainAgent ? copy('Main Agent sign in', 'Ingia kama Wakala Mkuu') : copy('Agent sign in', 'Ingia kama Wakala')} title={copy('Welcome back.', 'Karibu tena.')}
       description={copy('Sign in to continue.', 'Ingia ili kuendelea.')} />
     <AuthField label={copy('Email address', 'Barua pepe')} value={email} onChangeText={setEmail} placeholder="you@example.com"
       keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="username" editable={!busy} />
@@ -32,6 +34,6 @@ export default function LoginScreen({ navigation }) {
     <AuthButton label={busy ? copy('Signing in…', 'Inaingia…') : copy('Sign in', 'Ingia')} onPress={handleLogin} busy={busy} />
     <AuthLink disabled={busy} onPress={() => navigation.navigate('PasswordRecovery', { email: email.trim() })}>{copy('Forgot password?', 'Umesahau nenosiri?')}</AuthLink>
     <View style={{ flex: 1, minHeight: 32 }} />
-    <AuthLink disabled={busy} onPress={() => navigation.navigate('Step1Phone')}>{copy('New to Silverstone? Register', 'Mgeni Silverstone? Jisajili')}</AuthLink>
+    {!mainAgent && <AuthLink disabled={busy} onPress={() => navigation.navigate('Step1Phone')}>{copy('New to Swift Wakala? Register', 'Mgeni Swift Wakala? Jisajili')}</AuthLink>}
   </AuthFrame>;
 }

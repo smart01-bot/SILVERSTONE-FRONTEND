@@ -4,7 +4,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import SplashScreen       from '../screens/auth/SplashScreen';
 import RoleSelectScreen   from '../screens/auth/RoleSelectScreen';
 import LoginScreen        from '../screens/auth/LoginScreen';
 import PasswordRecoveryScreen from '../screens/auth/PasswordRecoveryScreen';
@@ -34,14 +33,13 @@ export default function AuthNavigator({ initialRoute } = {}) {
         ? 'RoleSelect'
         : initialRoute === 'Login'
           ? 'Login'
-          : 'Splash';
+          : 'RoleSelect';
 
   return (
     <Stack.Navigator
       initialRouteName={initial}
       screenOptions={{ headerShown: false }}
     >
-      <Stack.Screen name="Splash"         component={SplashScreen} />
       <Stack.Screen name="RoleSelect"     component={RoleSelectScreen} />
       <Stack.Screen name="Login"          component={LoginScreen} />
       <Stack.Screen name="PasswordRecovery" component={PasswordRecoveryScreen} />

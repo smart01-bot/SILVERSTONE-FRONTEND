@@ -1,176 +1,134 @@
-// src/screens/auth/RoleSelectScreen.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, StatusBar, SafeAreaView,
-  Image, Animated,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, AppState, Easing, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme }    from '../../context/ThemeContext';
-import { spacing, radius, fonts } from '../../constants/theme';
-import PressableScale  from '../../components/PressableScale';
+import Svg, { Defs, Ellipse, Path, RadialGradient, Stop } from 'react-native-svg';
+import SwiftWakalaMark, { SWIFT_WINGS } from '../../components/SwiftWakalaMark';
+import { AgentFrame } from '../../components/agent/AgentChrome';
+import { AgentUIProvider, useAgentUI } from '../../components/agent/AgentUI';
+import { useThemeReveal } from '../../components/agent/ThemeReveal';
+import { fonts } from '../../constants/theme';
 
-const ROLES = [
-  { id: 'main-agent', title: 'Main Agent', sub: 'Aggregator',           icon: 'shield-checkmark' },
-  { id: 'sub-agent',  title: 'Agent',      sub: 'Single-till operator',  icon: 'person' },
-];
-
-function RoleCard({ role, selected, onPress, theme, index }) {
-  const mountAnim = useRef(new Animated.Value(0)).current;
-  const selectAnim = useRef(new Animated.Value(selected ? 1 : 0)).current;
-
+function WelcomeWing() {
+  const { colors, isDark, reducedMotion } = useAgentUI();
+  const focused = useIsFocused();
+  const [active, setActive] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
+  const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.spring(mountAnim, {
-      toValue: 1, tension: 80, friction: 10,
-      delay: index * 80, useNativeDriver: true,
-    }).start();
+    const sub = AppState.addEventListener('change', state => setActive(state === 'active'));
+    return () => sub.remove();
   }, []);
-
   useEffect(() => {
-    Animated.spring(selectAnim, {
-      toValue: selected ? 1 : 0,
-      tension: 200, friction: 10, useNativeDriver: false,
-    }).start();
-  }, [selected]);
-
-  const borderColor = selectAnim.interpolate({
-    inputRange: [0, 1], outputRange: [theme.border, theme.primary],
-  });
-  const bgColor = selectAnim.interpolate({
-    inputRange: [0, 1], outputRange: [theme.surface, theme.primaryLight],
-  });
-
-  return (
-    <Animated.View style={{
-      opacity:   mountAnim,
-      transform: [{ translateY: mountAnim.interpolate({ inputRange: [0,1], outputRange: [24,0] }) }],
-    }}>
-      <PressableScale onPress={onPress} scaleDown={0.97}>
-        <Animated.View style={[s.card, { borderColor, backgroundColor: bgColor }]}>
-          <View style={[s.iconPlate, {
-            backgroundColor: selected ? theme.primary : theme.primaryLight,
-          }]}>
-            <Ionicons
-              name={selected ? role.icon : `${role.icon}-outline`}
-              size={28}
-              color={selected ? '#fff' : theme.primary}
-            />
-          </View>
-          <View style={s.cardText}>
-            <Text style={[s.cardTitle, { color: theme.text }]}>{role.title}</Text>
-            <Text style={[s.cardSub,   { color: theme.textDim }]}>{role.sub}</Text>
-          </View>
-          <Animated.View style={{
-            opacity:   selectAnim,
-            transform: [{ scale: selectAnim }],
-          }}>
-            <View style={[s.checkCircle, { backgroundColor: theme.primary }]}>
-              <Ionicons name="checkmark" size={14} color="#fff" />
-            </View>
-          </Animated.View>
-          {!selected && <Ionicons name="chevron-forward" size={20} color={theme.muted} />}
-        </Animated.View>
-      </PressableScale>
+    progress.setValue(0);
+    if (reducedMotion || !active || !focused) return undefined;
+    const timing = toValue => Animated.timing(progress, { toValue, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false });
+    const animation = Animated.loop(Animated.sequence([timing(1), timing(0)]));
+    animation.start();
+    return () => { animation.stop(); progress.stopAnimation(); };
+  }, [active, focused, reducedMotion, progress]);
+  return <View style={s.visual} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+    <Svg width={270} height={220} style={s.halo}>
+      <Defs><RadialGradient id="welcome-halo" cx="50%" cy="50%" rx="50%" ry="50%">
+        <Stop offset="0" stopColor="#FFFFFF" stopOpacity={isDark ? 0.055 : 0.95} /><Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+      </RadialGradient></Defs><Ellipse cx={135} cy={110} rx={135} ry={110} fill="url(#welcome-halo)" />
+    </Svg>
+    <Animated.View testID="welcome-wing" style={[s.mark, { transform: [
+      { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-3, 3] }) },
+      { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [3, -7] }) },
+      { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['-2deg', '1deg'] }) },
+    ] }]}>
+      {SWIFT_WINGS.map((path, index) => <Animated.View key={path} style={[StyleSheet.absoluteFillObject, { transform: [
+        { translateX: index ? 0 : progress.interpolate({ inputRange: [0, 1], outputRange: [0, 2.6] }) },
+        { translateY: index ? 0 : progress.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
+      ] }]}><Svg width="100%" height="100%" viewBox="-12 -12 124 104"><Path d={path} fill={colors.text} /></Svg></Animated.View>)}
     </Animated.View>
-  );
+  </View>;
 }
 
-export default function RoleSelectScreen({ navigation }) {
-  const { theme, isDark } = useTheme();
-  const [selected, setSelected] = useState(null);
-
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning.' : hour < 17 ? 'Good afternoon.' : 'Good evening.';
-
-  const handleSelect = (roleId) => {
-    setSelected(roleId);
-    setTimeout(() => navigation.navigate('Login', { selectedRole: roleId }), 180);
+function Welcome({ navigation }) {
+  const { colors, isDark, copy, reducedMotion, reducedTransparency } = useAgentUI();
+  const { toggle, error } = useThemeReveal();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const [selected, setSelected] = useState('sub-agent');
+  const [selectorWidth, setSelectorWidth] = useState(0);
+  const slide = useRef(new Animated.Value(0)).current;
+  const main = selected === 'main-agent';
+  const compact = width < 350 || height < 740;
+  useEffect(() => {
+    slide.stopAnimation();
+    const toValue = main ? 1 : 0;
+    if (reducedMotion) { slide.setValue(toValue); return undefined; }
+    const animation = Animated.timing(slide, { toValue, duration: 380, easing: Easing.bezier(.22, 1, .36, 1), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [main, reducedMotion, slide]);
+  const login = () => navigation.navigate('Login', { selectedRole: selected });
+  const register = () => {
+    if (!main) { navigation.navigate('Step1Phone'); return; }
+    Alert.alert(copy('Main Agent accounts', 'Akaunti za Wakala Mkuu'),
+      copy('Silverstone sets up Main Agent accounts. If your account is ready, sign in to continue.', 'Silverstone huandaa akaunti za Wakala Mkuu. Ikiwa akaunti yako iko tayari, ingia ili kuendelea.'),
+      [{ text: copy('Back', 'Rudi'), style: 'cancel' }, { text: copy('Sign in', 'Ingia'), onPress: login }]);
   };
-
-  return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.bg} />
-
-      {/* Logo row */}
-      <View style={s.logoRow}>
-        <View style={s.logoTile}>
-          <Image source={require('../../../assets/images/SilverS.png')} style={s.logoImg} resizeMode="contain" />
-        </View>
-        <Text style={[s.logoText, { color: theme.text }]}>silverstone</Text>
+  return <ScrollView testID="welcome-screen" showsVerticalScrollIndicator={false} contentContainerStyle={[s.page, {
+    paddingHorizontal: width < 350 ? 20 : 26, paddingTop: compact ? 18 : 28, paddingBottom: Math.max(16, insets.bottom),
+  }]}>
+    <View style={s.header}>
+      <View accessible accessibilityLabel="Swift Wakala by Silverstone" style={s.brand}>
+        <SwiftWakalaMark color={colors.text} size={34} />
+        <View><Text style={[s.brandName, { color: colors.text }]}>Swift Wakala</Text><Text style={[s.owner, { color: colors.secondary }]}>by Silverstone</Text></View>
       </View>
-
-      {/* Greeting */}
-      <View style={s.greetingWrap}>
-        <Text style={[s.greeting, { color: theme.text }]}>{greeting}</Text>
-        <Text style={[s.loginAs,  { color: theme.textDim }]}>Log in as</Text>
+      <Pressable testID="welcome-theme" accessibilityRole="button" accessibilityLabel={isDark ? copy('Switch to light theme', 'Badili kwenda mwanga') : copy('Switch to dark theme', 'Badili kwenda giza')}
+        onPress={event => toggle({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })}
+        style={({ pressed }) => [s.theme, { borderColor: colors.border, backgroundColor: colors.glass, opacity: pressed ? 0.65 : 1 }]}>
+        <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={21} color={colors.text} />
+      </Pressable>
+    </View>
+    <View style={[s.intro, compact && { marginTop: 30 }]}>
+      <Text style={[s.eyebrow, { color: colors.secondary }]}>{copy('YOUR BUSINESS. IN MOTION.', 'BIASHARA YAKO. INAENDELEA.')}</Text>
+      <Text accessibilityRole="header" style={[s.title, { color: colors.text, fontSize: compact ? 40 : 48, lineHeight: compact ? 46 : 54 }]}>{copy('Let’s get\nyou moving', 'Tuendelee\npamoja')}<Text style={{ color: colors.muted }}>.</Text></Text>
+      <Text style={[s.subtitle, { color: colors.secondary }]}>{copy('Choose how you use Swift Wakala.', 'Chagua jinsi unavyotumia Swift Wakala.')}</Text>
+    </View>
+    <WelcomeWing />
+    <View style={s.actions}>
+      <View accessibilityRole="radiogroup" accessibilityLabel={copy('Account role', 'Aina ya akaunti')}
+        onLayout={event => setSelectorWidth(event.nativeEvent.layout.width)}
+        style={[s.selector, { borderColor: colors.border, backgroundColor: reducedTransparency ? colors.surface : isDark ? 'rgba(255,255,255,0.055)' : 'rgba(255,255,255,0.42)' }]}>
+        <Animated.View pointerEvents="none" style={[s.selection, { width: Math.max(0, (selectorWidth - 12) / 2), backgroundColor: isDark ? 'rgba(255,255,255,0.14)' : '#FFFFFF',
+          transform: [{ translateX: slide.interpolate({ inputRange: [0, 1], outputRange: [0, Math.max(0, (selectorWidth - 12) / 2)] }) }] }]} />
+        {[['sub-agent', copy('Agent', 'Wakala')], ['main-agent', copy('Main Agent', 'Wakala Mkuu')]].map(([id, label]) => <Pressable key={id} testID={`welcome-${id}`} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: selected === id }} aria-checked={selected === id}
+          onPress={() => setSelected(id)} style={s.role}><Text style={[s.roleText, { color: selected === id ? colors.text : colors.secondary }]}>{label}</Text></Pressable>)}
       </View>
-
-      {/* Role cards */}
-      <View style={s.cards}>
-        {ROLES.map((role, i) => (
-          <RoleCard
-            key={role.id}
-            role={role}
-            index={i}
-            selected={selected === role.id}
-            onPress={() => handleSelect(role.id)}
-            theme={theme}
-          />
-        ))}
-      </View>
-
-      {/* Footer */}
-      <View style={s.footer}>
-        <Text style={[s.footerText, { color: theme.textDim }]}>
-          Don't have an account?{' '}
-          <Text
-            style={{ color: theme.primary, fontFamily: fonts.bodySemi }}
-            onPress={() => navigation.navigate('Step1Phone')}
-          >
-            Register
-          </Text>
-        </Text>
-      </View>
-    </SafeAreaView>
-  );
+      <Text accessibilityLiveRegion="polite" style={[s.description, { color: colors.secondary }]}>{main ? copy('Support your agents. Keep business moving.', 'Saidia mawakala wako. Endeleza biashara.') : copy('Move float. Serve your customers.', 'Hamisha float. Hudumia wateja wako.')}</Text>
+      {error ? <Text accessibilityRole="alert" style={[s.error, { color: colors.danger }]}>{error}</Text> : null}
+      <Pressable accessibilityRole="button" onPress={login} style={({ pressed }) => [s.continue, { backgroundColor: colors.action, opacity: pressed ? 0.75 : 1 }]}>
+        <Text style={[s.continueText, { color: colors.actionText }]}>{main ? copy('Continue as Main Agent', 'Endelea kama Wakala Mkuu') : copy('Continue as Agent', 'Endelea kama Wakala')}</Text>
+        <Ionicons name="arrow-forward" size={22} color={colors.actionText} />
+      </Pressable>
+      <View style={s.registration}><Text style={[s.newHere, { color: colors.secondary }]}>{copy('New here?', 'Mgeni hapa?')}</Text><Pressable accessibilityRole="button" onPress={register} style={s.registerLink}><Text style={[s.registerText, { color: colors.text }]}>{copy('Create an account', 'Fungua akaunti')}</Text></Pressable></View>
+    </View>
+  </ScrollView>;
 }
 
+export default function RoleSelectScreen(props) {
+  return <AgentUIProvider><AgentFrame><Welcome {...props} /></AgentFrame></AgentUIProvider>;
+}
 const s = StyleSheet.create({
-  safe: { flex: 1 },
-
-  logoRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm + 2, paddingTop: spacing.xl, paddingBottom: spacing.sm,
-  },
-  logoTile: {
-    width: 36, height: 36, borderRadius: radius.sm + 1,
-    backgroundColor: '#C8102E', alignItems: 'center', justifyContent: 'center', padding: spacing.sm - 2,
-  },
-  logoImg:  { width: '100%', height: '100%' },
-  logoText: { fontSize: 24, fontFamily: fonts.display, letterSpacing: -0.5 },
-
-  greetingWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg },
-  greeting:     { fontSize: 36, fontFamily: fonts.display, letterSpacing: -0.5 },
-  loginAs:      { fontSize: 19, fontFamily: fonts.body, marginTop: spacing.xs },
-
-  cards: { paddingHorizontal: spacing.md, gap: spacing.md - 4 },
-  card: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: spacing.md, padding: spacing.md + 2,
-    borderRadius: radius.xl, borderWidth: 1.5,
-  },
-  iconPlate: {
-    width: 56, height: 56, borderRadius: radius.lg,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  cardText:    { flex: 1, gap: spacing.xs - 2 },
-  cardTitle:   { fontSize: 21, fontFamily: fonts.heading },
-  cardSub:     { fontSize: 17, fontFamily: fonts.body },
-  checkCircle: {
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  footer:     { marginTop: 'auto', alignItems: 'center', paddingBottom: spacing.xl },
-  footerText: { fontSize: 17, fontFamily: fonts.body },
+  page: { flexGrow: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  brandName: { fontFamily: fonts.heading, fontSize: 18, letterSpacing: -.7 }, owner: { fontFamily: fonts.body, fontSize: 10, letterSpacing: .5, marginTop: 3 },
+  theme: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  intro: { marginTop: 48 }, eyebrow: { fontFamily: fonts.bodySemi, fontSize: 10, lineHeight: 16, letterSpacing: 1.8, marginBottom: 17 },
+  title: { fontFamily: fonts.heading, letterSpacing: -2.7 }, subtitle: { fontFamily: fonts.body, fontSize: 14, lineHeight: 23, marginTop: 19, letterSpacing: -.2 },
+  visual: { flexGrow: 1, minHeight: 196, maxHeight: 340, alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 12 },
+  halo: { position: 'absolute' }, mark: { width: 164, height: 146 }, actions: { marginTop: 'auto' },
+  selector: { borderWidth: 1, borderRadius: 21, padding: 5, flexDirection: 'row', overflow: 'hidden' },
+  selection: { position: 'absolute', left: 5, top: 5, bottom: 5, borderRadius: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.13)' },
+  role: { flex: 1, minHeight: 48, paddingVertical: 12, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' }, roleText: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 23, textAlign: 'center' },
+  description: { fontFamily: fonts.body, fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 15, marginBottom: 25 },
+  continue: { minHeight: 60, borderRadius: 20, paddingVertical: 16, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12 }, continueText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 23 },
+  registration: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 17 }, newHere: { fontFamily: fonts.body, fontSize: 13 },
+  registerLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 3 }, registerText: { fontFamily: fonts.bodySemi, fontSize: 13 }, error: { fontFamily: fonts.body, fontSize: 13, lineHeight: 21, marginBottom: 12 },
 });
