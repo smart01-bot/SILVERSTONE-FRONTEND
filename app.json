@@ -41,12 +41,6 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "color": "#D32F2F"
-        }
-      ],
       "expo-splash-screen"
     ],
     "extra": {

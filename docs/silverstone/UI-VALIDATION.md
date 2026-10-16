@@ -85,8 +85,8 @@ This requested global change also reaches authentication, onboarding and main-ag
 
 An isolated browser check of the actual `ScreenLoader` and `LoaderProvider` also passed: light/dark appearance, English/Swahili labels, overlay show/hide, live language changes, and reduced-motion updates. With reduced motion enabled, all three dots stayed at a fixed opacity; disabling it restored the pulses. No logo, embedded WebView or uncaught runtime error remained in either loader.
 
-## Interactive preview
+## Current validation path
 
-The branch includes a prebuilt, backend-isolated interactive presentation under `preview/`. Run `npm run preview:ui` from the repository root and open `http://127.0.0.1:4174`. It uses the actual post-login sub-agent navigation and screen components with synthetic local accounts and requests. No additional packages, Android build, Expo account or backend is required. The surrounding page can switch viewport sizes and reset local preview state.
+The obsolete checked-in browser preview has been removed from the repository. UI validation now uses the application source directly through automated tests, Expo export/build checks and native-device testing. Historical isolated browser-preview results elsewhere in this document remain evidence of earlier design validation, not a current runnable repository feature.
 
-The checked-in preview is not a second implementation and does not bypass production authentication: its fixture transport is bundled only into the separate preview artifact. It cannot move funds or perform production actions. Native hardware acceptance remains separate.
+Native hardware acceptance remains separate and should still cover device-specific layout, safe areas, performance, permissions and interaction behaviour.
