@@ -50,17 +50,10 @@
       "expo-splash-screen"
     ],
     "extra": {
-      "firebaseApiKey": "AIzaSyCvD5JbWjzEEF2CbG5r8_YkvoRaY3X9qpA",
-      "firebaseAuthDomain": "silverstone-frontend.firebaseapp.com",
-      "firebaseProjectId": "silverstone-frontend",
-      "firebaseStorageBucket": "silverstone-frontend.firebasestorage.app",
-      "firebaseMessagingSenderId": "197875724216",
-      "firebaseAppId": "1:197875724216:web:5df97efeb14addd592a94d",
       "eas": {
         "projectId": "bde2a248-8bd8-4716-984f-41ca5a9a93e9"
       }
     },
     "owner": "silverstone05s-organization"
-  },
-  "owner": "dev.05"
+  }
 }
