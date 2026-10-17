@@ -9,6 +9,7 @@ import { db, doc, updateDoc } from '../../api/screenData';
 import {
   AgentScroll, AgentButton, AgentSheet, AgentRow, useAgentUI,
 } from '../../components/agent/AgentUI';
+import { AgentConfirmDialog } from '../../components/agent/AgentConfirmDialog';
 
 const providedText = value => typeof value === 'string' && value.trim() ? value.trim() : null;
 
@@ -26,6 +27,7 @@ export default function ProfileScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [confirmedName, setConfirmedName] = useState(profile?.name);
   const [copied, setCopied] = useState(false);
+  const [signOutVisible, setSignOutVisible] = useState(false);
 
   useEffect(() => { setConfirmedName(profile?.name); }, [profile?.name, user?.id]);
 
@@ -57,11 +59,11 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(copy('Sign out', 'Ondoka'), copy('Return to your PIN screen?', 'Rudi kwenye skrini ya PIN?'), [
-      { text: copy('Cancel', 'Ghairi'), style: 'cancel' },
-      { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: lockSession },
-    ]);
+  const handleLogout = () => setSignOutVisible(true);
+  const confirmSignOut = () => {
+    setSignOutVisible(false);
+    // Local sign out only locks the retained session; account switching uses real logout.
+    lockSession();
   };
 
   const copyAgentNumber = async () => {
@@ -139,6 +141,20 @@ export default function ProfileScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={17} color={colors.secondary} />
         </TouchableOpacity>
       </AgentScroll>
+
+      <AgentConfirmDialog
+        visible={signOutVisible}
+        icon="log-out-outline"
+        title={copy('Sign out?', 'Ungependa kuondoka?')}
+        description={copy(
+          "You'll return to your PIN screen. Your account will stay linked to this device.",
+          'Utarudi kwenye skrini ya PIN. Akaunti yako itabaki imeunganishwa na kifaa hiki.',
+        )}
+        cancelLabel={copy('Cancel', 'Ghairi')}
+        confirmLabel={copy('Sign out', 'Ondoka')}
+        onCancel={() => setSignOutVisible(false)}
+        onConfirm={confirmSignOut}
+      />
 
       <AgentSheet visible={sheet === 'personal'} onClose={closeSheet} title={copy('Personal details', 'Taarifa binafsi')}>
         <View style={[s.detailRow, { borderBottomColor: colors.border }]}>
