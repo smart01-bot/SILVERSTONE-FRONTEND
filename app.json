@@ -5,12 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#EEF0F2",
     "icon": "./assets/images/swift-wakala-icon.png",
     "splash": {
       "backgroundColor": "#EEF0F2",
       "resizeMode": "contain"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/swift-wakala-adaptive.png",
         "backgroundColor": "#FFFFFF",
@@ -40,6 +42,7 @@
       }
     },
     "plugins": [
+      "expo-system-ui",
       "expo-font",
       "expo-secure-store",
       "expo-splash-screen"

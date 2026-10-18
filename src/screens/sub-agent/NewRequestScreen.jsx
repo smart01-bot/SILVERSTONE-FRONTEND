@@ -174,7 +174,7 @@ export default function NewRequestScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={[s.screen, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      enabled={Platform.OS === 'ios'} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + headerHeight : 0}>
       <AgentScroll ref={scrollRef} contentContainerStyle={s.content}>
         <Text style={[s.subtitle, { color: colors.secondary }]}>{copy('Set up your next transfer', 'Andaa uhamisho wako unaofuata')}</Text>

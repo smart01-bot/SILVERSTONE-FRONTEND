@@ -105,7 +105,9 @@ export function AgentSheet({ visible, onClose, title, children }) {
   const insets = useSafeAreaInsets();
   return <Modal transparent visible={visible} animationType={reducedMotion ? 'none' : 'slide'}
     onRequestClose={onClose} statusBarTranslucent>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    {/* Android's modal window already uses adjustResize. A second JS height
+        adjustment trails the IME animation and makes the sheet jump. */}
+    <KeyboardAvoidingView enabled={Platform.OS === 'ios'} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.modal, { backgroundColor: colors.scrim }]}>
       <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
       <View accessibilityViewIsModal style={[styles.sheet, { borderColor:colors.glassBorder, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16), marginTop: insets.top + 32 }]}>
