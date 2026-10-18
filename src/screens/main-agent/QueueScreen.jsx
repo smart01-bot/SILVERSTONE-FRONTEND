@@ -205,8 +205,8 @@ export default function QueueScreen({ navigation }) {
                   <Text style={[s.phone, { color: theme.textDim }]}>To: {req.destPhone}</Text>
                 </View>
 
-                <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:13,lineHeight:20}}>{req.nextAction}</Text>
-                {req.reservation && <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:12,lineHeight:19}}>{reservationLabel(req.reservation)}</Text>}
+                <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:14,lineHeight:21}}>{req.nextAction}</Text>
+                {req.reservation && <Text style={{color:theme.textDim,fontFamily:fonts.body,fontSize:13,lineHeight:20}}>{reservationLabel(req.reservation)}</Text>}
 
                 <View style={s.actions}>
                   {req.status === 'awaiting_review' && (
@@ -247,8 +247,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
   },
   headerRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 31, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 18, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   iconBtn: {
     width: 42, height: 42, borderRadius: radius.md,
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -261,7 +261,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   card: {
     borderRadius:20,borderWidth:1,borderLeftWidth:2,
@@ -273,33 +273,33 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText:   { fontSize: 17, fontFamily: fonts.bodySemi },
-  agentName:    { fontSize: 17, fontFamily: fonts.bodySemi },
-  agentSub:     { fontSize: 12,lineHeight:19,fontFamily:fonts.body,marginTop:3 },
+  avatarText:   { fontSize: 18, fontFamily: fonts.bodySemi },
+  agentName:    { fontSize: 18, fontFamily: fonts.bodySemi },
+  agentSub:     { fontSize: 13,lineHeight:20,fontFamily:fonts.body,marginTop:3 },
   cardTopRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
   urgentTag: {
     backgroundColor: '#F59E0B20', paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2,
   },
-  urgentText: { color: '#F59E0B', fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.6 },
+  urgentText: { color: '#F59E0B', fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.6 },
   waitBadge:  { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
-  waitText:   { fontSize: 15, fontFamily: fonts.bodyBold },
+  waitText:   { fontSize: 16, fontFamily: fonts.bodyBold },
 
   routeRow:  { flexDirection: 'row',flexWrap:'wrap',alignItems:'center',gap: spacing.sm },
-  route:     { fontSize: 17, fontFamily: fonts.bodySemi },
-  amount:    { fontSize: 22, fontFamily: fonts.bodyXBold, marginLeft: 'auto' },
+  route:     { fontSize: 18, fontFamily: fonts.bodySemi },
+  amount:    { fontSize: 23, fontFamily: fonts.bodyXBold, marginLeft: 'auto' },
   phonesRow: { gap:6 },
-  phone:     { fontSize: 13,lineHeight:20, fontFamily: fonts.body },
+  phone:     { fontSize: 14,lineHeight:21, fontFamily: fonts.body },
 
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   btnOutline: {
     flex: 1, minHeight:48,paddingVertical:12,paddingHorizontal:8,borderRadius: radius.md, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnOutlineText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  btnOutlineText: { fontSize: 15, fontFamily: fonts.bodySemi },
   btnFilled: {
     flex: 1, minHeight:48,paddingVertical:12,paddingHorizontal:8,borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnFilledText: { color: '#fff', fontSize: 17, fontFamily: fonts.bodyBold },
+  btnFilledText: { color: '#fff', fontSize: 18, fontFamily: fonts.bodyBold },
 });

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenLoader } from '../components/Loader';
 import { agentColors } from '../components/agent/agentTheme';
+import { AgentConfirmDialog } from '../components/agent/AgentConfirmDialog';
 import { AuthFrame, AuthHeading, AuthNotice, AuthButton, useAuthStyle } from '../components/auth/AuthUI';
 
 import AuthNavigator from './AuthNavigator';
@@ -23,7 +24,7 @@ import ForgotPinScreen from '../screens/auth/ForgotPinScreen';
 export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator({ fontsReady = true }) {
-  const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists, connectionError, retryConnection } = useAuth();
+  const { user, profile, authLoading, sessionLocked, unlockSession, checkPinExists, connectionError, retryConnection, logoutError, dismissLogoutError } = useAuth();
   const { theme, isDark, themeReady } = useTheme();
   const { copy } = useAuthStyle();
 
@@ -219,6 +220,9 @@ export default function AppNavigator({ fontsReady = true }) {
       importantForAccessibility={showSplash ? 'no-hide-descendants' : 'auto'}>
       {fontsReady && themeReady ? renderRoute() : null}
     </Animated.View>
+    {logoutError ? <AgentConfirmDialog visible icon="log-out-outline" hideCancel
+      title={copy('Sign out failed', 'Imeshindikana kuondoka')} description={logoutError}
+      confirmLabel={copy('Got it', 'Nimeelewa')} onCancel={dismissLogoutError} onConfirm={dismissLogoutError} /> : null}
     {showSplash ? <View style={StyleSheet.absoluteFillObject}>
       <SplashScreen ready={routeReady} resourcesReady={fontsReady && themeReady}
         contentProgress={contentProgress} onMotionPreference={setReducedMotion} onDone={() => setShowSplash(false)} />

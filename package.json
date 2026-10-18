@@ -10,6 +10,7 @@
     "build:android": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile preview --platform android",
     "build:dev": "unset NPM_CONFIG_PREFIX && nvm use 20.19.4 && eas build --profile development --platform android",
     "test": "node --test tests/*.test.mjs",
+    "icons:generate": "node scripts/generate-app-icons.cjs",
     "build:check": "expo export --platform android --output-dir dist --max-workers 2",
     "build": "npm run build:check"
   },
@@ -53,6 +54,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@types/react": "~18.2.79",
+    "sharp": "^0.35.5",
     "typescript": "~5.9.2"
   },
   "private": true

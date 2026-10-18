@@ -2,7 +2,7 @@
 import React, { useState,useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator }    from '@react-navigation/drawer';
-import { View, Text, Keyboard, Platform } from 'react-native';
+import { View, Text, Keyboard, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/DrawerContent';
@@ -35,7 +35,7 @@ export function MainTabBar({state,descriptors,navigation}) {
         onLongPress={()=>navigation.emit({type:'tabLongPress',target:route.key})}
         style={{minHeight:64,paddingVertical:8,paddingHorizontal:2,borderRadius:21,alignItems:'center',justifyContent:'center',backgroundColor:selected?colors.selected:'transparent',gap:5}}>
         <Ionicons name={icons[route.name]+(selected?'':'-outline')} size={23} color={selected?colors.text:colors.secondary}/>
-        <Text style={{fontFamily:selected?fonts.bodySemi:fonts.body,fontSize:10,lineHeight:15,color:selected?colors.text:colors.secondary,textAlign:'center'}}>{options.tabBarLabel}</Text>
+        <Text style={{fontFamily:selected?fonts.bodySemi:fonts.body,fontSize:11,lineHeight:16,color:selected?colors.text:colors.secondary,textAlign:'center'}}>{options.tabBarLabel}</Text>
       </PressFeedback>})}
     </View>
   </View>;
@@ -63,7 +63,7 @@ function MainTabs() {
         tabBarActiveTintColor:   theme.primary,
         tabBarInactiveTintColor: theme.textDim,
         tabBarLabelStyle: {
-          fontSize:      13,
+          fontSize:      14,
           fontFamily:    fonts.bodyBold,
           marginTop:     2,
           letterSpacing: 0.1,
@@ -110,25 +110,22 @@ function MainTabs() {
 }
 
 function MainAgentContent() {
-  const { theme, tr } = useTheme();
+  const { colors } = useAgentUI();
+  const { width } = useWindowDimensions();
 
-  const DRAWER_ITEMS = [
-    { label: tr('overview'),  icon: 'bar-chart-outline',        onPress: nav => nav.navigate('MainTabs', { screen: 'Overview'  }) },
-    { label: tr('queue'),     icon: 'list-outline',             onPress: nav => nav.navigate('MainTabs', { screen: 'Queue'     }) },
-    { label: tr('transfers'), icon: 'swap-horizontal-outline',  onPress: nav => nav.navigate('MainTabs', { screen: 'Transfers' }) },
-    { label: tr('agents'),    icon: 'people-outline',           onPress: nav => nav.navigate('MainTabs', { screen: 'Agents'    }) },
-    { label: tr('approvals'), icon: 'checkmark-circle-outline', onPress: nav => nav.navigate('MainTabs', { screen: 'Approvals' }) },
-  ];
   return (
     <Drawer.Navigator
       screenOptions={{
         headerShown:    false,
         drawerType:     'front',
-        overlayColor:   'rgba(0,0,0,0.55)',
+        overlayColor:   colors.scrim,
         swipeEdgeWidth: 60,
         drawerStyle: {
-          width:           290,
-          backgroundColor: theme.surface,
+          width: Math.min(352, width - 32),
+          backgroundColor: colors.bg,
+          borderTopRightRadius: 30,
+          borderBottomRightRadius: 30,
+          overflow: 'hidden',
           ...Platform.select({
             ios:     { shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.22, shadowRadius: 18 },
             android: { elevation: 22 },
@@ -136,7 +133,7 @@ function MainAgentContent() {
         },
       }}
       drawerContent={(props) => (
-        <DrawerContent {...props} items={DRAWER_ITEMS} />
+        <DrawerContent {...props} />
       )}
     >
       <Drawer.Screen name="MainTabs" component={MainTabs} />

@@ -144,8 +144,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  title: { fontSize: 34, fontFamily: fonts.display, letterSpacing: -0.5, textAlign: 'center' },
-  sub:   { fontSize: 18, fontFamily: fonts.body,    textAlign: 'center', lineHeight: 28 },
+  title: { fontSize: 35, fontFamily: fonts.display, letterSpacing: -0.5, textAlign: 'center' },
+  sub:   { fontSize: 19, fontFamily: fonts.body,    textAlign: 'center', lineHeight: 29 },
 
   card:    { width: '100%', borderRadius: radius.xl - 2, borderWidth: 1, overflow: 'hidden' },
   cardRow: {
@@ -154,8 +154,8 @@ const s = StyleSheet.create({
     alignItems:     'center',
     padding:        spacing.md,
   },
-  cardLabel: { fontSize: 17, fontFamily: fonts.body },
-  cardValue: { fontSize: 19, fontFamily: fonts.bodyBold },
+  cardLabel: { fontSize: 18, fontFamily: fonts.body },
+  cardValue: { fontSize: 20, fontFamily: fonts.bodyBold },
   divider:   { height: 1 },
   idRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 1 },
 
@@ -168,7 +168,7 @@ const s = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
   },
-  btnOutlineText: { fontSize: 18, fontFamily: fonts.bodyBold },
+  btnOutlineText: { fontSize: 19, fontFamily: fonts.bodyBold },
   btnFilled: {
     flex:           1,
     height:         58,
@@ -176,5 +176,5 @@ const s = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
   },
-  btnFilledText: { color: '#fff', fontSize: 18, fontFamily: fonts.bodyBold },
+  btnFilledText: { color: '#fff', fontSize: 19, fontFamily: fonts.bodyBold },
 });

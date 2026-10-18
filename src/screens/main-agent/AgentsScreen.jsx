@@ -141,15 +141,15 @@ const s = StyleSheet.create({
     position: 'absolute', width: 180, height: 180, borderRadius: 90,
     backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
   },
-  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 31, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 18, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
   searchWrap: { paddingHorizontal: 24, paddingTop: spacing.md - 4, paddingBottom: spacing.xs },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
-  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 16, fontFamily: fonts.body },
+  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 17, fontFamily: fonts.body },
 
   card: {
     borderRadius:20,borderWidth:1,
@@ -163,24 +163,24 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText:  { fontSize: 20, fontFamily: fonts.bodyBold },
+  avatarText:  { fontSize: 21, fontFamily: fonts.bodyBold },
   agentInfo:   { flex: 1, gap: 2 },
-  agentName:   { fontSize: 19, fontFamily: fonts.bodyBold },
-  agentPhone:  { fontSize: 14,lineHeight:22, fontFamily: fonts.body },
-  agentBiz:    { fontSize: 15, fontFamily: fonts.body },
+  agentName:   { fontSize: 20, fontFamily: fonts.bodyBold },
+  agentPhone:  { fontSize: 15,lineHeight:23, fontFamily: fonts.body },
+  agentBiz:    { fontSize: 16, fontFamily: fonts.body },
   activeBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs - 1, borderRadius: radius.sm - 2 },
-  activeText:  { color: '#16A34A', fontSize: 15, fontFamily: fonts.bodyBold },
+  activeText:  { color: '#16A34A', fontSize: 16, fontFamily: fonts.bodyBold },
 
   networksRow: {
     flexDirection: 'row', gap: spacing.sm - 2,
     paddingHorizontal: spacing.md - 2, paddingBottom: spacing.md - 4, flexWrap: 'wrap',
   },
   netChip:     { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm - 2, borderWidth: 1 },
-  netChipText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  netChipText: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   statsRow:    { flexDirection: 'row', borderTopWidth: 1, padding: spacing.md - 4 },
   stat:        { flex: 1, alignItems: 'center' },
-  statValue:   { fontSize: 18, fontFamily: fonts.bodyBold },
-  statLabel:   { fontSize: 14, fontFamily: fonts.body, marginTop: 2 },
+  statValue:   { fontSize: 19, fontFamily: fonts.bodyBold },
+  statLabel:   { fontSize: 15, fontFamily: fonts.body, marginTop: 2 },
   statDivider: { width: 1, marginVertical: spacing.xs },
 });

@@ -257,7 +257,7 @@ export default function RequestDetailModal({
 
           {request.urgent && (
             <View style={[styles.urgentBadge, { backgroundColor: '#FEF3C720' }]}>
-              <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 13 }}>
+              <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 14 }}>
                 URGENT
               </Text>
             </View>
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems:     'center',
   },
   sheetTitle: {
-    fontSize:   20,
+    fontSize:   21,
     fontWeight: '800',
   },
   closeBtn: {
@@ -425,10 +425,10 @@ const styles = StyleSheet.create({
     borderRadius:  10,
     padding:       10,
   },
-  idLabel: { fontSize: 12, fontWeight: '500' },
+  idLabel: { fontSize: 13, fontWeight: '500' },
   idValue: {
     flex:       1,
-    fontSize:   13,
+    fontSize:   14,
     fontWeight: '700',
   },
   routeCard: {
@@ -440,10 +440,10 @@ const styles = StyleSheet.create({
     padding:        14,
   },
   routeItem:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  routeNet:    { fontSize: 15, fontWeight: '700' },
-  routeWallet: { fontSize: 12 },
+  routeNet:    { fontSize: 16, fontWeight: '700' },
+  routeWallet: { fontSize: 13 },
   amount: {
-    fontSize:   32,
+    fontSize:   33,
     fontWeight: '800',
     textAlign:  'center',
   },
@@ -464,9 +464,9 @@ const styles = StyleSheet.create({
     padding:        12,
     borderBottomWidth: 1,
   },
-  detailLabel: { fontSize: 13 },
+  detailLabel: { fontSize: 14 },
   detailValue: {
-    fontSize:   13,
+    fontSize:   14,
     fontWeight: '600',
     maxWidth:   '60%',
     textAlign:  'right',
@@ -480,6 +480,6 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color:      '#fff',
     fontWeight: '700',
-    fontSize:   15,
+    fontSize:   16,
   },
 });

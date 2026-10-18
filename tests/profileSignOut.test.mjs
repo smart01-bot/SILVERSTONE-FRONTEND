@@ -24,7 +24,7 @@ const palette = {
 };
 const fonts = { body: 'Inter', bodyMed: 'Inter', bodySemi: 'Inter', heading: 'Manrope' };
 
-function profileHarness(language = 'en') {
+function profileHarness(language = 'en', screen = '../src/screens/sub-agent/ProfileScreen.jsx') {
   const state = [];
   let cursor = 0, locks = 0;
   const react = {
@@ -36,13 +36,13 @@ function profileHarness(language = 'en') {
     },
   };
   const module = { exports: {} };
-  vm.runInNewContext(compile('../src/screens/sub-agent/ProfileScreen.jsx'), {
+  vm.runInNewContext(compile(screen), {
     module, exports: module.exports,
     require: name => {
       if (name === 'react') return react;
       if (name === 'react-native') return {
-        View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity',
-        StyleSheet: styles, Alert: { alert() { throw Error('Sign out must not use a native alert'); } },
+        View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable', ScrollView: 'ScrollView',
+        StyleSheet: styles, useWindowDimensions: () => ({ height: 800, fontScale: 1 }), Alert: { alert() { throw Error('Sign out must not use a native alert'); } },
       };
       if (name === '@expo/vector-icons') return { Ionicons: 'Ionicons' };
       if (name === 'expo-clipboard') return {};
@@ -51,7 +51,11 @@ function profileHarness(language = 'en') {
         profile: { name: 'Demo Agent', pinSet: true },
         lockSession: () => { locks++; },
       }) };
-      if (name.includes('ThemeContext')) return { useTheme: () => ({ userPreference: 'dark' }) };
+      if (name.includes('ThemeContext')) return { useTheme: () => ({ userPreference: 'dark', isDark: true, lang: language, tr: key => key }) };
+      if (name === 'react-native-safe-area-context') return { useSafeAreaInsets: () => ({ top: 24, bottom: 24 }) };
+      if (name.includes('PressFeedback')) return { default: 'PressFeedback', __esModule: true };
+      if (name.includes('SwiftWakalaMark')) return { default: 'SwiftWakalaMark', __esModule: true };
+      if (name.includes('MainAgentWorkspaceSheet')) return { default: 'MainAgentWorkspaceSheet', __esModule: true, profileText: value => typeof value === 'string' && value.trim() ? value.trim() : null };
       if (name.includes('constants/theme')) return { fonts };
       if (name.includes('screenData')) return { db: {}, doc: () => {}, updateDoc: async () => {} };
       if (name.includes('AgentConfirmDialog')) return { AgentConfirmDialog: 'AgentConfirmDialog' };
@@ -64,7 +68,7 @@ function profileHarness(language = 'en') {
     },
   });
   return {
-    render() { cursor = 0; return module.exports.default({ navigation: { navigate() {} } }); },
+    render() { cursor = 0; return module.exports.default({ navigation: { navigate() {}, closeDrawer() {} }, items: [{ route: 'Overview', label: 'Overview', icon: 'grid-outline' }] }); },
     get locks() { return locks; },
   };
 }
@@ -95,7 +99,7 @@ test('Profile confirmation translates actions and explanation to Kiswahili', () 
   assert.match(dialog.props.description, /skrini ya PIN/);
 });
 
-function dialogTree(reducedMotion = false) {
+function dialogTree(reducedMotion = false, hideCancel = false) {
   let cancelled = 0, confirmed = 0;
   const module = { exports: {} };
   const react = { createElement };
@@ -109,14 +113,14 @@ function dialogTree(reducedMotion = false) {
       if (name === '@expo/vector-icons') return { Ionicons: 'Ionicons' };
       if (name.includes('LoaderContext')) return { LoadingModal: 'Modal' };
       if (name.includes('constants/theme')) return { fonts };
-      if (name.includes('AgentUI')) return {
-        useAgentUI: () => ({ colors: palette, copy: en => en, reducedMotion }),
-      };
+      if (name.includes('ThemeContext')) return { useTheme: () => ({ isDark: true, lang: 'en' }) };
+      if (name.includes('agentTheme')) return { agentColors: () => palette };
+      if (name.includes('Loader')) return { useReducedMotion: () => reducedMotion };
       throw Error('Unexpected import ' + name);
     },
   });
   const tree = module.exports.AgentConfirmDialog({
-    visible: true, icon: 'log-out-outline', title: 'Sign out?',
+    visible: true, hideCancel, icon: 'log-out-outline', title: 'Sign out?',
     description: 'Return to PIN', cancelLabel: 'Cancel', confirmLabel: 'Sign out',
     onCancel: () => { cancelled++; }, onConfirm: () => { confirmed++; },
   });
@@ -138,4 +142,27 @@ test('dialog uses theme surfaces, not native Alert, with separate cancel and con
   find(h.tree, 'agent-confirm-accept').props.onPress();
   assert.equal(h.confirmed, 1);
   assert.equal(dialogTree(true).tree.props.animationType, 'none');
+});
+
+test('sign-out error dialog has one dismiss action and supports Android Back', () => {
+  const h = dialogTree(false, true);
+  assert.equal(find(h.tree, 'agent-confirm-cancel'), undefined);
+  h.tree.props.onRequestClose();
+  assert.equal(h.cancelled, 1);
+  find(h.tree, 'agent-confirm-accept').props.onPress();
+  assert.equal(h.confirmed, 1);
+});
+
+test('main-agent drawer sign out requires confirmation and retains the account', () => {
+  const h = profileHarness('en', '../src/components/DrawerContent.jsx');
+  find(h.render(), 'drawer-sign-out').props.onPress();
+  let dialog = nodes(h.render()).find(n => n.type === 'AgentConfirmDialog');
+  assert.equal(dialog.props.visible, true);
+  dialog.props.onCancel();
+  assert.equal(h.locks, 0);
+  find(h.render(), 'drawer-sign-out').props.onPress();
+  dialog = nodes(h.render()).find(n => n.type === 'AgentConfirmDialog');
+  dialog.props.onConfirm();
+  assert.equal(h.locks, 1);
+  assert.equal(nodes(h.render()).find(n => n.type === 'AgentConfirmDialog').props.visible, false);
 });

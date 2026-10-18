@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState, Alert } from "react-native";
+import { AppState } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { api, onInvalidSession } from "../config/api";
 import { applicationFields } from "../api/onboarding";
@@ -20,6 +20,8 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true),
     [sessionLocked, setSessionLocked] = useState(false);
   const [connectionError, setConnectionError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
+  const loggingOut = useRef(false);
   const backgroundAt = useRef(null);
   const generation = useRef(0);
   const clear = () => {
@@ -106,11 +108,17 @@ export function AuthProvider({ children }) {
     }
   }
   async function logout() {
+    if (loggingOut.current) return;
+    loggingOut.current = true;
+    setLogoutError("");
     try {
       await api.logout();
       clear();
+      setConnectionError("");
     } catch (error) {
-      Alert.alert("Sign out failed", error.message);
+      setLogoutError(error.message || "Please try again.");
+    } finally {
+      loggingOut.current = false;
     }
   }
   function lockSession() {
@@ -149,6 +157,8 @@ export function AuthProvider({ children }) {
         authLoading,
         sessionLocked,
         connectionError,
+        logoutError,
+        dismissLogoutError: () => setLogoutError(""),
         login,
         register,
         logout,

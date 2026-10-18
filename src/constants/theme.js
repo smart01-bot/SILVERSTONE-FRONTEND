@@ -79,20 +79,20 @@ export const DARK = {
 export const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 export const typography = {
-  display:   { fontSize: 48, fontWeight: '800', letterSpacing: -1.2 },
-  h1:        { fontSize: 38, fontWeight: '800', letterSpacing: -0.9 },
-  h2:        { fontSize: 32, fontWeight: '700', letterSpacing: -0.6 },
-  h3:        { fontSize: 27, fontWeight: '700', letterSpacing: -0.3 },
-  h4:        { fontSize: 22, fontWeight: '700' },
-  body:      { fontSize: 20, fontWeight: '400', lineHeight: 30 },
-  bodyMed:   { fontSize: 20, fontWeight: '500', lineHeight: 30 },
-  caption:   { fontSize: 17, fontWeight: '400', lineHeight: 26 },
-  capMed:    { fontSize: 17, fontWeight: '500', lineHeight: 26 },
-  label:     { fontSize: 16, fontWeight: '500', letterSpacing: 0.3 },
-  labelCaps: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
-  mono:      { fontSize: 20, fontFamily: mono },
-  monoLg:    { fontSize: 38, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 },
-  monoXl:    { fontSize: 52, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },
+  display:   { fontSize: 49, fontWeight: '800', letterSpacing: -1.2 },
+  h1:        { fontSize: 39, fontWeight: '800', letterSpacing: -0.9 },
+  h2:        { fontSize: 33, fontWeight: '700', letterSpacing: -0.6 },
+  h3:        { fontSize: 28, fontWeight: '700', letterSpacing: -0.3 },
+  h4:        { fontSize: 23, fontWeight: '700' },
+  body:      { fontSize: 21, fontWeight: '400', lineHeight: 31 },
+  bodyMed:   { fontSize: 21, fontWeight: '500', lineHeight: 31 },
+  caption:   { fontSize: 18, fontWeight: '400', lineHeight: 27 },
+  capMed:    { fontSize: 18, fontWeight: '500', lineHeight: 27 },
+  label:     { fontSize: 17, fontWeight: '500', letterSpacing: 0.3 },
+  labelCaps: { fontSize: 15, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  mono:      { fontSize: 21, fontFamily: mono },
+  monoLg:    { fontSize: 39, fontWeight: '700', fontFamily: mono, letterSpacing: -0.5 },
+  monoXl:    { fontSize: 53, fontWeight: '800', fontFamily: mono, letterSpacing: -1 },
 };
 
 export const spacing = {

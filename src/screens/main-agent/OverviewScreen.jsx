@@ -60,8 +60,8 @@ export default function OverviewScreen({navigation}) {
   </SafeAreaView>;
 }
 const s=StyleSheet.create({root:{flex:1},content:{paddingHorizontal:24,paddingBottom:24},hero:{padding:24,borderRadius:26,gap:12},
-  heroLabel:{fontFamily:fonts.bodyMed,fontSize:14,lineHeight:22},heroTitle:{fontFamily:fonts.display,fontSize:32,lineHeight:40,letterSpacing:-0.8},heroSub:{fontFamily:fonts.body,fontSize:14,lineHeight:22,marginBottom:8},
-  metrics:{flexDirection:'row',flexWrap:'wrap',borderBottomWidth:1,marginTop:22,paddingBottom:18,gap:10},metric:{minHeight:90,paddingVertical:10,gap:7},metricNumber:{fontFamily:fonts.display,fontSize:29,lineHeight:38},metricLabel:{fontFamily:fonts.body,fontSize:12,lineHeight:19},
-  volume:{paddingVertical:24,gap:8},volumeAmount:{fontFamily:fonts.display,fontSize:28,lineHeight:37,letterSpacing:-0.5},sectionTitle:{fontFamily:fonts.bodySemi,fontSize:17,lineHeight:25},sectionHeading:{paddingVertical:12},
-  request:{flexDirection:'row',flexWrap:'wrap',alignItems:'center',paddingVertical:20,gap:12,borderBottomWidth:StyleSheet.hairlineWidth},requestName:{fontFamily:fonts.bodySemi,fontSize:16,lineHeight:23},requestAmount:{fontFamily:fonts.bodySemi,fontSize:17,lineHeight:24,fontVariant:['tabular-nums']},
+  heroLabel:{fontFamily:fonts.bodyMed,fontSize:15,lineHeight:23},heroTitle:{fontFamily:fonts.display,fontSize:33,lineHeight:41,letterSpacing:-0.8},heroSub:{fontFamily:fonts.body,fontSize:15,lineHeight:23,marginBottom:8},
+  metrics:{flexDirection:'row',flexWrap:'wrap',borderBottomWidth:1,marginTop:22,paddingBottom:18,gap:10},metric:{minHeight:90,paddingVertical:10,gap:7},metricNumber:{fontFamily:fonts.display,fontSize:30,lineHeight:39},metricLabel:{fontFamily:fonts.body,fontSize:13,lineHeight:20},
+  volume:{paddingVertical:24,gap:8},volumeAmount:{fontFamily:fonts.display,fontSize:29,lineHeight:38,letterSpacing:-0.5},sectionTitle:{fontFamily:fonts.bodySemi,fontSize:18,lineHeight:26},sectionHeading:{paddingVertical:12},
+  request:{flexDirection:'row',flexWrap:'wrap',alignItems:'center',paddingVertical:20,gap:12,borderBottomWidth:StyleSheet.hairlineWidth},requestName:{fontFamily:fonts.bodySemi,fontSize:17,lineHeight:24},requestAmount:{fontFamily:fonts.bodySemi,fontSize:18,lineHeight:25,fontVariant:['tabular-nums']},
 });

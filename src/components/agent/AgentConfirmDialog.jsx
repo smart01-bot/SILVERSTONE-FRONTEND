@@ -3,14 +3,19 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingModal as Modal } from '../../context/LoaderContext';
 import { fonts } from '../../constants/theme';
-import { useAgentUI } from './AgentUI';
+import { useTheme } from '../../context/ThemeContext';
+import { agentColors } from './agentTheme';
+import { useReducedMotion } from '../Loader';
 
 // Shared, theme-aware confirmation dialog. Callers own the action and visibility.
 export function AgentConfirmDialog({
   visible, icon = 'help-circle-outline', title, description,
-  cancelLabel, confirmLabel, onCancel, onConfirm,
+  cancelLabel, confirmLabel, onCancel, onConfirm, hideCancel = false,
 }) {
-  const { colors, copy, reducedMotion } = useAgentUI();
+  const { isDark, lang } = useTheme();
+  const colors = agentColors(isDark);
+  const copy = (en, sw) => lang === 'sw' ? sw : en;
+  const reducedMotion = useReducedMotion();
   return (
     <Modal transparent visible={visible} animationType={reducedMotion ? 'none' : 'fade'}
       onRequestClose={onCancel} statusBarTranslucent navigationBarTranslucent>
@@ -32,7 +37,7 @@ export function AgentConfirmDialog({
             </Text>
           </ScrollView>
           <View style={styles.actions}>
-            <Pressable testID="agent-confirm-cancel" accessibilityRole="button"
+            {!hideCancel && <Pressable testID="agent-confirm-cancel" accessibilityRole="button"
               accessibilityLabel={cancelLabel || copy('Cancel', 'Ghairi')}
               onPress={onCancel} style={({ pressed }) => [
                 styles.button, { borderColor: colors.border, backgroundColor: pressed ? colors.selected : 'transparent' },
@@ -40,7 +45,7 @@ export function AgentConfirmDialog({
               <Text style={[styles.buttonText, { color: colors.text }]}>
                 {cancelLabel || copy('Cancel', 'Ghairi')}
               </Text>
-            </Pressable>
+            </Pressable>}
             <Pressable testID="agent-confirm-accept" accessibilityRole="button"
               accessibilityLabel={confirmLabel}
               onPress={onConfirm} style={({ pressed }) => [
@@ -68,13 +73,13 @@ const styles = StyleSheet.create({
   bodyScroll: { flexGrow: 0 },
   body: { paddingTop: 24, paddingHorizontal: 24, paddingBottom: 22 },
   iconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  title: { fontFamily: fonts.heading, fontSize: 23, lineHeight: 30, marginBottom: 8 },
-  description: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23 },
+  title: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 31, marginBottom: 8 },
+  description: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24 },
   actions: { flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 24, gap: 10 },
   button: {
     flex: 1, minWidth: 0, minHeight: 52, borderWidth: 1, borderRadius: 14,
     justifyContent: 'center', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 9,
   },
   confirmButton: { borderWidth: 0 },
-  buttonText: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  buttonText: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 23, textAlign: 'center' },
 });

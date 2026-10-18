@@ -1,19 +1,20 @@
 {
   "expo": {
-    "name": "Silverstone",
+    "name": "Swift Wakala",
     "slug": "silverstone",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "icon": "./assets/images/SilverS.png",
+    "icon": "./assets/images/swift-wakala-icon.png",
     "splash": {
       "backgroundColor": "#EEF0F2",
       "resizeMode": "contain"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/SilverS.png",
-        "backgroundColor": "#D32F2F"
+        "foregroundImage": "./assets/images/swift-wakala-adaptive.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/images/swift-wakala-adaptive.png"
       },
       "package": "com.silverstone.floatmanager",
       "versionCode": 2,

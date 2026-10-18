@@ -106,6 +106,6 @@ export function RefreshIndicator({ refreshing, label, color }) {
 const s = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   indicator: { alignItems: 'center', gap: 18, paddingVertical: 24, paddingHorizontal: 16 },
-  label: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, textAlign: 'center' },
+  label: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23, textAlign: 'center' },
   refresh: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 8 },
 });

@@ -51,6 +51,6 @@ export default function Step5Selfie({ navigation, route }) {
     </View>
     <RegistrationText style={{ textAlign: 'center' }}>{photo ? copy('Selected · Not saved yet', 'Imechaguliwa · Bado haijahifadhiwa') : previous ? copy('Your selfie is saved privately.', 'Picha yako imehifadhiwa kwa faragha.') : copy('Face visible · Good lighting', 'Uso uonekane · Mwanga mzuri')}</RegistrationText>
     <TextAction label={photo || previous ? copy('Choose another photo', 'Chagua picha nyingine') : copy('Choose a selfie photo', 'Chagua picha yako')} onPress={choose} disabled={busy} />
-    <RegistrationText style={{ textAlign: 'center', fontSize: 13 }}>{copy('PNG or JPEG · Up to 2 MB', 'PNG au JPEG · Hadi MB 2')}</RegistrationText>
+    <RegistrationText style={{ textAlign: 'center', fontSize: 14 }}>{copy('PNG or JPEG · Up to 2 MB', 'PNG au JPEG · Hadi MB 2')}</RegistrationText>
   </RegistrationFrame>;
 }

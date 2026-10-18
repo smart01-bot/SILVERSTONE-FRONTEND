@@ -327,8 +327,8 @@ const s = StyleSheet.create({
     position: 'absolute', width: 180, height: 180, borderRadius: 90,
     backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
   },
-  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 31, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 18, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   headerBadge: {
     marginTop:         spacing.sm,
     alignSelf:         'flex-start',
@@ -337,7 +337,7 @@ const s = StyleSheet.create({
     paddingVertical:   spacing.xs,
     borderRadius:      radius.full,
   },
-  headerBadgeText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodySemi },
+  headerBadgeText: { color: '#fff', fontSize: 16, fontFamily: fonts.bodySemi },
 
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
@@ -345,7 +345,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   card: {
     borderRadius: radius.lg, borderWidth: 1,
@@ -359,30 +359,30 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText:      { fontSize: 20, fontFamily: fonts.bodyBold },
+  avatarText:      { fontSize: 21, fontFamily: fonts.bodyBold },
   agentInfo:       { flex: 1, gap: 2 },
-  agentName:       { fontSize: 19, fontFamily: fonts.bodyBold },
-  agentSub:        { fontSize: 15, fontFamily: fonts.body },
-  rejectionReason: { fontSize: 15, fontFamily: fonts.body, color: '#C8102E', marginTop: 2 },
-  daysAgo:         { fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: 0.4 },
+  agentName:       { fontSize: 20, fontFamily: fonts.bodyBold },
+  agentSub:        { fontSize: 16, fontFamily: fonts.body },
+  rejectionReason: { fontSize: 16, fontFamily: fonts.body, color: '#C8102E', marginTop: 2 },
+  daysAgo:         { fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.4 },
 
   details: {
     borderTopWidth: 1, paddingHorizontal: spacing.md - 2,
     paddingVertical: spacing.sm + 2, gap: spacing.sm - 2,
   },
   detailRow:   { flexDirection: 'row', justifyContent: 'space-between' },
-  detailLabel: { fontSize: 15, fontFamily: fonts.body },
-  detailValue: { fontSize: 15, fontFamily: fonts.bodySemi },
+  detailLabel: { fontSize: 16, fontFamily: fonts.body },
+  detailValue: { fontSize: 16, fontFamily: fonts.bodySemi },
 
   actions: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md - 2, paddingTop: 0 },
   btnOutline: {
     flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
   },
-  btnOutlineText: { fontSize: 16, fontFamily: fonts.bodySemi },
+  btnOutlineText: { fontSize: 17, fontFamily: fonts.bodySemi },
   btnFilled: {
     flex: 1, height: 46, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnFilledText: { color: '#fff', fontSize: 16, fontFamily: fonts.bodyBold },
+  btnFilledText: { color: '#fff', fontSize: 17, fontFamily: fonts.bodyBold },
 });
