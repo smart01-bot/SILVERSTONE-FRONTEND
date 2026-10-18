@@ -124,3 +124,26 @@ test('failed sign out uses a dismissible themed dialog while retaining the recon
   assert.equal(find(h.render(), 'AgentConfirmDialog'), undefined);
   assert.ok(find(h.render(), 'AuthHeading'));
 });
+
+test('session handoffs have distinct motion stages while profile refreshes keep home stable', async () => {
+  const h = harness();
+  let tree = h.render();
+  find(tree, 'SplashScreen').props.onDone();
+  tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'guest:signed-out');
+  assert.equal(find(tree, 'SessionTransition').props.enabled, true);
+  h.auth.user = { id: 'one' }; h.auth.profile = approved; h.auth.sessionLocked = true;
+  h.render(); await tick(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-entry');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+  find(tree, 'PinEntryScreen').props.onSuccess(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:home-sub-agent');
+  h.auth.profile = { ...approved, name: 'Updated account' };
+  assert.equal(find(h.render(), 'SessionTransition').props.stage, 'one:home-sub-agent');
+  h.auth.sessionLocked = true; tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-entry');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+  find(tree, 'PinEntryScreen').props.onForgotPin(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-reset');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+});

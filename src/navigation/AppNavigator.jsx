@@ -7,6 +7,7 @@ import { canOperate } from '../api/presentation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenLoader } from '../components/Loader';
+import SessionTransition from '../components/SessionTransition';
 import { agentColors } from '../components/agent/agentTheme';
 import { AgentConfirmDialog } from '../components/agent/AgentConfirmDialog';
 import { AuthFrame, AuthHeading, AuthNotice, AuthButton, useAuthStyle } from '../components/auth/AuthUI';
@@ -86,6 +87,19 @@ export default function AppNavigator({ fontsReady = true }) {
   const pinPending = Boolean(user && profile && (checking || checkedKey !== pinKey));
   const routeReady = Boolean(connectionError) || (!authLoading && !pinPending && (!user || Boolean(profile)));
 
+  // These boundaries sit outside the page navigators, so they need their own
+  // entrance motion. Keep the key stable through profile refreshes and tab changes.
+  const stage = connectionError ? 'connection-error'
+    : authLoading || pinPending ? 'loading'
+    : pinReadError ? 'pin-error'
+    : !user ? 'signed-out'
+    : !profile ? 'loading'
+    : !canOperate(profile) ? 'application'
+    : profile.status === 'approved' && !pinExists ? 'pin-setup'
+    : sessionLocked || (profile.status === 'approved' && !pinVerified)
+      ? (showForgot ? 'pin-reset' : 'pin-entry')
+      : `home-${profile.role}`;
+
   function renderRoute() {
     if (connectionError) {
       return <AuthFrame>
@@ -148,7 +162,7 @@ export default function AppNavigator({ fontsReady = true }) {
     }
 
     // PIN not verified yet
-    if (profile.status === 'approved' && pinExists && !pinVerified) {
+    if (stage === 'pin-entry' || stage === 'pin-reset') {
       if (showForgot) {
         return (
           <ForgotPinScreen
@@ -171,36 +185,6 @@ export default function AppNavigator({ fontsReady = true }) {
       );
     }
 
-    // Session locked — nav tree renders behind PIN overlay so ref is always mounted
-    if (sessionLocked) {
-      return (
-        <View style={styles.root}>
-          <NavigationContainer ref={navigationRef} theme={navTheme}>
-            {profile.role === 'main-agent'
-              ? <MainAgentNavigator />
-              : <SubAgentNavigator />}
-          </NavigationContainer>
-          <View style={StyleSheet.absoluteFillObject}>
-            {showForgot
-              ? <ForgotPinScreen
-                  onBack={() => setShowForgot(false)}
-                  onComplete={() => {
-                    setShowForgot(false);
-                    setPinVerified(false);
-                    unlockSession();
-                  }}
-                />
-              : <PinEntryScreen
-                  isSessionUnlock
-                  onSuccess={() => { setPinVerified(true); unlockSession(); }}
-                  onForgotPin={() => setShowForgot(true)}
-                />
-            }
-          </View>
-        </View>
-      );
-    }
-
     // Fully authenticated
     return (
       <View style={styles.root}>
@@ -218,7 +202,9 @@ export default function AppNavigator({ fontsReady = true }) {
       transform: [{ translateY: showSplash && !reducedMotion ? contentProgress.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) : 0 }],
     }]} pointerEvents={showSplash ? 'none' : 'auto'} accessibilityElementsHidden={showSplash}
       importantForAccessibility={showSplash ? 'no-hide-descendants' : 'auto'}>
-      {fontsReady && themeReady ? renderRoute() : null}
+      <SessionTransition stage={`${user?.id || 'guest'}:${stage}`} enabled={!showSplash}>
+        {fontsReady && themeReady ? renderRoute() : null}
+      </SessionTransition>
     </Animated.View>
     {logoutError ? <AgentConfirmDialog visible icon="log-out-outline" hideCancel
       title={copy('Sign out failed', 'Imeshindikana kuondoka')} description={logoutError}
