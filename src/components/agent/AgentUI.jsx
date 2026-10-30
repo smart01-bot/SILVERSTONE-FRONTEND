@@ -105,7 +105,9 @@ export function AgentSheet({ visible, onClose, title, children }) {
   const insets = useSafeAreaInsets();
   return <Modal transparent visible={visible} animationType={reducedMotion ? 'none' : 'slide'}
     onRequestClose={onClose} statusBarTranslucent>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    {/* Android's modal window already uses adjustResize. A second JS height
+        adjustment trails the IME animation and makes the sheet jump. */}
+    <KeyboardAvoidingView enabled={Platform.OS === 'ios'} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.modal, { backgroundColor: colors.scrim }]}>
       <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
       <View accessibilityViewIsModal style={[styles.sheet, { borderColor:colors.glassBorder, backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16), marginTop: insets.top + 32 }]}>
@@ -126,16 +128,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24, flexGrow: 1 },
   button: { minHeight: 58, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  buttonText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 23 },
+  buttonText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 17, lineHeight: 24 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 66, paddingVertical: 18, borderBottomWidth: StyleSheet.hairlineWidth },
-  rowLabel: { flex: 1, fontFamily: fonts.bodyMed, fontSize: 15, lineHeight: 22 },
-  rowValue: { flexShrink: 1, maxWidth: '42%', fontFamily: fonts.body, fontSize: 14, lineHeight: 21, textAlign: 'right' },
+  rowLabel: { flex: 1, fontFamily: fonts.bodyMed, fontSize: 16, lineHeight: 23 },
+  rowValue: { flexShrink: 1, maxWidth: '42%', fontFamily: fonts.body, fontSize: 15, lineHeight: 22, textAlign: 'right' },
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 12 },
-  noticeText: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 20 },
+  noticeText: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 21 },
   modal: { flex: 1, justifyContent: 'flex-end' },
   sheet: { maxHeight: '88%', borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth:1, paddingHorizontal: 24, paddingTop: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  sheetTitle: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 21, lineHeight: 28 },
+  sheetTitle: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 22, lineHeight: 29 },
   close: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   sheetContent: { paddingBottom: 20 },
 });

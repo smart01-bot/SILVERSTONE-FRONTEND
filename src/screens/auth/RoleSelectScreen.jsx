@@ -87,7 +87,7 @@ function Welcome({ navigation }) {
     </View>
     <View style={[s.intro, compact && { marginTop: 30 }]}>
       <Text style={[s.eyebrow, { color: colors.secondary }]}>{copy('YOUR BUSINESS. IN MOTION.', 'BIASHARA YAKO. INAENDELEA.')}</Text>
-      <Text accessibilityRole="header" style={[s.title, { color: colors.text, fontSize: compact ? 40 : 48, lineHeight: compact ? 46 : 54 }]}>{copy('Let’s get\nyou moving', 'Tuendelee\npamoja')}<Text style={{ color: colors.muted }}>.</Text></Text>
+      <Text accessibilityRole="header" style={[s.title, { color: colors.text, fontSize: compact ? 41 : 49, lineHeight: compact ? 47 : 55 }]}>{copy('Let’s get\nyou moving', 'Tuendelee\npamoja')}<Text style={{ color: colors.muted }}>.</Text></Text>
       <Text style={[s.subtitle, { color: colors.secondary }]}>{copy('Choose how you use Swift Wakala.', 'Chagua jinsi unavyotumia Swift Wakala.')}</Text>
     </View>
     <WelcomeWing />
@@ -118,17 +118,17 @@ const s = StyleSheet.create({
   page: { flexGrow: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
-  brandName: { fontFamily: fonts.heading, fontSize: 18, letterSpacing: -.7 }, owner: { fontFamily: fonts.body, fontSize: 10, letterSpacing: .5, marginTop: 3 },
+  brandName: { fontFamily: fonts.heading, fontSize: 19, letterSpacing: -.7 }, owner: { fontFamily: fonts.body, fontSize: 11, letterSpacing: .5, marginTop: 3 },
   theme: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  intro: { marginTop: 48 }, eyebrow: { fontFamily: fonts.bodySemi, fontSize: 10, lineHeight: 16, letterSpacing: 1.8, marginBottom: 17 },
-  title: { fontFamily: fonts.heading, letterSpacing: -2.7 }, subtitle: { fontFamily: fonts.body, fontSize: 14, lineHeight: 23, marginTop: 19, letterSpacing: -.2 },
+  intro: { marginTop: 48 }, eyebrow: { fontFamily: fonts.bodySemi, fontSize: 11, lineHeight: 17, letterSpacing: 1.8, marginBottom: 17 },
+  title: { fontFamily: fonts.heading, letterSpacing: -2.7 }, subtitle: { fontFamily: fonts.body, fontSize: 15, lineHeight: 24, marginTop: 19, letterSpacing: -.2 },
   visual: { flexGrow: 1, minHeight: 196, maxHeight: 340, alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 12 },
   halo: { position: 'absolute' }, mark: { width: 164, height: 146 }, actions: { marginTop: 'auto' },
   selector: { borderWidth: 1, borderRadius: 21, padding: 5, flexDirection: 'row', overflow: 'hidden' },
   selection: { position: 'absolute', left: 5, top: 5, bottom: 5, borderRadius: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.13)' },
-  role: { flex: 1, minHeight: 48, paddingVertical: 12, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' }, roleText: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 23, textAlign: 'center' },
-  description: { fontFamily: fonts.body, fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 15, marginBottom: 25 },
-  continue: { minHeight: 60, borderRadius: 20, paddingVertical: 16, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12 }, continueText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 23 },
-  registration: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 17 }, newHere: { fontFamily: fonts.body, fontSize: 13 },
-  registerLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 3 }, registerText: { fontFamily: fonts.bodySemi, fontSize: 13 }, error: { fontFamily: fonts.body, fontSize: 13, lineHeight: 21, marginBottom: 12 },
+  role: { flex: 1, minHeight: 48, paddingVertical: 12, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' }, roleText: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 24, textAlign: 'center' },
+  description: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, textAlign: 'center', marginTop: 15, marginBottom: 25 },
+  continue: { minHeight: 60, borderRadius: 20, paddingVertical: 16, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12 }, continueText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 24 },
+  registration: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 17 }, newHere: { fontFamily: fonts.body, fontSize: 14 },
+  registerLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 3 }, registerText: { fontFamily: fonts.bodySemi, fontSize: 14 }, error: { fontFamily: fonts.body, fontSize: 14, lineHeight: 22, marginBottom: 12 },
 });

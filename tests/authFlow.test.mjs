@@ -35,9 +35,10 @@ test("ordinary sign out locks while Not-name performs true logout", async () => 
   ]);
 
   assert.match(pinEntry, /Not \$\{firstName\}\?/);
-  assert.match(pinEntry, /onPress: logout/);
-  assert.match(profile, /onPress: lockSession/);
-  assert.match(drawer, /onPress=\{lockSession\}/);
+  assert.match(pinEntry, /onConfirm=\{\(\) => \{ setSwitchAccountVisible\(false\); logout\(\); \}\}/);
+  assert.match(profile, /onConfirm=\{confirmSignOut\}/);
+  assert.match(profile, /const confirmSignOut = \(\) => \{[\s\S]*?lockSession\(\)/);
+  assert.match(drawer, /onConfirm=\{\(\) => \{ setSignOutVisible\(false\); navigation.closeDrawer\(\); lockSession\(\); \}\}/);
   assert.match(context, /await api\.logout\(\)/);
   assert.match(context, /function lockSession\(\)/);
 });

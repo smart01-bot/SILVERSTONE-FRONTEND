@@ -20,6 +20,7 @@ function harness(name, auth = {}, lock = {}) {
   }).code;
   vm.runInNewContext(code, { module, exports: module.exports, setInterval: () => 1, clearInterval() {},
     require: p => p === 'react' ? react : p === 'react-native' ? { View: 'View', AppState: { addEventListener: () => ({ remove() {} }) }, Alert: { alert: (...a) => { alert = a; } } } :
+      p.includes('AgentConfirmDialog') ? { AgentConfirmDialog: 'AgentConfirmDialog' } :
       p.includes('AuthUI') ? ui : p.includes('AuthContext') ? { useAuth: () => ({ profile: { name: 'Raymond Duma' }, ...auth }) } :
       p.includes('pinLockout') ? { checkLockout: async () => ({ locked: false }), clearLockout: async () => {}, recordFailedAttempt: async () => ({ locked: false, remaining: 2 }), ...lock } :
       p === 'expo-local-authentication' ? { hasHardwareAsync: async () => false, isEnrolledAsync: async () => false } : {},
@@ -66,7 +67,18 @@ test('PIN entry respects lockout, records failure and leaves true logout behind 
   await enter('9999'); assert.equal(failed, 1); assert.equal(completed, 0);
   locked = true; await enter('1234'); assert.equal(completed, 0); assert.equal(find(h.render(props), 'PinKeypad').props.disabled, true);
   nodes(h.render(props)).find(n => n.type === 'AuthLink' && n.children[0] === 'Not Raymond?').props.onPress();
-  assert.equal(logouts, 0); h.alert[2][1].onPress(); assert.equal(logouts, 1);
+  assert.equal(logouts, 0);
+  let dialog = find(h.render(props), 'AgentConfirmDialog');
+  assert.equal(dialog.props.visible, true);
+  dialog.props.onCancel();
+  assert.equal(find(h.render(props), 'AgentConfirmDialog').props.visible, false);
+  assert.equal(logouts, 0);
+  nodes(h.render(props)).find(n => n.type === 'AuthLink' && n.children[0] === 'Not Raymond?').props.onPress();
+  dialog = find(h.render(props), 'AgentConfirmDialog');
+  dialog.props.onConfirm();
+  assert.equal(logouts, 1);
+  assert.equal(find(h.render(props), 'AgentConfirmDialog').props.visible, false);
+  assert.equal(h.alert, undefined);
 });
 
 test('password recovery shows confirmation only after API success and never discloses account existence', async () => {

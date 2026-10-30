@@ -71,7 +71,7 @@ export default function StatusBadge({ status, size = 'md' }) {
         styles.text,
         {
           color:    config.color,
-          fontSize: isSmall ? 11 : 12,
+          fontSize: isSmall ? 12 : 13,
         },
       ]}>
         {config.label}

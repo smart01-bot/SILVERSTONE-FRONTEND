@@ -33,6 +33,7 @@ function harness(initial = {}) {
     if (path.includes('ThemeContext')) return { useTheme: () => theme };
     if (path.includes('AuthUI')) return { useAuthStyle: () => ({ copy: en => en }), AuthFrame: 'AuthFrame', AuthHeading: 'AuthHeading', AuthNotice: 'AuthNotice', AuthButton: 'AuthButton' };
     if (path.includes('agentTheme')) return { agentColors: () => ({ bg: '#000' }) };
+    if (path.includes('AgentConfirmDialog')) return { AgentConfirmDialog: 'AgentConfirmDialog' };
     if (path.includes('presentation')) return { canOperate: p => p.accountStatus === 'active' && p.applicationStatus === 'approved' };
     if (path.includes('Loader')) return { ScreenLoader: 'ScreenLoader' };
     return path.split('/').at(-1);
@@ -109,4 +110,40 @@ test('removing a retained account returns to role selection without replaying th
   assert.equal(find(tree, 'SubAgentNavigator'), undefined);
   assert.equal(find(tree, 'MainAgentNavigator'), undefined);
   assert.equal(find(tree, 'SplashScreen'), undefined);
+});
+
+test('failed sign out uses a dismissible themed dialog while retaining the reconnect screen', () => {
+  const h = harness({ connectionError: 'Offline', logoutError: 'The request timed out.' });
+  h.auth.dismissLogoutError = () => { h.auth.logoutError = ''; };
+  const tree = h.render();
+  const dialog = find(tree, 'AgentConfirmDialog');
+  assert.equal(dialog.props.hideCancel, true);
+  assert.equal(dialog.props.description, 'The request timed out.');
+  assert.ok(find(tree, 'AuthHeading'));
+  dialog.props.onConfirm();
+  assert.equal(find(h.render(), 'AgentConfirmDialog'), undefined);
+  assert.ok(find(h.render(), 'AuthHeading'));
+});
+
+test('session handoffs have distinct motion stages while profile refreshes keep home stable', async () => {
+  const h = harness();
+  let tree = h.render();
+  find(tree, 'SplashScreen').props.onDone();
+  tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'guest:signed-out');
+  assert.equal(find(tree, 'SessionTransition').props.enabled, true);
+  h.auth.user = { id: 'one' }; h.auth.profile = approved; h.auth.sessionLocked = true;
+  h.render(); await tick(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-entry');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+  find(tree, 'PinEntryScreen').props.onSuccess(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:home-sub-agent');
+  h.auth.profile = { ...approved, name: 'Updated account' };
+  assert.equal(find(h.render(), 'SessionTransition').props.stage, 'one:home-sub-agent');
+  h.auth.sessionLocked = true; tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-entry');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
+  find(tree, 'PinEntryScreen').props.onForgotPin(); tree = h.render();
+  assert.equal(find(tree, 'SessionTransition').props.stage, 'one:pin-reset');
+  assert.equal(find(tree, 'SubAgentNavigator'), undefined);
 });

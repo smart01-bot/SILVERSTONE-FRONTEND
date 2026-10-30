@@ -9,6 +9,7 @@ import { db, doc, updateDoc } from '../../api/screenData';
 import {
   AgentScroll, AgentButton, AgentSheet, AgentRow, useAgentUI,
 } from '../../components/agent/AgentUI';
+import { AgentConfirmDialog } from '../../components/agent/AgentConfirmDialog';
 
 const providedText = value => typeof value === 'string' && value.trim() ? value.trim() : null;
 
@@ -26,6 +27,7 @@ export default function ProfileScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [confirmedName, setConfirmedName] = useState(profile?.name);
   const [copied, setCopied] = useState(false);
+  const [signOutVisible, setSignOutVisible] = useState(false);
 
   useEffect(() => { setConfirmedName(profile?.name); }, [profile?.name, user?.id]);
 
@@ -57,11 +59,11 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(copy('Sign out', 'Ondoka'), copy('Return to your PIN screen?', 'Rudi kwenye skrini ya PIN?'), [
-      { text: copy('Cancel', 'Ghairi'), style: 'cancel' },
-      { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: lockSession },
-    ]);
+  const handleLogout = () => setSignOutVisible(true);
+  const confirmSignOut = () => {
+    setSignOutVisible(false);
+    // Local sign out only locks the retained session; account switching uses real logout.
+    lockSession();
   };
 
   const copyAgentNumber = async () => {
@@ -140,6 +142,20 @@ export default function ProfileScreen({ navigation }) {
         </TouchableOpacity>
       </AgentScroll>
 
+      <AgentConfirmDialog
+        visible={signOutVisible}
+        icon="log-out-outline"
+        title={copy('Sign out?', 'Ungependa kuondoka?')}
+        description={copy(
+          "You'll return to your PIN screen. Your account will stay linked to this device.",
+          'Utarudi kwenye skrini ya PIN. Akaunti yako itabaki imeunganishwa na kifaa hiki.',
+        )}
+        cancelLabel={copy('Cancel', 'Ghairi')}
+        confirmLabel={copy('Sign out', 'Ondoka')}
+        onCancel={() => setSignOutVisible(false)}
+        onConfirm={confirmSignOut}
+      />
+
       <AgentSheet visible={sheet === 'personal'} onClose={closeSheet} title={copy('Personal details', 'Taarifa binafsi')}>
         <View style={[s.detailRow, { borderBottomColor: colors.border }]}>
           <View style={s.detailContent}>
@@ -214,27 +230,27 @@ export default function ProfileScreen({ navigation }) {
 const s = StyleSheet.create({
   content: { paddingTop: 4, paddingBottom: 16 },
   settingsRow: { minHeight: 68, paddingVertical: 18, gap: 16 },
-  settingsLabel: { fontSize: 17, lineHeight: 25, fontFamily: fonts.bodyMed },
-  settingsValue: { fontSize: 15, lineHeight: 23 },
+  settingsLabel: { fontSize: 18, lineHeight: 26, fontFamily: fonts.bodyMed },
+  settingsValue: { fontSize: 16, lineHeight: 24 },
   numberContent: { flex: 1, minWidth: 0, gap: 5 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 8, paddingBottom: 20 },
-  groupLabel: { fontFamily:fonts.bodyMed,fontSize:15,lineHeight:22,marginTop:22,marginBottom:4 },
+  groupLabel: { fontFamily:fonts.bodyMed,fontSize:16,lineHeight:23,marginTop:22,marginBottom:4 },
   avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontSize: 26, fontFamily: fonts.bodySemi },
+  initials: { fontSize: 27, fontFamily: fonts.bodySemi },
   identityText: { flex: 1, gap: 4 },
-  name: { fontSize: 26, lineHeight: 34, fontFamily: fonts.bodySemi },
-  agency: { fontSize: 15, lineHeight: 23, fontFamily: fonts.body },
+  name: { fontSize: 27, lineHeight: 35, fontFamily: fonts.bodySemi },
+  agency: { fontSize: 16, lineHeight: 24, fontFamily: fonts.body },
   numberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  numberLabel: { fontSize: 15, lineHeight: 22, fontFamily: fonts.body },
-  numberValue: { fontSize: 18, lineHeight: 26, fontFamily: fonts.bodyMed },
+  numberLabel: { fontSize: 16, lineHeight: 23, fontFamily: fonts.body },
+  numberValue: { fontSize: 19, lineHeight: 27, fontFamily: fonts.bodyMed },
   copyButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   signOut: { minHeight: 68, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  rowLabel: { flex: 1, fontSize: 17, lineHeight: 25, fontFamily: fonts.bodyMed },
+  rowLabel: { flex: 1, fontSize: 18, lineHeight: 26, fontFamily: fonts.bodyMed },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 80, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   detailContent: { flex: 1, minWidth: 0, gap: 5 },
-  detailLabel: { fontSize: 15, lineHeight: 22, fontFamily: fonts.body },
-  detailValue: { fontSize: 17, lineHeight: 25, fontFamily: fonts.body },
-  nameInput: { minHeight: 44, fontSize: 17, fontFamily: fonts.body, paddingVertical: 7, borderBottomWidth: 1 },
+  detailLabel: { fontSize: 16, lineHeight: 23, fontFamily: fonts.body },
+  detailValue: { fontSize: 18, lineHeight: 26, fontFamily: fonts.body },
+  nameInput: { minHeight: 44, fontSize: 18, fontFamily: fonts.body, paddingVertical: 7, borderBottomWidth: 1 },
   editActions: { gap: 6, marginTop: 16 },
-  note: { fontSize: 15, lineHeight: 23, fontFamily: fonts.body, paddingTop: 18 },
+  note: { fontSize: 16, lineHeight: 24, fontFamily: fonts.body, paddingTop: 18 },
 });

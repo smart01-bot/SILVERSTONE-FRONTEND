@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
+import { AgentConfirmDialog } from '../../components/agent/AgentConfirmDialog';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../context/AuthContext';
 import { checkLockout, recordFailedAttempt, clearLockout } from '../../utils/pinLockout';
@@ -18,6 +19,7 @@ export default function PinEntryScreen({ onSuccess, onForgotPin }) {
   const [lockUntil, setLockUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [bioAvailable, setBioAvailable] = useState(false);
+  const [switchAccountVisible, setSwitchAccountVisible] = useState(false);
   const input = useRef('');
   const verifying = useRef(false);
   const firstName = profile?.name?.trim().split(/\s+/)[0] || copy('Agent', 'Wakala');
@@ -120,14 +122,7 @@ export default function PinEntryScreen({ onSuccess, onForgotPin }) {
   }
 
   function handleSwitchAccount() {
-    Alert.alert(
-      copy('Switch account?', 'Badili akaunti?'),
-      copy('This signs out your retained account.', 'Hii itaondoa akaunti yako iliyohifadhiwa.'),
-      [
-        { text: copy('Cancel', 'Ghairi'), style: 'cancel' },
-        { text: copy('Sign out', 'Ondoka'), style: 'destructive', onPress: logout },
-      ],
-    );
+    setSwitchAccountVisible(true);
   }
 
   return <AuthFrame footer="Swift Wakala · by Silverstone">
@@ -154,5 +149,11 @@ export default function PinEntryScreen({ onSuccess, onForgotPin }) {
       biometric={bioAvailable ? handleBiometric : undefined}
     />
     <AuthLink disabled={busy} onPress={handleSwitchAccount}>{copy(`Not ${firstName}?`, `Si ${firstName}?`)}</AuthLink>
+    <AgentConfirmDialog visible={switchAccountVisible} icon="log-out-outline"
+      title={copy('Switch account?', 'Badili akaunti?')}
+      description={copy('This signs out your retained account. Sign in again to use another account.', 'Hii itaondoa akaunti yako iliyohifadhiwa. Ingia tena ili kutumia akaunti nyingine.')}
+      cancelLabel={copy('Cancel', 'Ghairi')} confirmLabel={copy('Sign out', 'Ondoka')}
+      onCancel={() => setSwitchAccountVisible(false)}
+      onConfirm={() => { setSwitchAccountVisible(false); logout(); }} />
   </AuthFrame>;
 }

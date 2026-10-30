@@ -114,7 +114,7 @@ export default function SplashScreen({ navigation, onDone, ready = true, resourc
           </View>
         </Animated.View>
         <Animated.View style={{ opacity: Animated.multiply(v.words, v.wordExit.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })), transform: [{ translateY: v.words.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>
-          <Text style={[s.title, { color: ink, fontSize: titleSize, lineHeight: titleSize * 1.25 }]}>Swift Wakala</Text>
+          <Text style={[s.title, { color: ink, fontSize: titleSize + 1, lineHeight: (titleSize + 1) * 1.25 }]}>Swift Wakala</Text>
           <Text style={[s.owner, { color: muted }]}>by Silverstone</Text>
         </Animated.View>
       </View>
@@ -126,6 +126,6 @@ const s = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' }, safe: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lockup: { width: '100%', paddingHorizontal: 20 },
   title: { fontFamily: fonts.bodySemi, letterSpacing: -1.3, textAlign: 'center', marginTop: 2, marginBottom: 10 },
-  owner: { fontFamily: fonts.body, fontSize: 12, lineHeight: 20, letterSpacing: 2, textAlign: 'center' },
-  waiting: { position: 'absolute', bottom: 48, left: 24, right: 24, textAlign: 'center', fontFamily: fonts.body, fontSize: 12, lineHeight: 20 },
+  owner: { fontFamily: fonts.body, fontSize: 13, lineHeight: 21, letterSpacing: 2, textAlign: 'center' },
+  waiting: { position: 'absolute', bottom: 48, left: 24, right: 24, textAlign: 'center', fontFamily: fonts.body, fontSize: 13, lineHeight: 21 },
 });

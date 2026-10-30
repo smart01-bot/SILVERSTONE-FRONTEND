@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SystemUI from 'expo-system-ui';
 import { LIGHT, DARK } from '../constants/theme';
 import { useTr } from '../constants/translations';
+import { agentColors } from '../components/agent/agentTheme';
 
 export const ThemeContext = createContext({});
 
@@ -38,6 +40,12 @@ export function ThemeProvider({ children }) {
   const isDark = userPreference
     ? userPreference === 'dark'
     : deviceScheme === 'dark';
+
+  useEffect(() => {
+    // Android exposes the Activity's native backdrop during IME resize frames.
+    // A React View background alone leaves that area at the default white.
+    SystemUI.setBackgroundColorAsync(agentColors(isDark).bg).catch(() => {});
+  }, [isDark]);
 
   // preference: 'light' | 'dark' | 'auto'
   const setTheme = async (preference) => {

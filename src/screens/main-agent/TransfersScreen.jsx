@@ -178,15 +178,15 @@ const s = StyleSheet.create({
     position: 'absolute', width: 180, height: 180, borderRadius: 90,
     backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -40,
   },
-  headerTitle: { fontSize: 30, fontFamily: fonts.display, color: '#fff' },
-  headerSub:   { fontSize: 17, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: { fontSize: 31, fontFamily: fonts.display, color: '#fff' },
+  headerSub:   { fontSize: 18, fontFamily: fonts.body, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
   searchWrap: { paddingHorizontal: 24, paddingTop: spacing.md - 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, paddingHorizontal: spacing.md - 4,
   },
-  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 16, fontFamily: fonts.body },
+  searchInput: { flex: 1,minWidth:0,paddingVertical:12,fontSize: 17, fontFamily: fonts.body },
 
   filters:   { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
@@ -194,7 +194,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md - 2, paddingVertical: 12,minHeight:48,justifyContent:'center',
     borderRadius: radius.full, borderWidth: 1,
   },
-  pillText: { fontSize: 14, fontFamily: fonts.bodySemi },
+  pillText: { fontSize: 15, fontFamily: fonts.bodySemi },
 
   volumeCard: {
     borderBottomWidth:1,
@@ -202,9 +202,9 @@ const s = StyleSheet.create({
     marginBottom:  spacing.md,
     alignItems:    'flex-start',
   },
-  volumeLabel:  { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 1 },
-  volumeAmount: { fontSize: 36, fontFamily: fonts.display, marginTop: spacing.xs },
-  volumeSub:    { fontSize: 17, fontFamily: fonts.body, marginTop: spacing.xs },
+  volumeLabel:  { fontSize: 15, fontFamily: fonts.bodySemi, letterSpacing: 1 },
+  volumeAmount: { fontSize: 37, fontFamily: fonts.display, marginTop: spacing.xs },
+  volumeSub:    { fontSize: 18, fontFamily: fonts.body, marginTop: spacing.xs },
 
   listCard: { overflow:'hidden' },
   row: {
@@ -212,11 +212,11 @@ const s = StyleSheet.create({
     padding: spacing.md - 2,
   },
   rowLeft:   { flex:1,minWidth:140,gap:5 },
-  rowId:     { fontSize: 14, fontFamily: fonts.bodySemi, letterSpacing: 0.4 },
-  rowAgent:  { fontSize: 18, fontFamily: fonts.bodyBold },
-  rowRoute:  { fontSize: 15, fontFamily: fonts.body },
+  rowId:     { fontSize: 15, fontFamily: fonts.bodySemi, letterSpacing: 0.4 },
+  rowAgent:  { fontSize: 19, fontFamily: fonts.bodyBold },
+  rowRoute:  { fontSize: 16, fontFamily: fonts.body },
   rowRight:  { alignItems: 'flex-end', gap: 2 },
-  rowAmount: { fontSize: 18, fontFamily: fonts.bodyBold },
-  rowTime:   { fontSize: 15, fontFamily: fonts.body },
+  rowAmount: { fontSize: 19, fontFamily: fonts.bodyBold },
+  rowTime:   { fontSize: 16, fontFamily: fonts.body },
   divider:   { height: 1, marginHorizontal: spacing.md - 2 },
 });

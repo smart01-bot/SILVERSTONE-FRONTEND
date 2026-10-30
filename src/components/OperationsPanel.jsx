@@ -547,8 +547,8 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     flexWrap: "wrap",
   },
-  title: { fontFamily: fonts.display, fontSize: 24 },
-  text: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23 },
+  title: { fontFamily: fonts.display, fontSize: 25 },
+  text: { fontFamily: fonts.body, fontSize: 17, lineHeight: 24 },
   section: {
     borderWidth: 1,
     borderRadius: radius.md,
@@ -569,6 +569,6 @@ const s = StyleSheet.create({
     padding: spacing.sm,
     minHeight: 48,
     fontFamily: fonts.body,
-    fontSize: 16,
+    fontSize: 17,
   },
 });
